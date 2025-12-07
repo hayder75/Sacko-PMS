@@ -1,0 +1,149 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    SAKO PMS - WHAT TO DO NEXT
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 LOGIN CREDENTIALS (All users created):
+
+1. SAKO HQ / Admin:     admin@sako.com | admin123
+2. Regional Director:   regional@sako.com | regional123
+3. Area Manager:        areamanager@sako.com | area123
+4. Branch Manager:     branchmanager@sako.com | branch123
+5. Line Manager:        linemanager@sako.com | line123
+6. Sub-Team Leader:    subteam@sako.com | subteam123
+7. Staff / MSO:         staff@sako.com | staff123
+
+═══════════════════════════════════════════════════════════════════════════════
+                            STEP-BY-STEP WORKFLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 1: LOGIN AS ADMIN
+───────────────────────────────────────────────────────────────────────────────
+→ Login with: admin@sako.com | admin123
+→ You'll see the HQ Dashboard
+
+STEP 2: EXPLORE THE SYSTEM (As Admin)
+───────────────────────────────────────────────────────────────────────────────
+→ Check out different pages:
+  • Plan Cascade - Upload plans
+  • User Management - See all users
+  • Hierarchy - Manage organization structure
+  • CBS Validation - Validate bank transactions
+  • Audit Trail - See system activity
+
+STEP 3: TEST AS DIFFERENT ROLES
+───────────────────────────────────────────────────────────────────────────────
+→ Logout and login as different roles to see different dashboards:
+  • Staff → See personal dashboard
+  • Branch Manager → See team performance
+  • Area Manager → See branch comparisons
+
+STEP 4: CREATE YOUR FIRST PLAN (Optional - For Testing)
+───────────────────────────────────────────────────────────────────────────────
+→ As Admin, go to "Plan Cascade"
+→ Upload a plan file (Excel/CSV format)
+→ System will cascade plans to all branches
+
+STEP 5: MAP ACCOUNTS (Optional - For Testing)
+───────────────────────────────────────────────────────────────────────────────
+→ As Branch Manager, go to "Mapping Management"
+→ Assign customer accounts to staff members
+→ Or use "Auto-Balance" to split evenly
+
+STEP 6: LOG DAILY TASKS (Optional - For Testing)
+───────────────────────────────────────────────────────────────────────────────
+→ Login as Staff
+→ Go to "Tasks" → "Add New Task"
+→ Fill in task details and submit
+→ Task goes through approval chain
+
+STEP 7: APPROVE TASKS (Optional - For Testing)
+───────────────────────────────────────────────────────────────────────────────
+→ Login as Sub-Team Leader or Manager
+→ Go to "Tasks"
+→ See pending tasks and approve them
+→ Tasks move up the approval chain
+
+═══════════════════════════════════════════════════════════════════════════════
+                            QUICK TEST SCENARIO
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Login as Staff (staff@sako.com | staff123)
+   → See your dashboard
+   → Go to Tasks → Add New Task
+   → Submit a task
+
+2. Logout and login as Sub-Team Leader (subteam@sako.com | subteam123)
+   → Go to Tasks
+   → See the task you just created
+   → Approve it
+
+3. Logout and login as Branch Manager (branchmanager@sako.com | branch123)
+   → Go to Tasks
+   → See the approved task
+   → Approve it (final approval)
+
+4. Login as Admin (admin@sako.com | admin123)
+   → Go to Dashboard
+   → See system overview
+   → Check different pages
+
+═══════════════════════════════════════════════════════════════════════════════
+                            WHAT EACH ROLE CAN DO
+═══════════════════════════════════════════════════════════════════════════════
+
+SAKO HQ / Admin:
+  ✓ View everything
+  ✓ Upload plans
+  ✓ Create users
+  ✓ Manage hierarchy
+  ✓ Upload CBS files
+  ✓ View audit trail
+
+Regional Director:
+  ✓ View regional performance
+  ✓ See all areas under them
+  ✓ View reports
+
+Area Manager:
+  ✓ View area performance
+  ✓ See all branches under them
+  ✓ Approve tasks
+  ✓ View reports
+
+Branch Manager:
+  ✓ View branch performance
+  ✓ See team performance
+  ✓ Approve tasks
+  ✓ Manage account mappings
+  ✓ Create Line Managers and Sub-Team Leaders
+
+Line Manager:
+  ✓ View sub-team performance
+  ✓ Approve tasks
+  ✓ Create Sub-Team Leaders and Staff
+
+Sub-Team Leader:
+  ✓ View team tasks
+  ✓ Approve staff tasks
+  ✓ Create Staff accounts
+
+Staff / MSO:
+  ✓ Log daily tasks
+  ✓ View own performance
+  ✓ View own mapped accounts
+  ✓ View own scorecard
+
+═══════════════════════════════════════════════════════════════════════════════
+                            TIPS
+═══════════════════════════════════════════════════════════════════════════════
+
+• The system loads fast now - charts load in background
+• No console logs on login
+• All 7 roles are ready to test
+• Each role sees different menus and dashboards
+• Start with Staff role to log tasks
+• Then test approval flow with managers
+• Finally check Admin dashboard for overview
+
+═══════════════════════════════════════════════════════════════════════════════
+
