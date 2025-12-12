@@ -13,17 +13,17 @@ const buildApprovalChain = async (submitter) => {
   const branch_code = submitter.branch_code;
 
   // MSO → Accountant → MSM → Branch Manager
-  if (['MSO I', 'MSO II', 'MSO III'].includes(submitterPosition)) {
+  if (['Member Service Officer I', 'Member Service Officer II', 'Member Service Officer III'].includes(submitterPosition)) {
     // Find Accountant in same branch
     const accountant = await User.findOne({
       branch_code,
-      position: 'Accountant',
+      position: 'Accountant', // Accountant is the official position name
       isActive: true,
     });
     if (accountant) {
       chain.push({
         approverId: accountant._id,
-        position: 'Accountant',
+        position: 'Accountant', // Accountant is the official position name
         status: 'Pending',
       });
     }
@@ -31,13 +31,16 @@ const buildApprovalChain = async (submitter) => {
     // Find MSM in same branch
     const msm = await User.findOne({
       branch_code,
-      position: 'MSM',
+      $or: [
+        { position: 'Member Service Manager (MSM)' },
+        { position: 'MSM' } // Legacy support
+      ],
       isActive: true,
     });
     if (msm) {
       chain.push({
         approverId: msm._id,
-        position: 'MSM',
+        position: 'Member Service Manager (MSM)',
         status: 'Pending',
       });
     }
@@ -60,13 +63,16 @@ const buildApprovalChain = async (submitter) => {
   else if (submitterPosition === 'Accountant') {
     const msm = await User.findOne({
       branch_code,
-      position: 'MSM',
+      $or: [
+        { position: 'Member Service Manager (MSM)' },
+        { position: 'MSM' } // Legacy support
+      ],
       isActive: true,
     });
     if (msm) {
       chain.push({
         approverId: msm._id,
-        position: 'MSM',
+        position: 'Member Service Manager (MSM)',
         status: 'Pending',
       });
     }
@@ -159,7 +165,7 @@ export const createTask = asyncHandler(async (req, res) => {
   const { taskType, productType, accountNumber, amount, remarks, evidence, taskDate } = req.body;
 
   // Only MSOs, Accountants, and Auditors can log tasks
-  const allowedPositions = ['MSO I', 'MSO II', 'MSO III', 'Accountant', 'Auditor'];
+  const allowedPositions = ['Member Service Officer I', 'Member Service Officer II', 'Member Service Officer III', 'Accountant'];
   if (!allowedPositions.includes(req.user.position)) {
     return res.status(403).json({
       success: false,

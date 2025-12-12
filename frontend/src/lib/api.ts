@@ -454,3 +454,35 @@ export const auditAPI = {
   },
 };
 
+// Branches API
+export const branchesAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/branches${queryString}`);
+  },
+  
+  getById: async (id: string) => {
+    return apiRequest(`/branches/${id}`);
+  },
+  
+  create: async (branchData: any) => {
+    return apiRequest('/branches', {
+      method: 'POST',
+      body: JSON.stringify(branchData),
+    });
+  },
+  
+  update: async (id: string, branchData: any) => {
+    return apiRequest(`/branches/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(branchData),
+    });
+  },
+  
+  delete: async (id: string) => {
+    return apiRequest(`/branches/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+

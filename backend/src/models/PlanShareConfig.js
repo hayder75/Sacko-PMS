@@ -17,7 +17,7 @@ const planShareConfigSchema = new mongoose.Schema({
       'Customer Base',
     ],
   },
-  // Plan share percentages by position
+  // Plan share percentages by position (official positions from plan cascad.xlsx)
   planShares: {
     'Branch Manager': {
       type: Number,
@@ -25,7 +25,7 @@ const planShareConfigSchema = new mongoose.Schema({
       min: 0,
       max: 100,
     },
-    'MSM': {
+    'Member Service Manager (MSM)': {
       type: Number,
       default: 15,
       min: 0,
@@ -37,25 +37,19 @@ const planShareConfigSchema = new mongoose.Schema({
       min: 0,
       max: 100,
     },
-    'Auditor': {
-      type: Number,
-      default: 5,
-      min: 0,
-      max: 100,
-    },
-    'MSO I': {
+    'Member Service Officer I': {
       type: Number,
       default: 0,
       min: 0,
       max: 100,
     },
-    'MSO II': {
+    'Member Service Officer II': {
       type: Number,
       default: 0,
       min: 0,
       max: 100,
     },
-    'MSO III': {
+    'Member Service Officer III': {
       type: Number,
       default: 0,
       min: 0,

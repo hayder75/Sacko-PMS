@@ -206,36 +206,43 @@ export function HierarchyManagement() {
                     value={formData.position}
                     onValueChange={(value) => setFormData({ ...formData, position: value })}
                     required
+                    disabled={!formData.role}
                   >
                     <SelectTrigger id="position">
-                      <SelectValue placeholder="Select position" />
+                      <SelectValue placeholder={formData.role ? "Select position" : "Select role first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {role === 'regionalDirector' && (
-                        <SelectItem value="Area Manager">Area Manager</SelectItem>
-                      )}
-                      {role === 'areaManager' && (
+                      {formData.role === 'areaManager' && (
                         <SelectItem value="Branch Manager">Branch Manager</SelectItem>
                       )}
-                      {role === 'branchManager' && (
+                      {formData.role === 'branchManager' && (
                         <>
-                          <SelectItem value="MSM">MSM</SelectItem>
+                          <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
                           <SelectItem value="Accountant">Accountant</SelectItem>
-                          <SelectItem value="Auditor">Auditor</SelectItem>
+                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
+                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
+                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
                         </>
                       )}
-                      {role === 'lineManager' && (
+                      {formData.role === 'lineManager' && (
                         <>
-                          <SelectItem value="MSO I">MSO I</SelectItem>
-                          <SelectItem value="MSO II">MSO II</SelectItem>
-                          <SelectItem value="MSO III">MSO III</SelectItem>
+                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
+                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
+                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
                         </>
                       )}
-                      {role === 'subTeamLeader' && (
+                      {formData.role === 'subTeamLeader' && (
                         <>
-                          <SelectItem value="MSO I">MSO I</SelectItem>
-                          <SelectItem value="MSO II">MSO II</SelectItem>
-                          <SelectItem value="MSO III">MSO III</SelectItem>
+                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
+                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
+                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
+                        </>
+                      )}
+                      {formData.role === 'staff' && (
+                        <>
+                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
+                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
+                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
                         </>
                       )}
                     </SelectContent>

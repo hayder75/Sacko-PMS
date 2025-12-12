@@ -88,28 +88,37 @@ const canCreateRole = (creatorRole, targetRole) => {
 
 // Helper function to determine who can create which positions
 const canCreatePosition = (creatorRole, creatorPosition, targetPosition) => {
-  // Admin can create Regional Directors, Area Managers, and Branch Managers
-  if (creatorRole === 'admin' && ['Branch Manager', 'Area Manager', 'Regional Director'].includes(targetPosition)) {
+  const normalizedCreatorRole = normalizeRole(creatorRole);
+  const normalizedCreatorPosition = creatorPosition;
+  const normalizedTargetPosition = targetPosition;
+
+  // Admin can create Branch Managers
+  if (normalizedCreatorRole === 'admin' && normalizedTargetPosition === 'Branch Manager') {
     return true;
   }
   
-  // Regional Director can create Area Managers
-  if (creatorRole === 'regionalDirector' && targetPosition === 'Area Manager') {
+  // Regional Director can create Area Managers (position not in enum, handled separately)
+  if (normalizedCreatorRole === 'regionalDirector' && normalizedTargetPosition === 'Area Manager') {
     return true;
   }
   
   // Area Manager can create Branch Managers
-  if (creatorRole === 'areaManager' && targetPosition === 'Branch Manager') {
+  if (normalizedCreatorRole === 'areaManager' && normalizedTargetPosition === 'Branch Manager') {
     return true;
   }
   
-  // Branch Manager can create MSMs and Accountants/Auditors
-  if (creatorRole === 'branchManager' && ['MSM', 'Accountant', 'Auditor'].includes(targetPosition)) {
+  // Branch Manager can create MSM, Accountant, and MSOs
+  if (normalizedCreatorRole === 'branchManager' && ['Member Service Manager (MSM)', 'Accountant', 'Member Service Officer I', 'Member Service Officer II', 'Member Service Officer III'].includes(normalizedTargetPosition)) {
     return true;
   }
   
   // Line Manager (MSM) can create MSOs
-  if (creatorPosition === 'MSM' && ['MSO I', 'MSO II', 'MSO III'].includes(targetPosition)) {
+  if (normalizedCreatorPosition === 'Member Service Manager (MSM)' && ['Member Service Officer I', 'Member Service Officer II', 'Member Service Officer III'].includes(normalizedTargetPosition)) {
+    return true;
+  }
+  
+  // Accountant (Sub-Team Leader) can create MSOs
+  if (normalizedCreatorPosition === 'Accountant' && ['Member Service Officer I', 'Member Service Officer II', 'Member Service Officer III'].includes(normalizedTargetPosition)) {
     return true;
   }
   
@@ -169,7 +178,7 @@ export const createUser = asyncHandler(async (req, res) => {
     });
   }
 
-  if (['MSO I', 'MSO II', 'MSO III'].includes(position) && !sub_team) {
+  if (['Member Service Officer I', 'Member Service Officer II', 'Member Service Officer III'].includes(position) && !sub_team) {
     return res.status(400).json({
       success: false,
       message: 'sub_team is required for MSO positions',

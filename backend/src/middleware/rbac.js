@@ -119,7 +119,7 @@ export const canApproveByPosition = (req, res, next) => {
     });
   }
 
-  const approverPositions = ['Branch Manager', 'MSM', 'Accountant'];
+  const approverPositions = ['Branch Manager', 'Member Service Manager (MSM)', 'Accountant'];
   if (!approverPositions.includes(req.user.position)) {
     return res.status(403).json({
       success: false,

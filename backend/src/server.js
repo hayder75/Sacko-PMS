@@ -56,6 +56,7 @@ import juneBalanceRoutes from './routes/juneBalanceRoutes.js';
 import planShareConfigRoutes from './routes/planShareConfigRoutes.js';
 import productKpiMappingRoutes from './routes/productKpiMappingRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
+import branchRoutes from './routes/branchRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -70,6 +71,7 @@ app.use('/api/june-balance', juneBalanceRoutes);
 app.use('/api/plan-share-config', planShareConfigRoutes);
 app.use('/api/product-mappings', productKpiMappingRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/branches', branchRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

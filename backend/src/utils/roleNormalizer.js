@@ -18,11 +18,12 @@ export function normalizeRole(role) {
     'Branch Manager': 'branchManager',
     'branchManager': 'branchManager',
     'Line Manager': 'lineManager',
-    'MSM': 'lineManager',
+    'Member Service Manager (MSM)': 'lineManager',
+    'MSM': 'lineManager', // Legacy support
     'lineManager': 'lineManager',
     'Sub-Team Leader': 'subTeamLeader',
     'Accountant': 'subTeamLeader',
-    'Auditor': 'subTeamLeader',
+    'Auditor': 'subTeamLeader', // Legacy support - use Accountant instead
     'subTeamLeader': 'subTeamLeader',
     'Staff / MSO': 'staff',
     'MSO': 'staff',

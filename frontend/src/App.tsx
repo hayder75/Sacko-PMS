@@ -18,6 +18,7 @@ import { MonthlyScorecard } from './pages/MonthlyScorecard';
 import { Settings } from './pages/Settings';
 import { RoutesGuide } from './pages/RoutesGuide';
 import { UserManagement } from './pages/hq/UserManagement';
+import { BranchManagement } from './pages/hq/BranchManagement';
 import { PlanCascade } from './pages/hq/PlanCascade';
 import { CBSValidation } from './pages/hq/CBSValidation';
 import { AuditTrail } from './pages/hq/AuditTrail';
@@ -196,6 +197,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <UserManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/branch-management"
+        element={
+          <ProtectedRoute>
+            <BranchManagement />
           </ProtectedRoute>
         }
       />

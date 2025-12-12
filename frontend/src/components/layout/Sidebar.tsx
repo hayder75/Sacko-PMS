@@ -47,6 +47,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'MAPPING MANAGEMENT', icon: Network, path: '/mapping' },
       { title: 'CBS VALIDATION', icon: CheckCircle2, path: '/cbs-validation' },
       { title: 'USER MANAGEMENT', icon: Users, path: '/user-management' },
+      { title: 'BRANCH MANAGEMENT', icon: Network, path: '/branch-management' },
       { title: 'KPI FRAMEWORK', icon: Target, path: '/kpi-framework' },
       { title: 'COMPETENCY FRAMEWORK', icon: Shield, path: '/competency-framework' },
       { title: 'AUDIT TRAIL', icon: FileText, path: '/audit-trail' },

@@ -19,13 +19,12 @@ const kpiCategories = [
 ];
 
 const positions = [
-  'branchManager',
-  'MSM',
+  'Branch Manager',
+  'Member Service Manager (MSM)',
   'Accountant',
-  'Auditor',
-  'MSO I',
-  'MSO II',
-  'MSO III',
+  'Member Service Officer I',
+  'Member Service Officer II',
+  'Member Service Officer III',
 ];
 
 export function PlanShareConfig() {
@@ -37,13 +36,12 @@ export function PlanShareConfig() {
     branch_code: '',
     kpi_category: '',
     planShares: {
-      'branchManager': 15,
-      'MSM': 15,
+      'Branch Manager': 15,
+      'Member Service Manager (MSM)': 15,
       'Accountant': 15,
-      'Auditor': 5,
-      'MSO I': 0,
-      'MSO II': 0,
-      'MSO III': 0,
+      'Member Service Officer I': 0,
+      'Member Service Officer II': 0,
+      'Member Service Officer III': 0,
     },
   });
 
@@ -91,13 +89,12 @@ export function PlanShareConfig() {
         branch_code: '',
         kpi_category: '',
         planShares: {
-          'branchManager': 15,
-          'MSM': 15,
+          'Branch Manager': 15,
+          'Member Service Manager (MSM)': 15,
           'Accountant': 15,
-          'Auditor': 5,
-          'MSO I': 0,
-          'MSO II': 0,
-          'MSO III': 0,
+          'Member Service Officer I': 0,
+          'Member Service Officer II': 0,
+          'Member Service Officer III': 0,
         },
       });
       loadConfigs();

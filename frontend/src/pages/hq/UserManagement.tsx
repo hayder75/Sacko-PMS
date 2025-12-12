@@ -155,18 +155,34 @@ export function UserManagement() {
                     value={formData.position}
                     onValueChange={(value) => setFormData({ ...formData, position: value })}
                     required
+                    disabled={!formData.role}
                   >
                     <SelectTrigger id="position">
-                      <SelectValue placeholder="Select position" />
+                      <SelectValue placeholder={formData.role ? "Select position" : "Select role first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="branchManager">branchManager</SelectItem>
-                      <SelectItem value="MSM">MSM</SelectItem>
-                      <SelectItem value="Accountant">Accountant</SelectItem>
-                      <SelectItem value="Auditor">Auditor</SelectItem>
-                      <SelectItem value="MSO I">MSO I</SelectItem>
-                      <SelectItem value="MSO II">MSO II</SelectItem>
-                      <SelectItem value="MSO III">MSO III</SelectItem>
+                      {formData.role === 'regionalDirector' && (
+                        <SelectItem value="Regional Director">Regional Director</SelectItem>
+                      )}
+                      {formData.role === 'areaManager' && (
+                        <SelectItem value="Area Manager">Area Manager</SelectItem>
+                      )}
+                      {formData.role === 'branchManager' && (
+                        <SelectItem value="Branch Manager">Branch Manager</SelectItem>
+                      )}
+                      {formData.role === 'lineManager' && (
+                        <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
+                      )}
+                      {formData.role === 'subTeamLeader' && (
+                        <SelectItem value="Accountant">Accountant</SelectItem>
+                      )}
+                      {formData.role === 'staff' && (
+                        <>
+                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
+                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
+                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
