@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
-import { usersAPI } from '@/lib/api';
+import { usersAPI, subTeamsAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
 export function HierarchyManagement() {
   const { user, role } = useUser();
   const [showForm, setShowForm] = useState(false);
   const [staff, setStaff] = useState<any[]>([]);
+  const [subTeams, setSubTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     employeeId: '',
@@ -22,10 +23,12 @@ export function HierarchyManagement() {
     password: '',
     role: '',
     position: '',
+    sub_team: '',
   });
 
   useEffect(() => {
     loadStaff();
+    loadSubTeams();
   }, []);
 
   const loadStaff = async () => {
@@ -37,14 +40,20 @@ export function HierarchyManagement() {
       if (role === 'subTeamLeader') {
         // Sub-team leader can see staff under them
         params.role = 'staff';
-        if (user?.branchId) params.branchId = user.branchId;
+        if (user?.branchId) {
+          params.branchId = typeof user.branchId === 'string' ? user.branchId : user.branchId._id || user.branchId;
+        }
       } else if (role === 'lineManager') {
         // Line manager can see sub-team leaders and staff
         params.role = ['subTeamLeader', 'staff'];
-        if (user?.branchId) params.branchId = user.branchId;
+        if (user?.branchId) {
+          params.branchId = typeof user.branchId === 'string' ? user.branchId : user.branchId._id || user.branchId;
+        }
       } else if (role === 'branchManager') {
         // Branch manager can see all in branch
-        if (user?.branchId) params.branchId = user.branchId;
+        if (user?.branchId) {
+          params.branchId = typeof user.branchId === 'string' ? user.branchId : user.branchId._id || user.branchId;
+        }
       }
 
       const response = await usersAPI.getAll(params);
@@ -55,6 +64,20 @@ export function HierarchyManagement() {
       console.error('Error loading staff:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSubTeams = async () => {
+    try {
+      const branchId = typeof user?.branchId === 'string' ? user.branchId : user?.branchId?._id || user?.branchId;
+      if (branchId) {
+        const response = await subTeamsAPI.getAll({ branchId });
+        if (response.success) {
+          setSubTeams(response.data || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading sub-teams:', error);
     }
   };
 
@@ -84,12 +107,15 @@ export function HierarchyManagement() {
     e.preventDefault();
     try {
       setLoading(true);
+      const branchIdValue = typeof user?.branchId === 'string' ? user.branchId : user?.branchId?._id || user?.branchId;
+      
       const userData = {
         ...formData,
         branch_code: user?.branch_code || user?.branchId?.code,
-        branchId: user?.branchId,
+        branchId: branchIdValue,
         areaId: user?.areaId,
         regionId: user?.regionId,
+        sub_team: formData.sub_team || undefined,
       };
 
       await usersAPI.create(userData);
@@ -101,6 +127,7 @@ export function HierarchyManagement() {
         password: '',
         role: '',
         position: '',
+        sub_team: '',
       });
       loadStaff();
     } catch (error: any) {
@@ -213,19 +240,14 @@ export function HierarchyManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       {formData.role === 'areaManager' && (
-                        <SelectItem value="Branch Manager">Branch Manager</SelectItem>
+                        <SelectItem value="Area Manager">Area Manager</SelectItem>
                       )}
                       {formData.role === 'branchManager' && (
-                        <>
-                          <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
-                          <SelectItem value="Accountant">Accountant</SelectItem>
-                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
-                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
-                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
-                        </>
+                        <SelectItem value="Branch Manager">Branch Manager</SelectItem>
                       )}
                       {formData.role === 'lineManager' && (
                         <>
+                          <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
                           <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
                           <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
                           <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
@@ -233,6 +255,7 @@ export function HierarchyManagement() {
                       )}
                       {formData.role === 'subTeamLeader' && (
                         <>
+                          <SelectItem value="Accountant">Accountant</SelectItem>
                           <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
                           <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
                           <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
@@ -248,6 +271,36 @@ export function HierarchyManagement() {
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Sub-Team Selection - Required for MSO positions */}
+                {(formData.role === 'staff' || ['Member Service Officer I', 'Member Service Officer II', 'Member Service Officer III'].includes(formData.position)) && (
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="sub_team">Sub-Team *</Label>
+                    <Select
+                      value={formData.sub_team}
+                      onValueChange={(value) => setFormData({ ...formData, sub_team: value })}
+                      required
+                      disabled={!formData.role || !formData.position}
+                    >
+                      <SelectTrigger id="sub_team">
+                        <SelectValue placeholder={formData.position ? "Select sub-team" : "Select role and position first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subTeams.length === 0 ? (
+                          <SelectItem value="no-subteams" disabled>No sub-teams available. Create sub-teams in Team Management first.</SelectItem>
+                        ) : (
+                          subTeams.map((st: any) => (
+                            <SelectItem key={st._id} value={st.code}>
+                              {st.name} ({st.code})
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">
+                      MSOs must be assigned to a sub-team for KPI tracking
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button type="submit" disabled={loading}>
@@ -278,13 +331,14 @@ export function HierarchyManagement() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Position</TableHead>
+                  <TableHead>Sub-Team</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {staff.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                    <TableCell colSpan={7} className="text-center text-slate-500 py-8">
                       No team members found
                     </TableCell>
                   </TableRow>
@@ -298,6 +352,7 @@ export function HierarchyManagement() {
                         <Badge variant="outline">{member.role}</Badge>
                       </TableCell>
                       <TableCell>{member.position || '-'}</TableCell>
+                      <TableCell>{member.sub_team || '-'}</TableCell>
                       <TableCell>
                         <Badge variant={member.isActive ? 'success' : 'destructive'}>
                           {member.isActive ? 'Active' : 'Inactive'}

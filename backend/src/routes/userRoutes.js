@@ -12,9 +12,9 @@ import { isHQAdmin, isManagerOrAbove } from '../middleware/rbac.js';
 
 const router = express.Router();
 
-// GET: Only HQ Admin can see all users
+// GET: HQ Admin sees all, Managers see their branch/team
 router.route('/')
-  .get(protect, isHQAdmin, getUsers)
+  .get(protect, isManagerOrAbove, getUsers)
   // POST: Managers and above can create users (authorization checked in controller)
   .post(protect, isManagerOrAbove, createUser);
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  createPlan,
   uploadPlan,
   getPlans,
   getPlan,
@@ -11,6 +12,7 @@ import { upload } from '../utils/fileUpload.js';
 
 const router = express.Router();
 
+router.post('/', protect, isHQAdmin, createPlan); // Manual plan creation
 router.post('/upload', protect, isHQAdmin, upload.single('planFile'), uploadPlan);
 router.get('/', protect, getPlans);
 router.get('/:id', protect, getPlan);

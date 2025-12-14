@@ -22,9 +22,7 @@ const positions = [
   'Branch Manager',
   'Member Service Manager (MSM)',
   'Accountant',
-  'Member Service Officer I',
-  'Member Service Officer II',
-  'Member Service Officer III',
+  'MSO', // This percentage is divided equally among all MSOs (I, II, III) in the branch
 ];
 
 export function PlanShareConfig() {
@@ -36,12 +34,10 @@ export function PlanShareConfig() {
     branch_code: '',
     kpi_category: '',
     planShares: {
-      'Branch Manager': 15,
-      'Member Service Manager (MSM)': 15,
-      'Accountant': 15,
-      'Member Service Officer I': 0,
-      'Member Service Officer II': 0,
-      'Member Service Officer III': 0,
+      'Branch Manager': 30,
+      'Member Service Manager (MSM)': 25,
+      'Accountant': 13,
+      'MSO': 32, // This percentage is divided equally among all MSOs (I, II, III) in the branch
     },
   });
 
@@ -88,14 +84,12 @@ export function PlanShareConfig() {
       setFormData({
         branch_code: '',
         kpi_category: '',
-        planShares: {
-          'Branch Manager': 15,
-          'Member Service Manager (MSM)': 15,
-          'Accountant': 15,
-          'Member Service Officer I': 0,
-          'Member Service Officer II': 0,
-          'Member Service Officer III': 0,
-        },
+                      planShares: {
+                        'Branch Manager': 30,
+                        'Member Service Manager (MSM)': 25,
+                        'Accountant': 13,
+                        'MSO': 32,
+                      },
       });
       loadConfigs();
     } catch (error: any) {
@@ -171,12 +165,20 @@ export function PlanShareConfig() {
                 <div className="grid grid-cols-2 gap-4">
                   {positions.map((position) => (
                     <div key={position} className="space-y-2">
-                      <Label htmlFor={position}>{position}</Label>
+                      <Label htmlFor={position}>
+                        {position}
+                        {position === 'MSO' && (
+                          <span className="text-xs text-slate-500 ml-2">
+                            (Divided equally among all MSOs in branch)
+                          </span>
+                        )}
+                      </Label>
                       <Input
                         id={position}
                         type="number"
                         min="0"
                         max="100"
+                        step="0.01"
                         value={formData.planShares[position as keyof typeof formData.planShares] || 0}
                         onChange={(e) => setFormData({
                           ...formData,
@@ -220,13 +222,10 @@ export function PlanShareConfig() {
                       branch_code: '',
                       kpi_category: '',
                       planShares: {
-                        'branchManager': 15,
-                        'MSM': 15,
-                        'Accountant': 15,
-                        'Auditor': 5,
-                        'MSO I': 0,
-                        'MSO II': 0,
-                        'MSO III': 0,
+                        'Branch Manager': 30,
+                        'Member Service Manager (MSM)': 25,
+                        'Accountant': 13,
+                        'MSO': 32,
                       },
                     });
                   }}

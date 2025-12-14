@@ -43,6 +43,11 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
 // Auth API
 export const authAPI = {
+  getMe: async () => {
+    return apiRequest('/auth/me', {
+      method: 'GET',
+    });
+  },
   login: async (email: string, password: string) => {
     const data = await apiRequest('/auth/login', {
       method: 'POST',
@@ -61,9 +66,6 @@ export const authAPI = {
     });
   },
   
-  getMe: async () => {
-    return apiRequest('/auth/me');
-  },
   
   updateDetails: async (details: any) => {
     return apiRequest('/auth/updatedetails', {
@@ -230,6 +232,28 @@ export const mappingsAPI = {
       method: 'POST',
       body: JSON.stringify({ branchId }),
     });
+  },
+  
+  bulkUpload: async (file: File, branchId: string) => {
+    const formData = new FormData();
+    formData.append('mappingFile', file);
+    formData.append('branchId', branchId);
+
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}/mappings/bulk-upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.message || 'Upload failed');
+    }
+
+    return response.json();
   },
 };
 
@@ -482,6 +506,107 @@ export const branchesAPI = {
   delete: async (id: string) => {
     return apiRequest(`/branches/${id}`, {
       method: 'DELETE',
+    });
+  },
+};
+
+// Regions API
+export const regionsAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/regions${queryString}`);
+  },
+  
+  getById: async (id: string) => {
+    return apiRequest(`/regions/${id}`);
+  },
+  
+  create: async (regionData: any) => {
+    return apiRequest('/regions', {
+      method: 'POST',
+      body: JSON.stringify(regionData),
+    });
+  },
+  
+  update: async (id: string, regionData: any) => {
+    return apiRequest(`/regions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(regionData),
+    });
+  },
+  
+  delete: async (id: string) => {
+    return apiRequest(`/regions/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Areas API
+export const areasAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/areas${queryString}`);
+  },
+  
+  getById: async (id: string) => {
+    return apiRequest(`/areas/${id}`);
+  },
+  
+  create: async (areaData: any) => {
+    return apiRequest('/areas', {
+      method: 'POST',
+      body: JSON.stringify(areaData),
+    });
+  },
+  
+  update: async (id: string, areaData: any) => {
+    return apiRequest(`/areas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(areaData),
+    });
+  },
+  
+  delete: async (id: string) => {
+    return apiRequest(`/areas/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Teams API
+export const teamsAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/teams/teams${queryString}`);
+  },
+
+  create: async (teamData: any) => {
+    return apiRequest('/teams/teams', {
+      method: 'POST',
+      body: JSON.stringify(teamData),
+    });
+  },
+};
+
+// Sub-Teams API
+export const subTeamsAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/teams/sub-teams${queryString}`);
+  },
+
+  create: async (subTeamData: any) => {
+    return apiRequest('/teams/sub-teams', {
+      method: 'POST',
+      body: JSON.stringify(subTeamData),
+    });
+  },
+
+  update: async (id: string, subTeamData: any) => {
+    return apiRequest(`/teams/sub-teams/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(subTeamData),
     });
   },
 };

@@ -7,18 +7,18 @@ import {
   deletePlanShareConfig,
 } from '../controllers/planShareConfigController.js';
 import { protect } from '../middleware/auth.js';
-import { isAdmin } from '../middleware/rbac.js';
+import { isHQAdmin } from '../middleware/rbac.js';
 
 const router = express.Router();
 
 router.route('/')
-  .get(protect, isAdmin, getPlanShareConfigs)
-  .post(protect, isAdmin, createPlanShareConfig);
+  .get(protect, isHQAdmin, getPlanShareConfigs)
+  .post(protect, isHQAdmin, createPlanShareConfig);
 
 router.route('/:id')
-  .get(protect, isAdmin, getPlanShareConfig)
-  .put(protect, isAdmin, updatePlanShareConfig)
-  .delete(protect, isAdmin, deletePlanShareConfig);
+  .get(protect, isHQAdmin, getPlanShareConfig)
+  .put(protect, isHQAdmin, updatePlanShareConfig)
+  .delete(protect, isHQAdmin, deletePlanShareConfig);
 
 export default router;
 

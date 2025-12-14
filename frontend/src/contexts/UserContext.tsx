@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { authAPI, getToken, removeToken } from '@/lib/api';
 import { mapBackendRoleToFrontend } from '@/lib/roleMapper';
@@ -35,7 +35,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     const token = getToken();
     if (!token) {
       setIsAuthenticated(false);
@@ -45,6 +45,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await authAPI.getMe();
+      
       if (response.success && response.data) {
         setUser(response.data);
         // Map backend role to frontend role
@@ -62,13 +63,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(false);
         setUser(null);
       }
-    } catch (error) {
-      console.error('Error loading user:', error);
-      removeToken();
+    } catch (error: any) {
+      // Don't remove token on network errors - might be temporary
+      if (!error.message?.includes('NetworkError') && !error.message?.includes('Failed to fetch')) {
+        removeToken();
+      }
       setIsAuthenticated(false);
       setUser(null);
     }
-  };
+  }, []);
 
   const logout = () => {
     removeToken();
@@ -81,7 +84,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadUser();
-  }, []);
+  }, [loadUser]);
 
   return (
     <UserContext.Provider value={{ 

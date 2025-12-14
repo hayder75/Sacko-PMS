@@ -21,7 +21,7 @@ const getStatusIcon = (status: string) => {
 };
 
 export function BranchManagerDashboard() {
-  const { user } = useUser();
+  const { user, role } = useUser();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,11 +68,19 @@ export function BranchManagerDashboard() {
     teamPerformance: [],
   };
 
+  // Determine dashboard title based on role
+  const dashboardTitle = role === 'lineManager' 
+    ? 'Line Manager Dashboard' 
+    : 'Branch Manager Dashboard';
+  const dashboardSubtitle = role === 'lineManager'
+    ? `${user?.branchId?.name || user?.branch_code || 'Branch'} - Line Manager Overview`
+    : `${user?.branchId?.name || user?.branch_code || 'Branch'} Overview`;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-800">Branch Manager Dashboard</h1>
-        <p className="text-slate-600 mt-1">{user?.branchId?.name || user?.branch_code || 'Branch'} Overview</p>
+        <h1 className="text-3xl font-bold text-slate-800">{dashboardTitle}</h1>
+        <p className="text-slate-600 mt-1">{dashboardSubtitle}</p>
       </div>
 
       {/* Summary Cards */}

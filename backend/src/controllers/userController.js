@@ -18,17 +18,34 @@ export const getUsers = asyncHandler(async (req, res) => {
     // Admin can see all
   } else if (userRole === 'branchManager') {
     // Branch Manager sees users in their branch
-    query.branch_code = req.user.branch_code;
+    if (req.user.branchId) {
+      query.branchId = req.user.branchId;
+    } else if (req.user.branch_code) {
+      query.branch_code = req.user.branch_code;
+    }
   } else if (userRole === 'lineManager') {
     // Line Manager sees users in their sub-team
-    query.branch_code = req.user.branch_code;
-    query.sub_team = req.user.sub_team;
+    if (req.user.branchId) {
+      query.branchId = req.user.branchId;
+    } else if (req.user.branch_code) {
+      query.branch_code = req.user.branch_code;
+    }
+    if (req.user.sub_team) {
+      query.sub_team = req.user.sub_team;
+    }
   } else {
     // Staff sees only themselves
     query._id = req.user._id;
   }
   
-  if (role) query.role = role;
+  if (role) {
+    // Handle both single role and array of roles
+    if (Array.isArray(role)) {
+      query.role = { $in: role };
+    } else {
+      query.role = role;
+    }
+  }
   if (branchId) query.branchId = branchId;
   if (branch_code) query.branch_code = branch_code;
   if (sub_team) query.sub_team = sub_team;
@@ -92,12 +109,12 @@ const canCreatePosition = (creatorRole, creatorPosition, targetPosition) => {
   const normalizedCreatorPosition = creatorPosition;
   const normalizedTargetPosition = targetPosition;
 
-  // Admin can create Branch Managers
-  if (normalizedCreatorRole === 'admin' && normalizedTargetPosition === 'Branch Manager') {
+  // Admin can create Regional Directors, Area Managers, and Branch Managers
+  if (normalizedCreatorRole === 'admin' && ['Regional Director', 'Area Manager', 'Branch Manager'].includes(normalizedTargetPosition)) {
     return true;
   }
   
-  // Regional Director can create Area Managers (position not in enum, handled separately)
+  // Regional Director can create Area Managers
   if (normalizedCreatorRole === 'regionalDirector' && normalizedTargetPosition === 'Area Manager') {
     return true;
   }

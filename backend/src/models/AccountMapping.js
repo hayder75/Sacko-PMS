@@ -72,6 +72,11 @@ const accountMappingSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  // Customer phone number
+  phoneNumber: {
+    type: String,
+    trim: true,
+  },
 }, {
   timestamps: true,
 });

@@ -168,13 +168,30 @@ export function UserManagement() {
                         <SelectItem value="Area Manager">Area Manager</SelectItem>
                       )}
                       {formData.role === 'branchManager' && (
-                        <SelectItem value="Branch Manager">Branch Manager</SelectItem>
+                        <>
+                          <SelectItem value="Branch Manager">Branch Manager</SelectItem>
+                          <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
+                          <SelectItem value="Accountant">Accountant</SelectItem>
+                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
+                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
+                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
+                        </>
                       )}
                       {formData.role === 'lineManager' && (
-                        <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
+                        <>
+                          <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
+                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
+                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
+                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
+                        </>
                       )}
                       {formData.role === 'subTeamLeader' && (
-                        <SelectItem value="Accountant">Accountant</SelectItem>
+                        <>
+                          <SelectItem value="Accountant">Accountant</SelectItem>
+                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
+                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
+                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
+                        </>
                       )}
                       {formData.role === 'staff' && (
                         <>

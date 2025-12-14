@@ -18,42 +18,32 @@ const planShareConfigSchema = new mongoose.Schema({
     ],
   },
   // Plan share percentages by position (official positions from plan cascad.xlsx)
+  // MSO percentage is shared equally among all MSOs (I, II, III) in the branch
   planShares: {
     'Branch Manager': {
       type: Number,
-      default: 15,
+      default: 30,
       min: 0,
       max: 100,
     },
     'Member Service Manager (MSM)': {
       type: Number,
-      default: 15,
+      default: 25,
       min: 0,
       max: 100,
     },
     'Accountant': {
       type: Number,
-      default: 15,
+      default: 13,
       min: 0,
       max: 100,
     },
-    'Member Service Officer I': {
+    'MSO': {
       type: Number,
-      default: 0,
+      default: 32,
       min: 0,
       max: 100,
-    },
-    'Member Service Officer II': {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
-    'Member Service Officer III': {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
+      // This percentage is divided equally among all MSOs (I, II, III) in the branch
     },
   },
   // Total must equal 100%

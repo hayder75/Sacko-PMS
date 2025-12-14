@@ -34,6 +34,8 @@ import { TeamPerformance } from './pages/TeamPerformance';
 import { BehavioralEvaluation } from './pages/BehavioralEvaluation';
 import { TeamTasks } from './pages/TeamTasks';
 import { BehavioralInput } from './pages/BehavioralInput';
+import { TeamManagement } from './pages/TeamManagement';
+import { BulkMappingUpload } from './pages/BulkMappingUpload';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loadUser } = useUser();
@@ -161,6 +163,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/bulk-mapping-upload"
+        element={
+          <ProtectedRoute>
+            <BulkMappingUpload />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/kpi"
         element={
           <ProtectedRoute>
@@ -277,6 +287,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <HierarchyManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teams"
+        element={
+          <ProtectedRoute>
+            <TeamManagement />
           </ProtectedRoute>
         }
       />

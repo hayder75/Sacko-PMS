@@ -70,15 +70,21 @@ export const cascadePlanToStaff = async (branchPlan) => {
     }
 
     // Get all active staff in this branch
-    const staff = await User.find({
+    const allStaff = await User.find({
       branch_code,
       isActive: true,
       role: { $in: ['staff', 'subTeamLeader'] },
     });
 
+    // Separate MSOs from other positions
+    const msoPositions = ['Member Service Officer I', 'Member Service Officer II', 'Member Service Officer III'];
+    const msoStaff = allStaff.filter(s => msoPositions.includes(s.position));
+    const otherStaff = allStaff.filter(s => !msoPositions.includes(s.position));
+
     const staffPlans = [];
 
-    for (const staffMember of staff) {
+    // Process non-MSO staff (BM, MSM, Accountant) - they get their individual percentages
+    for (const staffMember of otherStaff) {
       const position = staffMember.position;
       const planSharePercent = planShareConfig.planShares[position] || 0;
 
@@ -111,6 +117,40 @@ export const cascadePlanToStaff = async (branchPlan) => {
       });
 
       staffPlans.push(staffPlan);
+    }
+
+    // Process MSOs - divide the MSO percentage equally among all MSOs
+    const msoTotalPercent = planShareConfig.planShares['MSO'] || 0;
+    if (msoTotalPercent > 0 && msoStaff.length > 0) {
+      // Calculate each MSO's share (divide equally)
+      const msoIndividualPercent = msoTotalPercent / msoStaff.length;
+      const msoTotalTarget = (target_value * msoTotalPercent) / 100;
+      const msoIndividualTarget = msoTotalTarget / msoStaff.length;
+
+      for (const msoMember of msoStaff) {
+        // Calculate breakdowns for this MSO's share
+        const breakdowns = calculateBreakdowns(msoIndividualTarget, period);
+
+        // Create staff plan for this MSO
+        const staffPlan = await StaffPlan.create({
+          branchPlanId: branchPlan._id,
+          branch_code,
+          userId: msoMember._id,
+          position: msoMember.position,
+          kpi_category,
+          period,
+          target_type,
+          individual_target: msoIndividualTarget,
+          yearly_target: breakdowns.yearly,
+          monthly_target: breakdowns.monthly,
+          weekly_target: breakdowns.weekly,
+          daily_target: breakdowns.daily,
+          plan_share_percent: msoIndividualPercent, // Individual MSO's share
+          status: 'Active',
+        });
+
+        staffPlans.push(staffPlan);
+      }
     }
 
     return staffPlans;

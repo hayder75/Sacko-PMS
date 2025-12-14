@@ -57,6 +57,10 @@ import planShareConfigRoutes from './routes/planShareConfigRoutes.js';
 import productKpiMappingRoutes from './routes/productKpiMappingRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
+import teamRoutes from './routes/teamRoutes.js';
+import regionRoutes from './routes/regionRoutes.js';
+import areaRoutes from './routes/areaRoutes.js';
+import staffPlanRoutes from './routes/staffPlanRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -72,6 +76,10 @@ app.use('/api/plan-share-config', planShareConfigRoutes);
 app.use('/api/product-mappings', productKpiMappingRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/branches', branchRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/regions', regionRoutes);
+app.use('/api/areas', areaRoutes);
+app.use('/api/staff-plans', staffPlanRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

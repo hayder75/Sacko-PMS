@@ -1,3 +1,4 @@
+import { normalizeRole } from '../utils/roleNormalizer.js';
 // Role-Based Access Control Middleware
 
 export const authorize = (...roles) => {
@@ -21,7 +22,22 @@ export const authorize = (...roles) => {
 };
 
 // Specific role checkers
-export const isAdmin = authorize('admin');
+export const isAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized',
+    });
+  }
+  // Check for both 'admin' and 'SAKO HQ / Admin' roles
+  if (req.user.role === 'admin' || req.user.role === 'SAKO HQ / Admin') {
+    return next();
+  }
+  return res.status(403).json({
+    success: false,
+    message: `User role '${req.user.role}' is not authorized to access this route`,
+  });
+};
 export const isHQAdmin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -68,7 +84,15 @@ export const isBranchManager = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ success: false, message: 'Not authorized' });
   }
-  if (req.user.role === 'branchManager' || req.user.role === 'Branch Manager') {
+  // Allow Branch Managers and Line Managers (MSM) to access branch-level routes
+  if (
+    req.user.role === 'branchManager' ||
+    req.user.role === 'Branch Manager' ||
+    req.user.role === 'lineManager' ||
+    req.user.role === 'Line Manager' ||
+    req.user.role === 'Member Service Manager (MSM)' ||
+    req.user.role === 'MSM'
+  ) {
     return next();
   }
   return res.status(403).json({
@@ -90,9 +114,18 @@ export const isManagerOrAbove = (req, res, next) => {
     });
   }
   
-  // Check for both old and new role formats
-  const allowedRoles = ['admin', 'SAKO HQ / Admin', 'regionalDirector', 'Regional Director', 'Regional Manager', 'areaManager', 'Area Manager', 'branchManager', 'Branch Manager'];
-  if (allowedRoles.includes(req.user.role)) {
+  const normalized = normalizeRole(req.user.role);
+
+  // Check for both old and new role formats (includes lineManager/MSM)
+  const allowedRoles = [
+    'admin', 'SAKO HQ / Admin',
+    'regionalDirector', 'Regional Director', 'Regional Manager',
+    'areaManager', 'Area Manager',
+    'branchManager', 'Branch Manager',
+    'lineManager', 'Line Manager', 'Member Service Manager (MSM)', 'MSM',
+  ];
+
+  if (allowedRoles.includes(req.user.role) || allowedRoles.includes(normalized)) {
     return next();
   }
   

@@ -8,16 +8,16 @@ import {
   deleteMapping,
 } from '../controllers/productKpiMappingController.js';
 import { protect } from '../middleware/auth.js';
-import { isAdmin } from '../middleware/rbac.js';
+import { isHQAdmin } from '../middleware/rbac.js';
 
 const router = express.Router();
 
-router.get('/', protect, isAdmin, getAllMappings);
-router.get('/unmapped', protect, isAdmin, getUnmappedProducts);
-router.get('/:productName', protect, isAdmin, getMapping);
-router.post('/', protect, isAdmin, createMapping);
-router.post('/bulk', protect, isAdmin, bulkCreateMappings);
-router.delete('/:id', protect, isAdmin, deleteMapping);
+router.get('/', protect, isHQAdmin, getAllMappings);
+router.get('/unmapped', protect, isHQAdmin, getUnmappedProducts);
+router.get('/:productName', protect, isHQAdmin, getMapping);
+router.post('/', protect, isHQAdmin, createMapping);
+router.post('/bulk', protect, isHQAdmin, bulkCreateMappings);
+router.delete('/:id', protect, isHQAdmin, deleteMapping);
 
 export default router;
 
