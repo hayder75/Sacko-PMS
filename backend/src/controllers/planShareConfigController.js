@@ -1,6 +1,7 @@
-import PlanShareConfig from '../models/PlanShareConfig.js';
+import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
+import { KPI_CATEGORY_TO_ENUM } from '../utils/prismaHelpers.js';
 
 // @desc    Get plan share configs
 // @route   GET /api/plan-share-config
@@ -8,20 +9,24 @@ import { logAudit } from '../utils/auditLogger.js';
 export const getPlanShareConfigs = asyncHandler(async (req, res) => {
   const { branch_code, kpi_category, isActive } = req.query;
 
-  const query = {};
-  if (branch_code) query.branch_code = branch_code;
-  if (kpi_category) query.kpi_category = kpi_category;
-  if (isActive !== undefined) query.isActive = isActive === 'true';
+  const where = {};
+  if (branch_code) where.branch_code = branch_code.toUpperCase().trim();
+  if (kpi_category) where.kpi_category = KPI_CATEGORY_TO_ENUM[kpi_category] || kpi_category;
+  if (isActive !== undefined) where.isActive = isActive === 'true';
 
-  const configs = await PlanShareConfig.find(query)
-    .populate('createdBy', 'name email')
-    .populate('updatedBy', 'name email')
-    .sort({ kpi_category: 1, branch_code: 1 });
+  const configs = await prisma.planShareConfig.findMany({
+    where,
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: [{ kpi_category: 'asc' }, { branch_code: 'asc' }],
+  });
 
   res.status(200).json({
     success: true,
     count: configs.length,
-    data: configs,
+    data: configs.map(c => ({ ...c, _id: c.id })),
   });
 });
 
@@ -29,9 +34,13 @@ export const getPlanShareConfigs = asyncHandler(async (req, res) => {
 // @route   GET /api/plan-share-config/:id
 // @access  Private (Admin)
 export const getPlanShareConfig = asyncHandler(async (req, res) => {
-  const config = await PlanShareConfig.findById(req.params.id)
-    .populate('createdBy', 'name email')
-    .populate('updatedBy', 'name email');
+  const config = await prisma.planShareConfig.findUnique({
+    where: { id: req.params.id },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
+    },
+  });
 
   if (!config) {
     return res.status(404).json({
@@ -42,7 +51,7 @@ export const getPlanShareConfig = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: config,
+    data: { ...config, _id: config.id },
   });
 });
 
@@ -59,11 +68,15 @@ export const createPlanShareConfig = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if config already exists
-  const existing = await PlanShareConfig.findOne({
-    branch_code: branch_code || null,
-    kpi_category,
-    isActive: true,
+  const kpiEnum = KPI_CATEGORY_TO_ENUM[kpi_category] || kpi_category;
+  const bCode = branch_code ? branch_code.toUpperCase().trim() : null;
+
+  const existing = await prisma.planShareConfig.findFirst({
+    where: {
+      branch_code: bCode,
+      kpi_category: kpiEnum,
+      isActive: true,
+    },
   });
 
   if (existing) {
@@ -73,20 +86,25 @@ export const createPlanShareConfig = asyncHandler(async (req, res) => {
     });
   }
 
-  // Create config (validation happens in model pre-save)
-  const config = await PlanShareConfig.create({
-    branch_code: branch_code || null,
-    kpi_category,
-    planShares,
-    createdBy: req.user._id,
-    isActive: true,
+  const config = await prisma.planShareConfig.create({
+    data: {
+      branch_code: bCode,
+      kpi_category: kpiEnum,
+      share_branch_manager: parseFloat(planShares['Branch Manager'] || 0),
+      share_msm: parseFloat(planShares['Member Service Manager (MSM)'] || planShares['MSM'] || 0),
+      share_accountant: parseFloat(planShares['Accountant'] || 0),
+      share_mso: parseFloat(planShares['MSO'] || 0),
+      total_percent: parseFloat(Object.values(planShares).reduce((a, b) => a + b, 0)),
+      createdById: req.user.id,
+      isActive: true,
+    },
   });
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'Plan Share Config Created',
     'PlanShareConfig',
-    config._id,
+    config.id,
     `${kpi_category} - ${branch_code || 'Default'}`,
     `Created plan share config`,
     req
@@ -94,7 +112,7 @@ export const createPlanShareConfig = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    data: config,
+    data: { ...config, _id: config.id },
   });
 });
 
@@ -102,28 +120,45 @@ export const createPlanShareConfig = asyncHandler(async (req, res) => {
 // @route   PUT /api/plan-share-config/:id
 // @access  Private (Admin)
 export const updatePlanShareConfig = asyncHandler(async (req, res) => {
-  let config = await PlanShareConfig.findById(req.params.id);
+  const existingConfig = await prisma.planShareConfig.findUnique({ where: { id: req.params.id } });
 
-  if (!config) {
+  if (!existingConfig) {
     return res.status(404).json({
       success: false,
       message: 'Plan share config not found',
     });
   }
 
-  // Update planShares if provided
+  const updateData = {};
   if (req.body.planShares) {
-    config.planShares = { ...config.planShares, ...req.body.planShares };
+    const ps = req.body.planShares;
+    if (ps['Branch Manager'] !== undefined) updateData.share_branch_manager = parseFloat(ps['Branch Manager']);
+    if (ps['Member Service Manager (MSM)'] !== undefined) updateData.share_msm = parseFloat(ps['Member Service Manager (MSM)']);
+    if (ps['Accountant'] !== undefined) updateData.share_accountant = parseFloat(ps['Accountant']);
+    if (ps['MSO'] !== undefined) updateData.share_mso = parseFloat(ps['MSO']);
+
+    // Calculate new total
+    const current = {
+      'Branch Manager': updateData.share_branch_manager ?? existingConfig.share_branch_manager,
+      'MSM': updateData.share_msm ?? existingConfig.share_msm,
+      'Accountant': updateData.share_accountant ?? existingConfig.share_accountant,
+      'MSO': updateData.share_mso ?? existingConfig.share_mso,
+    };
+    updateData.total_percent = Object.values(current).reduce((a, b) => a + b, 0);
   }
 
-  config.updatedBy = req.user._id;
-  config = await config.save();
+  updateData.updatedById = req.user.id;
+
+  const config = await prisma.planShareConfig.update({
+    where: { id: req.params.id },
+    data: updateData,
+  });
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'Plan Share Config Updated',
     'PlanShareConfig',
-    config._id,
+    config.id,
     `${config.kpi_category} - ${config.branch_code || 'Default'}`,
     `Updated plan share config`,
     req
@@ -131,7 +166,7 @@ export const updatePlanShareConfig = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: config,
+    data: { ...config, _id: config.id },
   });
 });
 
@@ -139,7 +174,7 @@ export const updatePlanShareConfig = asyncHandler(async (req, res) => {
 // @route   DELETE /api/plan-share-config/:id
 // @access  Private (Admin)
 export const deletePlanShareConfig = asyncHandler(async (req, res) => {
-  const config = await PlanShareConfig.findById(req.params.id);
+  const config = await prisma.planShareConfig.findUnique({ where: { id: req.params.id } });
 
   if (!config) {
     return res.status(404).json({
@@ -148,14 +183,16 @@ export const deletePlanShareConfig = asyncHandler(async (req, res) => {
     });
   }
 
-  config.isActive = false;
-  await config.save();
+  await prisma.planShareConfig.update({
+    where: { id: req.params.id },
+    data: { isActive: false }
+  });
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'Plan Share Config Deleted',
     'PlanShareConfig',
-    config._id,
+    config.id,
     `${config.kpi_category} - ${config.branch_code || 'Default'}`,
     `Deactivated plan share config`,
     req
@@ -166,4 +203,3 @@ export const deletePlanShareConfig = asyncHandler(async (req, res) => {
     message: 'Plan share config deactivated successfully',
   });
 });
-

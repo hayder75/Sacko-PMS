@@ -1,29 +1,42 @@
-import User from '../models/User.js';
+import prisma from '../config/database.js';
 import { generateToken } from '../utils/generateToken.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
+import { hashPassword, comparePassword, POSITION_TO_ENUM } from '../utils/prismaHelpers.js';
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Private (HQ Admin only)
 export const register = asyncHandler(async (req, res) => {
-  const { employeeId, name, email, password, role, branchId, position } = req.body;
+  const { employeeId, name, email, password, role, branchId, position, branch_code, regionId, areaId, sub_team } = req.body;
 
-  const user = await User.create({
-    employeeId,
-    name,
-    email,
-    password,
-    role,
-    branchId,
-    position,
+  // Hash password before saving
+  const hashedPassword = await hashPassword(password);
+
+  // Convert position to enum if needed
+  const positionEnum = POSITION_TO_ENUM[position] || position;
+
+  const user = await prisma.user.create({
+    data: {
+      employeeId,
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      branchId: branchId || null,
+      branch_code: branch_code || null,
+      regionId: regionId || null,
+      areaId: areaId || null,
+      sub_team: sub_team || null,
+      position: positionEnum,
+    },
   });
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'User Created',
     'User',
-    user._id,
+    user.id,
     user.name,
     `Created user: ${user.name} with role ${user.role}`,
     req
@@ -32,7 +45,8 @@ export const register = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     data: {
-      _id: user._id,
+      _id: user.id,
+      id: user.id,
       employeeId: user.employeeId,
       name: user.name,
       email: user.email,
@@ -54,9 +68,11 @@ export const login = asyncHandler(async (req, res) => {
     });
   }
 
-  const user = await User.findOne({ email }).select('+password');
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
 
-  if (!user || !(await user.matchPassword(password))) {
+  if (!user || !(await comparePassword(password, user.password))) {
     return res.status(401).json({
       success: false,
       message: 'Invalid credentials',
@@ -70,10 +86,10 @@ export const login = asyncHandler(async (req, res) => {
     });
   }
 
-  const token = generateToken(user._id);
+  const token = generateToken(user.id);
 
   await logAudit(
-    user._id,
+    user.id,
     'Login',
     'System',
     null,
@@ -86,7 +102,8 @@ export const login = asyncHandler(async (req, res) => {
     success: true,
     token,
     data: {
-      _id: user._id,
+      _id: user.id,
+      id: user.id,
       employeeId: user.employeeId,
       name: user.name,
       email: user.email,
@@ -100,14 +117,39 @@ export const login = asyncHandler(async (req, res) => {
 // @route   GET /api/auth/me
 // @access  Private
 export const getMe = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id)
-    .populate('branchId', 'name code')
-    .populate('regionId', 'name')
-    .populate('areaId', 'name');
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    include: {
+      branch: {
+        select: { id: true, name: true, code: true },
+      },
+      region: {
+        select: { id: true, name: true },
+      },
+      area: {
+        select: { id: true, name: true },
+      },
+    },
+  });
+
+  // Add _id alias for backward compatibility
+  const userData = { ...user, _id: user.id };
+  if (userData.branch) {
+    userData.branch._id = userData.branch.id;
+    userData.branchId = userData.branch;
+  }
+  if (userData.region) {
+    userData.region._id = userData.region.id;
+    userData.regionId = userData.region;
+  }
+  if (userData.area) {
+    userData.area._id = userData.area.id;
+    userData.areaId = userData.area;
+  }
 
   res.status(200).json({
     success: true,
-    data: user,
+    data: userData,
   });
 });
 
@@ -115,21 +157,20 @@ export const getMe = asyncHandler(async (req, res) => {
 // @route   PUT /api/auth/updatedetails
 // @access  Private
 export const updateDetails = asyncHandler(async (req, res) => {
-  const fieldsToUpdate = {
-    name: req.body.name,
-    email: req.body.email,
-  };
+  const fieldsToUpdate = {};
+  if (req.body.name) fieldsToUpdate.name = req.body.name;
+  if (req.body.email) fieldsToUpdate.email = req.body.email;
 
-  const user = await User.findByIdAndUpdate(req.user._id, fieldsToUpdate, {
-    new: true,
-    runValidators: true,
+  const user = await prisma.user.update({
+    where: { id: req.user.id },
+    data: fieldsToUpdate,
   });
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'User Updated',
     'User',
-    user._id,
+    user.id,
     user.name,
     `Updated user details`,
     req
@@ -137,7 +178,7 @@ export const updateDetails = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: user,
+    data: { ...user, _id: user.id },
   });
 });
 
@@ -145,23 +186,29 @@ export const updateDetails = asyncHandler(async (req, res) => {
 // @route   PUT /api/auth/updatepassword
 // @access  Private
 export const updatePassword = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select('+password');
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+  });
 
-  if (!(await user.matchPassword(req.body.currentPassword))) {
+  if (!(await comparePassword(req.body.currentPassword, user.password))) {
     return res.status(401).json({
       success: false,
       message: 'Password is incorrect',
     });
   }
 
-  user.password = req.body.newPassword;
-  await user.save();
+  const hashedPassword = await hashPassword(req.body.newPassword);
+
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: { password: hashedPassword },
+  });
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'Password Reset',
     'User',
-    user._id,
+    user.id,
     user.name,
     `Password updated`,
     req
@@ -172,4 +219,3 @@ export const updatePassword = asyncHandler(async (req, res) => {
     message: 'Password updated successfully',
   });
 });
-

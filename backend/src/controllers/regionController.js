@@ -1,24 +1,34 @@
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import Region from '../models/Region.js';
-import { logAudit } from '../utils/auditLogger.js';
+import prisma from '../config/database.js';
 
 // @desc    Get all regions
 // @route   GET /api/regions
 // @access  Private (Admin)
 export const getRegions = asyncHandler(async (req, res) => {
   const { isActive } = req.query;
-  
-  const query = {};
-  if (isActive !== undefined) query.isActive = isActive === 'true';
 
-  const regions = await Region.find(query)
-    .populate('directorId', 'name email')
-    .sort({ name: 1 });
+  const where = {};
+  if (isActive !== undefined) where.isActive = isActive === 'true';
+
+  const regions = await prisma.region.findMany({
+    where,
+    include: {
+      director: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { name: 'asc' },
+  });
+
+  // Map for backward compatibility
+  const mappedRegions = regions.map(region => ({
+    ...region,
+    _id: region.id,
+    directorId: region.director ? { ...region.director, _id: region.director.id } : null,
+  }));
 
   res.status(200).json({
     success: true,
-    count: regions.length,
-    data: regions,
+    count: mappedRegions.length,
+    data: mappedRegions,
   });
 });
 
@@ -26,7 +36,12 @@ export const getRegions = asyncHandler(async (req, res) => {
 // @route   GET /api/regions/:id
 // @access  Private (Admin)
 export const getRegion = asyncHandler(async (req, res) => {
-  const region = await Region.findById(req.params.id).populate('directorId', 'name email');
+  const region = await prisma.region.findUnique({
+    where: { id: req.params.id },
+    include: {
+      director: { select: { id: true, name: true, email: true } },
+    },
+  });
 
   if (!region) {
     return res.status(404).json({
@@ -37,7 +52,7 @@ export const getRegion = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: region,
+    data: { ...region, _id: region.id },
   });
 });
 
@@ -54,7 +69,7 @@ export const createRegion = asyncHandler(async (req, res) => {
     });
   }
 
-  const existingRegion = await Region.findOne({ code });
+  const existingRegion = await prisma.region.findUnique({ where: { code } });
   if (existingRegion) {
     return res.status(400).json({
       success: false,
@@ -62,26 +77,18 @@ export const createRegion = asyncHandler(async (req, res) => {
     });
   }
 
-  const region = await Region.create({
-    name,
-    code,
-    directorId: directorId || undefined,
+  const region = await prisma.region.create({
+    data: {
+      name,
+      code,
+      directorId: directorId || null,
+    },
   });
-
-  await logAudit(
-    req.user._id,
-    'Region Created',
-    'Region',
-    region._id,
-    region.name,
-    `Created region: ${region.name} (${region.code})`,
-    req
-  );
 
   res.status(201).json({
     success: true,
     message: 'Region created successfully',
-    data: region,
+    data: { ...region, _id: region.id },
   });
 });
 
@@ -89,34 +96,26 @@ export const createRegion = asyncHandler(async (req, res) => {
 // @route   PUT /api/regions/:id
 // @access  Private (Admin)
 export const updateRegion = asyncHandler(async (req, res) => {
-  let region = await Region.findById(req.params.id);
+  const existingRegion = await prisma.region.findUnique({
+    where: { id: req.params.id },
+  });
 
-  if (!region) {
+  if (!existingRegion) {
     return res.status(404).json({
       success: false,
       message: 'Region not found',
     });
   }
 
-  region = await Region.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
+  const region = await prisma.region.update({
+    where: { id: req.params.id },
+    data: req.body,
   });
-
-  await logAudit(
-    req.user._id,
-    'Region Updated',
-    'Region',
-    region._id,
-    region.name,
-    `Updated region: ${region.name}`,
-    req
-  );
 
   res.status(200).json({
     success: true,
     message: 'Region updated successfully',
-    data: region,
+    data: { ...region, _id: region.id },
   });
 });
 
@@ -124,7 +123,9 @@ export const updateRegion = asyncHandler(async (req, res) => {
 // @route   DELETE /api/regions/:id
 // @access  Private (Admin)
 export const deleteRegion = asyncHandler(async (req, res) => {
-  const region = await Region.findById(req.params.id);
+  const region = await prisma.region.findUnique({
+    where: { id: req.params.id },
+  });
 
   if (!region) {
     return res.status(404).json({
@@ -134,23 +135,14 @@ export const deleteRegion = asyncHandler(async (req, res) => {
   }
 
   // Soft delete - set isActive to false
-  region.isActive = false;
-  await region.save();
-
-  await logAudit(
-    req.user._id,
-    'Region Deleted',
-    'Region',
-    region._id,
-    region.name,
-    `Deactivated region: ${region.name}`,
-    req
-  );
+  const updatedRegion = await prisma.region.update({
+    where: { id: req.params.id },
+    data: { isActive: false },
+  });
 
   res.status(200).json({
     success: true,
     message: 'Region deactivated successfully',
-    data: region,
+    data: { ...updatedRegion, _id: updatedRegion.id },
   });
 });
-

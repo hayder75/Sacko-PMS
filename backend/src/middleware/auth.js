@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import prisma from '../config/database.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -17,15 +17,36 @@ export const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.userId).select('-password');
-    
-    if (!req.user || !req.user.isActive) {
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        email: true,
+        role: true,
+        branchId: true,
+        branch_code: true,
+        sub_team: true,
+        regionId: true,
+        areaId: true,
+        position: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user || !user.isActive) {
       return res.status(401).json({
         success: false,
         message: 'User not found or inactive',
       });
     }
-    
+
+    // Add _id alias for backward compatibility
+    req.user = { ...user, _id: user.id };
+
     next();
   } catch (error) {
     return res.status(401).json({
@@ -34,4 +55,3 @@ export const protect = async (req, res, next) => {
     });
   }
 };
-

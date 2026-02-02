@@ -1,44 +1,43 @@
-import AuditLog from '../models/AuditLog.js';
+import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { isHQAdmin } from '../middleware/rbac.js';
 
 // @desc    Get all audit logs
 // @route   GET /api/audit
 // @access  Private (HQ Admin only)
 export const getAuditLogs = asyncHandler(async (req, res) => {
   const { action, entityType, userId, startDate, endDate, limit = 100 } = req.query;
-  
-  const query = {};
-  
-  if (action) query.action = action;
-  if (entityType) query.entityType = entityType;
-  if (userId) query.userId = userId;
-  
+
+  const where = {};
+
+  if (action) where.action = action;
+  if (entityType) where.entityType = entityType;
+  if (userId) where.userId = userId;
+
   if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      query.createdAt.$lte = new Date(endDate);
-    }
+    where.createdAt = {};
+    if (startDate) where.createdAt.gte = new Date(startDate);
+    if (endDate) where.createdAt.lte = new Date(endDate);
   }
 
-  const auditLogs = await AuditLog.find(query)
-    .populate('userId', 'name email role')
-    .sort({ createdAt: -1 })
-    .limit(parseInt(limit));
+  const auditLogs = await prisma.auditLog.findMany({
+    where,
+    include: {
+      user: { select: { id: true, name: true, email: true, role: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: parseInt(limit),
+  });
 
   res.status(200).json({
     success: true,
     count: auditLogs.length,
     data: auditLogs.map(log => ({
-      _id: log._id,
-      id: log._id,
+      _id: log.id,
+      id: log.id,
       timestamp: log.createdAt,
       createdAt: log.createdAt,
-      user: log.userId?.name || 'Unknown',
-      userName: log.userId?.name || 'Unknown',
+      user: log.user?.name || 'Unknown',
+      userName: log.user?.name || 'Unknown',
       action: log.action,
       entity: log.entityName || log.entityType || 'N/A',
       entityName: log.entityName || log.entityType || 'N/A',
@@ -54,8 +53,12 @@ export const getAuditLogs = asyncHandler(async (req, res) => {
 // @route   GET /api/audit/:id
 // @access  Private (HQ Admin only)
 export const getAuditLog = asyncHandler(async (req, res) => {
-  const auditLog = await AuditLog.findById(req.params.id)
-    .populate('userId', 'name email role');
+  const auditLog = await prisma.auditLog.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: { select: { id: true, name: true, email: true, role: true } },
+    },
+  });
 
   if (!auditLog) {
     return res.status(404).json({
@@ -66,7 +69,6 @@ export const getAuditLog = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: auditLog,
+    data: { ...auditLog, _id: auditLog.id },
   });
 });
-

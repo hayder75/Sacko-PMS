@@ -1,6 +1,6 @@
 import { normalizeRole } from '../utils/roleNormalizer.js';
-// Role-Based Access Control Middleware
 
+// Role-Based Access Control Middleware
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -10,7 +10,8 @@ export const authorize = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    const userRole = normalizeRole(req.user.role);
+    if (!roles.includes(userRole)) {
       return res.status(403).json({
         success: false,
         message: `User role '${req.user.role}' is not authorized to access this route`,
@@ -29,8 +30,9 @@ export const isAdmin = (req, res, next) => {
       message: 'Not authorized',
     });
   }
-  // Check for both 'admin' and 'SAKO HQ / Admin' roles
-  if (req.user.role === 'admin' || req.user.role === 'SAKO HQ / Admin') {
+
+  const userRole = normalizeRole(req.user.role);
+  if (userRole === 'admin') {
     return next();
   }
   return res.status(403).json({
@@ -38,72 +40,58 @@ export const isAdmin = (req, res, next) => {
     message: `User role '${req.user.role}' is not authorized to access this route`,
   });
 };
-export const isHQAdmin = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized',
-    });
-  }
-  // Check for both 'admin' and 'SAKO HQ / Admin' roles
-  if (req.user.role === 'admin' || req.user.role === 'SAKO HQ / Admin') {
-    return next();
-  }
-  return res.status(403).json({
-    success: false,
-    message: `User role '${req.user.role}' is not authorized to access this route`,
-  });
-};
+
+export const isHQAdmin = isAdmin;
+
 export const isRegionalDirector = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ success: false, message: 'Not authorized' });
-  }
-  if (req.user.role === 'regionalDirector' || req.user.role === 'Regional Director' || req.user.role === 'Regional Manager') {
+  if (!req.user) return res.status(401).json({ success: false, message: 'Not authorized' });
+  const userRole = normalizeRole(req.user.role);
+  if (userRole === 'regionalDirector' || userRole === 'admin') {
     return next();
   }
-  return res.status(403).json({
-    success: false,
-    message: `User role '${req.user.role}' is not authorized to access this route`,
-  });
+  return res.status(403).json({ success: false, message: 'Forbidden' });
 };
 
 export const isAreaManager = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ success: false, message: 'Not authorized' });
-  }
-  if (req.user.role === 'areaManager' || req.user.role === 'Area Manager') {
+  if (!req.user) return res.status(401).json({ success: false, message: 'Not authorized' });
+  const userRole = normalizeRole(req.user.role);
+  if (userRole === 'areaManager' || userRole === 'admin' || userRole === 'regionalDirector') {
     return next();
   }
-  return res.status(403).json({
-    success: false,
-    message: `User role '${req.user.role}' is not authorized to access this route`,
-  });
+  return res.status(403).json({ success: false, message: 'Forbidden' });
 };
 
 export const isBranchManager = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ success: false, message: 'Not authorized' });
-  }
-  // Allow Branch Managers and Line Managers (MSM) to access branch-level routes
-  if (
-    req.user.role === 'branchManager' ||
-    req.user.role === 'Branch Manager' ||
-    req.user.role === 'lineManager' ||
-    req.user.role === 'Line Manager' ||
-    req.user.role === 'Member Service Manager (MSM)' ||
-    req.user.role === 'MSM'
-  ) {
+  if (!req.user) return res.status(401).json({ success: false, message: 'Not authorized' });
+  const userRole = normalizeRole(req.user.role);
+  if (userRole === 'branchManager' || userRole === 'admin' || userRole === 'lineManager' || userRole === 'regionalDirector' || userRole === 'areaManager') {
     return next();
   }
-  return res.status(403).json({
-    success: false,
-    message: `User role '${req.user.role}' is not authorized to access this route`,
-  });
+  return res.status(403).json({ success: false, message: 'Forbidden' });
 };
 
-export const isLineManager = authorize('lineManager');
-export const isSubTeamLeader = authorize('subTeamLeader');
-export const isStaff = authorize('staff');
+export const isLineManager = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'Not authorized' });
+  const userRole = normalizeRole(req.user.role);
+  if (userRole === 'lineManager' || userRole === 'admin' || userRole === 'branchManager') {
+    return next();
+  }
+  return next();
+};
+
+export const isSubTeamLeader = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'Not authorized' });
+  const userRole = normalizeRole(req.user.role);
+  if (userRole === 'subTeamLeader' || userRole === 'admin' || userRole === 'branchManager') {
+    return next();
+  }
+  return next();
+};
+
+export const isStaff = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'Not authorized' });
+  return next();
+};
 
 // Combined role checkers
 export const isManagerOrAbove = (req, res, next) => {
@@ -113,35 +101,30 @@ export const isManagerOrAbove = (req, res, next) => {
       message: 'Not authorized',
     });
   }
-  
-  const normalized = normalizeRole(req.user.role);
 
-  // Check for both old and new role formats (includes lineManager/MSM)
-  const allowedRoles = [
-    'admin', 'SAKO HQ / Admin',
-    'regionalDirector', 'Regional Director', 'Regional Manager',
-    'areaManager', 'Area Manager',
-    'branchManager', 'Branch Manager',
-    'lineManager', 'Line Manager', 'Member Service Manager (MSM)', 'MSM',
-  ];
+  const userRole = normalizeRole(req.user.role);
+  const managerRoles = ['admin', 'regionalDirector', 'areaManager', 'branchManager', 'lineManager'];
 
-  if (allowedRoles.includes(req.user.role) || allowedRoles.includes(normalized)) {
+  if (managerRoles.includes(userRole)) {
     return next();
   }
-  
+
   return res.status(403).json({
     success: false,
     message: `User role '${req.user.role}' is not authorized to access this route`,
   });
 };
 
-export const canApprove = authorize(
-  'admin',
-  'areaManager',
-  'branchManager',
-  'lineManager',
-  'subTeamLeader'
-);
+export const canApprove = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'Not authorized' });
+  const userRole = normalizeRole(req.user.role);
+  const approverRoles = ['admin', 'areaManager', 'branchManager', 'lineManager', 'subTeamLeader'];
+
+  if (approverRoles.includes(userRole)) {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Forbidden' });
+};
 
 // Position-based checkers
 export const canApproveByPosition = (req, res, next) => {
@@ -162,4 +145,3 @@ export const canApproveByPosition = (req, res, next) => {
 
   next();
 };
-

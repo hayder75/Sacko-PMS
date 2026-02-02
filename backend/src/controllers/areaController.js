@@ -1,27 +1,37 @@
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import Area from '../models/Area.js';
-import Region from '../models/Region.js';
-import { logAudit } from '../utils/auditLogger.js';
+import prisma from '../config/database.js';
 
 // @desc    Get all areas
 // @route   GET /api/areas
 // @access  Private (Admin)
 export const getAreas = asyncHandler(async (req, res) => {
   const { isActive, regionId } = req.query;
-  
-  const query = {};
-  if (isActive !== undefined) query.isActive = isActive === 'true';
-  if (regionId) query.regionId = regionId;
 
-  const areas = await Area.find(query)
-    .populate('regionId', 'name code')
-    .populate('managerId', 'name email')
-    .sort({ name: 1 });
+  const where = {};
+  if (isActive !== undefined) where.isActive = isActive === 'true';
+  if (regionId) where.regionId = regionId;
+
+  const areas = await prisma.area.findMany({
+    where,
+    include: {
+      region: { select: { id: true, name: true, code: true } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { name: 'asc' },
+  });
+
+  // Map for backward compatibility
+  const mappedAreas = areas.map(area => ({
+    ...area,
+    _id: area.id,
+    regionId: area.region ? { ...area.region, _id: area.region.id } : null,
+    managerId: area.manager ? { ...area.manager, _id: area.manager.id } : null,
+  }));
 
   res.status(200).json({
     success: true,
-    count: areas.length,
-    data: areas,
+    count: mappedAreas.length,
+    data: mappedAreas,
   });
 });
 
@@ -29,9 +39,13 @@ export const getAreas = asyncHandler(async (req, res) => {
 // @route   GET /api/areas/:id
 // @access  Private (Admin)
 export const getArea = asyncHandler(async (req, res) => {
-  const area = await Area.findById(req.params.id)
-    .populate('regionId', 'name code')
-    .populate('managerId', 'name email');
+  const area = await prisma.area.findUnique({
+    where: { id: req.params.id },
+    include: {
+      region: { select: { id: true, name: true, code: true } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
+  });
 
   if (!area) {
     return res.status(404).json({
@@ -42,7 +56,7 @@ export const getArea = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: area,
+    data: { ...area, _id: area.id },
   });
 });
 
@@ -59,7 +73,7 @@ export const createArea = asyncHandler(async (req, res) => {
     });
   }
 
-  const existingArea = await Area.findOne({ code });
+  const existingArea = await prisma.area.findUnique({ where: { code } });
   if (existingArea) {
     return res.status(400).json({
       success: false,
@@ -67,7 +81,7 @@ export const createArea = asyncHandler(async (req, res) => {
     });
   }
 
-  const region = await Region.findById(regionId);
+  const region = await prisma.region.findUnique({ where: { id: regionId } });
   if (!region) {
     return res.status(404).json({
       success: false,
@@ -75,27 +89,19 @@ export const createArea = asyncHandler(async (req, res) => {
     });
   }
 
-  const area = await Area.create({
-    name,
-    code,
-    regionId,
-    managerId: managerId || undefined,
+  const area = await prisma.area.create({
+    data: {
+      name,
+      code,
+      regionId,
+      managerId: managerId || null,
+    },
   });
-
-  await logAudit(
-    req.user._id,
-    'Area Created',
-    'Area',
-    area._id,
-    area.name,
-    `Created area: ${area.name} (${area.code}) in region ${region.name}`,
-    req
-  );
 
   res.status(201).json({
     success: true,
     message: 'Area created successfully',
-    data: area,
+    data: { ...area, _id: area.id },
   });
 });
 
@@ -103,34 +109,26 @@ export const createArea = asyncHandler(async (req, res) => {
 // @route   PUT /api/areas/:id
 // @access  Private (Admin)
 export const updateArea = asyncHandler(async (req, res) => {
-  let area = await Area.findById(req.params.id);
+  const existingArea = await prisma.area.findUnique({
+    where: { id: req.params.id },
+  });
 
-  if (!area) {
+  if (!existingArea) {
     return res.status(404).json({
       success: false,
       message: 'Area not found',
     });
   }
 
-  area = await Area.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
+  const area = await prisma.area.update({
+    where: { id: req.params.id },
+    data: req.body,
   });
-
-  await logAudit(
-    req.user._id,
-    'Area Updated',
-    'Area',
-    area._id,
-    area.name,
-    `Updated area: ${area.name}`,
-    req
-  );
 
   res.status(200).json({
     success: true,
     message: 'Area updated successfully',
-    data: area,
+    data: { ...area, _id: area.id },
   });
 });
 
@@ -138,7 +136,9 @@ export const updateArea = asyncHandler(async (req, res) => {
 // @route   DELETE /api/areas/:id
 // @access  Private (Admin)
 export const deleteArea = asyncHandler(async (req, res) => {
-  const area = await Area.findById(req.params.id);
+  const area = await prisma.area.findUnique({
+    where: { id: req.params.id },
+  });
 
   if (!area) {
     return res.status(404).json({
@@ -148,23 +148,14 @@ export const deleteArea = asyncHandler(async (req, res) => {
   }
 
   // Soft delete - set isActive to false
-  area.isActive = false;
-  await area.save();
-
-  await logAudit(
-    req.user._id,
-    'Area Deleted',
-    'Area',
-    area._id,
-    area.name,
-    `Deactivated area: ${area.name}`,
-    req
-  );
+  const updatedArea = await prisma.area.update({
+    where: { id: req.params.id },
+    data: { isActive: false },
+  });
 
   res.status(200).json({
     success: true,
     message: 'Area deactivated successfully',
-    data: area,
+    data: { ...updatedArea, _id: updatedArea.id },
   });
 });
-

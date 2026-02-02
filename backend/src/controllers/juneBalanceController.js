@@ -1,4 +1,4 @@
-import JuneBalance from '../models/JuneBalance.js';
+import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
 import XLSX from 'xlsx';
@@ -15,72 +15,40 @@ export const importJuneBalance = asyncHandler(async (req, res) => {
     });
   }
 
-  // Get baseline period and date from request body
   const baseline_period = req.body.baseline_period || '2025';
   const baseline_date_str = req.body.baseline_date || '2025-06-30';
-  const make_active = req.body.make_active !== 'false'; // Default to true
+  const make_active = req.body.make_active !== 'false';
   const baseline_date = new Date(baseline_date_str);
 
   if (isNaN(baseline_date.getTime())) {
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     return res.status(400).json({
       success: false,
       message: 'Invalid baseline_date format. Use YYYY-MM-DD',
     });
   }
 
-  // Validate baseline_period is not empty
-  if (!baseline_period || baseline_period.trim() === '') {
-    return res.status(400).json({
-      success: false,
-      message: 'baseline_period is required',
-    });
-  }
-
   try {
-    // If making this baseline active, deactivate all other baselines
     if (make_active) {
-      await JuneBalance.updateMany(
-        { is_active: true },
-        { is_active: false }
-      );
-    }
-
-    // Parse Excel file
-    let workbook;
-    try {
-      workbook = XLSX.readFile(req.file.path);
-    } catch (error) {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(400).json({
-        success: false,
-        message: 'Failed to parse file. Please ensure it is a valid Excel (.xlsx) or CSV file.',
+      await prisma.juneBalance.updateMany({
+        where: { is_active: true },
+        data: { is_active: false }
       });
     }
 
-    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(400).json({
-        success: false,
-        message: 'File has no sheets',
-      });
-    }
-
+    const workbook = XLSX.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
 
     if (!data || data.length === 0) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
         message: 'File is empty or invalid',
       });
     }
 
-    // Process each row
     const results = {
       imported: 0,
       updated: 0,
@@ -89,112 +57,103 @@ export const importJuneBalance = asyncHandler(async (req, res) => {
 
     for (const row of data) {
       try {
-        const account_id = row.account_id || row.accountId || row['Account ID'];
+        const account_id = String(row.account_id || row.accountId || row['Account ID'] || '').trim();
         const june_balance = parseFloat(row.june_balance || row.juneBalance || row['June Balance'] || 0);
-        const accountNumber = row.accountNumber || row.account_number || row['Account Number'];
-        const branch_code = row.branch_code || row.branchCode || row['Branch Code'];
+        const accountNumber = String(row.accountNumber || row.account_number || row['Account Number'] || '').trim();
+        const branch_code = String(row.branch_code || row.branchCode || row['Branch Code'] || '').trim().toUpperCase();
 
         if (!account_id) {
-          results.errors.push(`Row missing account_id: ${JSON.stringify(row)}`);
+          results.errors.push(`Row missing account_id`);
           continue;
         }
 
-        // Upsert June balance record with baseline_period
-        const existing = await JuneBalance.findOne({
-          account_id: String(account_id),
-          baseline_period: baseline_period,
+        const existing = await prisma.juneBalance.findUnique({
+          where: {
+            account_id_baseline_period: {
+              account_id,
+              baseline_period
+            }
+          }
         });
 
-        await JuneBalance.findOneAndUpdate(
-          { 
-            account_id: String(account_id),
-            baseline_period: baseline_period,
-          },
-          {
-            account_id: String(account_id),
-            accountNumber: accountNumber ? String(accountNumber) : undefined,
-            june_balance: june_balance || 0,
-            branch_code: branch_code ? String(branch_code) : undefined,
-            baseline_period: baseline_period,
-            baseline_date: baseline_date,
-            is_active: make_active,
-            importedBy: req.user._id,
-            importedAt: new Date(),
-          },
-          { upsert: true, new: true }
-        );
-
         if (existing) {
+          await prisma.juneBalance.update({
+            where: { id: existing.id },
+            data: {
+              accountNumber: accountNumber || null,
+              june_balance,
+              branch_code: branch_code || null,
+              baseline_date,
+              is_active: make_active,
+              importedById: req.user.id,
+              importedAt: new Date(),
+            }
+          });
           results.updated++;
         } else {
+          await prisma.juneBalance.create({
+            data: {
+              account_id,
+              accountNumber: accountNumber || null,
+              june_balance,
+              branch_code: branch_code || null,
+              baseline_period,
+              baseline_date,
+              is_active: make_active,
+              importedById: req.user.id,
+            }
+          });
           results.imported++;
         }
       } catch (error) {
-        results.errors.push(`Error processing row: ${error.message}`);
+        results.errors.push(`Error: ${error.message}`);
       }
     }
 
-    // Delete uploaded file
-    try {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-    } catch (error) {
-      console.error('Error deleting uploaded file:', error);
-      // Continue even if file deletion fails
-    }
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
     await logAudit(
-      req.user._id,
+      req.user.id,
       'Baseline Balance Import',
       'JuneBalance',
       null,
-      `${baseline_period} Baseline (${baseline_date_str})`,
-      `Imported ${results.imported} new, updated ${results.updated} account balances`,
+      `${baseline_period} Baseline`,
+      `Imported ${results.imported}, updated ${results.updated} balances`,
       req
     );
 
     res.status(200).json({
       success: true,
-      message: `Successfully imported ${results.imported} new and updated ${results.updated} account balances for ${baseline_period} baseline`,
-      data: {
-        ...results,
-        baseline_period,
-        baseline_date: baseline_date_str,
-        is_active: make_active,
-      },
+      message: `Successfully imported balances for ${baseline_period}`,
+      data: results,
     });
   } catch (error) {
-    // Clean up file on error
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     throw error;
   }
 });
 
-// @desc    Get June balance by account (uses active baseline by default)
+// @desc    Get June balance by account
 // @route   GET /api/june-balance/:accountId
 // @access  Private
 export const getJuneBalance = asyncHandler(async (req, res) => {
   const { accountId } = req.params;
   const { baseline_period } = req.query;
 
-  const query = {
-    $or: [
+  const where = {
+    OR: [
       { account_id: accountId },
       { accountNumber: accountId },
-    ],
+    ]
   };
 
-  // If baseline_period specified, use it; otherwise use active baseline
   if (baseline_period) {
-    query.baseline_period = baseline_period;
+    where.baseline_period = baseline_period;
   } else {
-    query.is_active = true;
+    where.is_active = true;
   }
 
-  const juneBalance = await JuneBalance.findOne(query);
+  const juneBalance = await prisma.juneBalance.findFirst({ where });
 
   if (!juneBalance) {
     return res.status(404).json({
@@ -205,7 +164,7 @@ export const getJuneBalance = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: juneBalance,
+    data: { ...juneBalance, _id: juneBalance.id },
   });
 });
 
@@ -215,19 +174,21 @@ export const getJuneBalance = asyncHandler(async (req, res) => {
 export const getAllJuneBalances = asyncHandler(async (req, res) => {
   const { branch_code, baseline_period, is_active } = req.query;
 
-  const query = {};
-  if (branch_code) query.branch_code = branch_code;
-  if (baseline_period) query.baseline_period = baseline_period;
-  if (is_active !== undefined) query.is_active = is_active === 'true';
+  const where = {};
+  if (branch_code) where.branch_code = branch_code.toUpperCase().trim();
+  if (baseline_period) where.baseline_period = baseline_period;
+  if (is_active !== undefined) where.is_active = is_active === 'true';
 
-  const balances = await JuneBalance.find(query)
-    .sort({ account_id: 1, baseline_period: -1 })
-    .limit(1000); // Limit for performance
+  const balances = await prisma.juneBalance.findMany({
+    where,
+    orderBy: [{ account_id: 'asc' }, { baseline_period: 'desc' }],
+    take: 1000,
+  });
 
   res.status(200).json({
     success: true,
     count: balances.length,
-    data: balances,
+    data: balances.map(b => ({ ...b, _id: b.id })),
   });
 });
 
@@ -235,17 +196,29 @@ export const getAllJuneBalances = asyncHandler(async (req, res) => {
 // @route   GET /api/june-balance/periods/list
 // @access  Private (Admin)
 export const getBaselinePeriods = asyncHandler(async (req, res) => {
-  const periods = await JuneBalance.distinct('baseline_period');
+  // Prisma doesn't have a direct "distinct" that returns full objects easily,
+  // so we'll use groupBy
+  const groups = await prisma.juneBalance.groupBy({
+    by: ['baseline_period'],
+    _count: {
+      account_id: true
+    }
+  });
+
   const periodsWithDetails = await Promise.all(
-    periods.map(async (period) => {
-      const count = await JuneBalance.countDocuments({ baseline_period: period });
-      const active = await JuneBalance.findOne({ baseline_period: period, is_active: true });
-      const sample = await JuneBalance.findOne({ baseline_period: period });
+    groups.map(async (group) => {
+      const sample = await prisma.juneBalance.findFirst({
+        where: { baseline_period: group.baseline_period }
+      });
+      const activeSample = await prisma.juneBalance.findFirst({
+        where: { baseline_period: group.baseline_period, is_active: true }
+      });
+
       return {
-        baseline_period: period,
+        baseline_period: group.baseline_period,
         baseline_date: sample?.baseline_date,
-        account_count: count,
-        is_active: !!active,
+        account_count: group._count.account_id,
+        is_active: !!activeSample,
         importedAt: sample?.importedAt,
       };
     })
@@ -263,27 +236,19 @@ export const getBaselinePeriods = asyncHandler(async (req, res) => {
 export const activateBaselinePeriod = asyncHandler(async (req, res) => {
   const { period } = req.params;
 
-  // Deactivate all other baselines
-  await JuneBalance.updateMany(
-    { is_active: true },
-    { is_active: false }
-  );
-
-  // Activate this baseline period
-  const result = await JuneBalance.updateMany(
-    { baseline_period: period },
-    { is_active: true }
-  );
-
-  if (result.matchedCount === 0) {
-    return res.status(404).json({
-      success: false,
-      message: `No baseline found for period ${period}`,
-    });
-  }
+  await prisma.$transaction([
+    prisma.juneBalance.updateMany({
+      where: { is_active: true },
+      data: { is_active: false }
+    }),
+    prisma.juneBalance.updateMany({
+      where: { baseline_period: period },
+      data: { is_active: true }
+    })
+  ]);
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'Baseline Activation',
     'JuneBalance',
     null,
@@ -295,10 +260,5 @@ export const activateBaselinePeriod = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: `Activated ${period} baseline period`,
-    data: {
-      baseline_period: period,
-      accounts_updated: result.modifiedCount,
-    },
   });
 });
-

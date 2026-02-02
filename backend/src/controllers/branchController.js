@@ -1,31 +1,41 @@
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import Branch from '../models/Branch.js';
-import { logAudit } from '../utils/auditLogger.js';
-import Area from '../models/Area.js';
-import Region from '../models/Region.js';
-import User from '../models/User.js';
+import prisma from '../config/database.js';
+import { normalizeRole } from '../utils/roleNormalizer.js';
 
 // @desc    Get all branches
 // @route   GET /api/branches
 // @access  Private (Admin)
 export const getBranches = asyncHandler(async (req, res) => {
   const { isActive, areaId, regionId } = req.query;
-  
-  const query = {};
-  if (isActive !== undefined) query.isActive = isActive === 'true';
-  if (areaId) query.areaId = areaId;
-  if (regionId) query.regionId = regionId;
 
-  const branches = await Branch.find(query)
-    .populate('regionId', 'name')
-    .populate('areaId', 'name')
-    .populate('managerId', 'name email')
-    .sort({ name: 1 });
+  const where = {};
+  if (isActive !== undefined) where.isActive = isActive === 'true';
+  if (areaId) where.areaId = areaId;
+  if (regionId) where.regionId = regionId;
+
+  const branches = await prisma.branch.findMany({
+    where,
+    include: {
+      region: { select: { id: true, name: true } },
+      area: { select: { id: true, name: true } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { name: 'asc' },
+  });
+
+  // Map for backward compatibility
+  const mappedBranches = branches.map(branch => ({
+    ...branch,
+    _id: branch.id,
+    regionId: branch.region ? { ...branch.region, _id: branch.region.id } : null,
+    areaId: branch.area ? { ...branch.area, _id: branch.area.id } : null,
+    managerId: branch.manager ? { ...branch.manager, _id: branch.manager.id } : null,
+  }));
 
   res.status(200).json({
     success: true,
-    count: branches.length,
-    data: branches,
+    count: mappedBranches.length,
+    data: mappedBranches,
   });
 });
 
@@ -33,10 +43,14 @@ export const getBranches = asyncHandler(async (req, res) => {
 // @route   GET /api/branches/:id
 // @access  Private (Admin)
 export const getBranch = asyncHandler(async (req, res) => {
-  const branch = await Branch.findById(req.params.id)
-    .populate('regionId', 'name')
-    .populate('areaId', 'name')
-    .populate('managerId', 'name email');
+  const branch = await prisma.branch.findUnique({
+    where: { id: req.params.id },
+    include: {
+      region: { select: { id: true, name: true } },
+      area: { select: { id: true, name: true } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
+  });
 
   if (!branch) {
     return res.status(404).json({
@@ -47,7 +61,7 @@ export const getBranch = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: branch,
+    data: { ...branch, _id: branch.id },
   });
 });
 
@@ -66,7 +80,9 @@ export const createBranch = asyncHandler(async (req, res) => {
   }
 
   // Check if branch code already exists
-  const existingBranch = await Branch.findOne({ code: code.toUpperCase().trim() });
+  const existingBranch = await prisma.branch.findUnique({
+    where: { code: code.toUpperCase().trim() }
+  });
   if (existingBranch) {
     return res.status(400).json({
       success: false,
@@ -75,7 +91,7 @@ export const createBranch = asyncHandler(async (req, res) => {
   }
 
   // Verify region exists
-  const region = await Region.findById(regionId);
+  const region = await prisma.region.findUnique({ where: { id: regionId } });
   if (!region) {
     return res.status(400).json({
       success: false,
@@ -84,7 +100,7 @@ export const createBranch = asyncHandler(async (req, res) => {
   }
 
   // Verify area exists and belongs to region
-  const area = await Area.findById(areaId);
+  const area = await prisma.area.findUnique({ where: { id: areaId } });
   if (!area) {
     return res.status(400).json({
       success: false,
@@ -92,7 +108,7 @@ export const createBranch = asyncHandler(async (req, res) => {
     });
   }
 
-  if (area.regionId.toString() !== regionId.toString()) {
+  if (area.regionId !== regionId) {
     return res.status(400).json({
       success: false,
       message: 'Area does not belong to the specified region',
@@ -101,15 +117,14 @@ export const createBranch = asyncHandler(async (req, res) => {
 
   // Verify manager exists and is a Branch Manager (if provided)
   if (managerId) {
-    const manager = await User.findById(managerId);
+    const manager = await prisma.user.findUnique({ where: { id: managerId } });
     if (!manager) {
       return res.status(400).json({
         success: false,
         message: 'Invalid managerId',
       });
     }
-    
-    const { normalizeRole } = await import('../utils/roleNormalizer.js');
+
     const managerRole = normalizeRole(manager.role);
     if (managerRole !== 'branchManager') {
       return res.status(400).json({
@@ -120,36 +135,32 @@ export const createBranch = asyncHandler(async (req, res) => {
   }
 
   // Create branch
-  const branch = await Branch.create({
-    name: name.trim(),
-    code: code.toUpperCase().trim(),
-    regionId,
-    areaId,
-    managerId: managerId || null,
-    address: address?.trim() || '',
-    phone: phone?.trim() || '',
-    isActive: true,
+  const branch = await prisma.branch.create({
+    data: {
+      name: name.trim(),
+      code: code.toUpperCase().trim(),
+      regionId,
+      areaId,
+      managerId: managerId || null,
+      address: address?.trim() || '',
+      phone: phone?.trim() || '',
+      isActive: true,
+    },
   });
 
-  await logAudit(
-    req.user._id,
-    'Branch Created',
-    'Branch',
-    branch._id,
-    branch.name,
-    `Created branch: ${branch.name} (${branch.code})`,
-    req
-  );
-
-  const populatedBranch = await Branch.findById(branch._id)
-    .populate('regionId', 'name')
-    .populate('areaId', 'name')
-    .populate('managerId', 'name email');
+  const populatedBranch = await prisma.branch.findUnique({
+    where: { id: branch.id },
+    include: {
+      region: { select: { id: true, name: true } },
+      area: { select: { id: true, name: true } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
+  });
 
   res.status(201).json({
     success: true,
     message: 'Branch created successfully',
-    data: populatedBranch,
+    data: { ...populatedBranch, _id: populatedBranch.id },
   });
 });
 
@@ -159,7 +170,7 @@ export const createBranch = asyncHandler(async (req, res) => {
 export const updateBranch = asyncHandler(async (req, res) => {
   const { name, code, regionId, areaId, managerId, address, phone, isActive } = req.body;
 
-  const branch = await Branch.findById(req.params.id);
+  const branch = await prisma.branch.findUnique({ where: { id: req.params.id } });
   if (!branch) {
     return res.status(404).json({
       success: false,
@@ -169,7 +180,9 @@ export const updateBranch = asyncHandler(async (req, res) => {
 
   // If code is being changed, check for duplicates
   if (code && code.toUpperCase().trim() !== branch.code) {
-    const existingBranch = await Branch.findOne({ code: code.toUpperCase().trim() });
+    const existingBranch = await prisma.branch.findUnique({
+      where: { code: code.toUpperCase().trim() }
+    });
     if (existingBranch) {
       return res.status(400).json({
         success: false,
@@ -180,7 +193,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
 
   // Verify region exists (if being updated)
   if (regionId) {
-    const region = await Region.findById(regionId);
+    const region = await prisma.region.findUnique({ where: { id: regionId } });
     if (!region) {
       return res.status(400).json({
         success: false,
@@ -191,7 +204,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
 
   // Verify area exists and belongs to region (if being updated)
   if (areaId) {
-    const area = await Area.findById(areaId);
+    const area = await prisma.area.findUnique({ where: { id: areaId } });
     if (!area) {
       return res.status(400).json({
         success: false,
@@ -200,7 +213,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
     }
 
     const finalRegionId = regionId || branch.regionId;
-    if (area.regionId.toString() !== finalRegionId.toString()) {
+    if (area.regionId !== finalRegionId) {
       return res.status(400).json({
         success: false,
         message: 'Area does not belong to the specified region',
@@ -209,28 +222,25 @@ export const updateBranch = asyncHandler(async (req, res) => {
   }
 
   // Verify manager exists and is a Branch Manager (if being updated)
-  if (managerId !== undefined) {
-    if (managerId) {
-      const manager = await User.findById(managerId);
-      if (!manager) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid managerId',
-        });
-      }
-      
-      const { normalizeRole } = await import('../utils/roleNormalizer.js');
-      const managerRole = normalizeRole(manager.role);
-      if (managerRole !== 'branchManager') {
-        return res.status(400).json({
-          success: false,
-          message: 'Manager must have Branch Manager role',
-        });
-      }
+  if (managerId !== undefined && managerId) {
+    const manager = await prisma.user.findUnique({ where: { id: managerId } });
+    if (!manager) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid managerId',
+      });
+    }
+
+    const managerRole = normalizeRole(manager.role);
+    if (managerRole !== 'branchManager') {
+      return res.status(400).json({
+        success: false,
+        message: 'Manager must have Branch Manager role',
+      });
     }
   }
 
-  // Update branch (never hard delete - only deactivate)
+  // Update branch
   const updateData = {};
   if (name) updateData.name = name.trim();
   if (code) updateData.code = code.toUpperCase().trim();
@@ -241,29 +251,20 @@ export const updateBranch = asyncHandler(async (req, res) => {
   if (phone !== undefined) updateData.phone = phone?.trim() || '';
   if (isActive !== undefined) updateData.isActive = isActive;
 
-  const updatedBranch = await Branch.findByIdAndUpdate(
-    req.params.id,
-    updateData,
-    { new: true, runValidators: true }
-  )
-    .populate('regionId', 'name')
-    .populate('areaId', 'name')
-    .populate('managerId', 'name email');
-
-  await logAudit(
-    req.user._id,
-    'Branch Updated',
-    'Branch',
-    updatedBranch._id,
-    updatedBranch.name,
-    `Updated branch: ${updatedBranch.name} (${updatedBranch.code})`,
-    req
-  );
+  const updatedBranch = await prisma.branch.update({
+    where: { id: req.params.id },
+    data: updateData,
+    include: {
+      region: { select: { id: true, name: true } },
+      area: { select: { id: true, name: true } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
+  });
 
   res.status(200).json({
     success: true,
     message: 'Branch updated successfully',
-    data: updatedBranch,
+    data: { ...updatedBranch, _id: updatedBranch.id },
   });
 });
 
@@ -271,7 +272,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
 // @route   DELETE /api/branches/:id
 // @access  Private (Admin only)
 export const deleteBranch = asyncHandler(async (req, res) => {
-  const branch = await Branch.findById(req.params.id);
+  const branch = await prisma.branch.findUnique({ where: { id: req.params.id } });
   if (!branch) {
     return res.status(404).json({
       success: false,
@@ -280,9 +281,11 @@ export const deleteBranch = asyncHandler(async (req, res) => {
   }
 
   // Check if branch has active users
-  const activeUsers = await User.countDocuments({
-    branchId: branch._id,
-    isActive: true,
+  const activeUsers = await prisma.user.count({
+    where: {
+      branchId: branch.id,
+      isActive: true,
+    },
   });
 
   if (activeUsers > 0) {
@@ -292,24 +295,15 @@ export const deleteBranch = asyncHandler(async (req, res) => {
     });
   }
 
-  // Soft delete - set isActive to false (never hard delete to preserve historical data)
-  branch.isActive = false;
-  await branch.save();
-
-  await logAudit(
-    req.user._id,
-    'Branch Deactivated',
-    'Branch',
-    branch._id,
-    branch.name,
-    `Deactivated branch: ${branch.name} (${branch.code})`,
-    req
-  );
+  // Soft delete - set isActive to false
+  const updatedBranch = await prisma.branch.update({
+    where: { id: req.params.id },
+    data: { isActive: false },
+  });
 
   res.status(200).json({
     success: true,
     message: 'Branch deactivated successfully',
-    data: branch,
+    data: { ...updatedBranch, _id: updatedBranch.id },
   });
 });
-

@@ -26,3 +26,5 @@ build/
 # Uploads
 uploads/
 
+
+/src/generated/prisma

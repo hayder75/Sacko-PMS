@@ -1,10 +1,10 @@
-import Plan from '../models/Plan.js';
-import PlanShareConfig from '../models/PlanShareConfig.js';
+import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
 import { cascadeBranchPlan } from '../utils/planCascade.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
+import { KPI_CATEGORY_TO_ENUM } from '../utils/prismaHelpers.js';
 
 // @desc    Create plan manually
 // @route   POST /api/plans
@@ -20,20 +20,29 @@ export const createPlan = asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate target_type
-  if (target_type && target_type !== 'incremental') {
-    return res.status(400).json({
+  // Find branchId from branch_code
+  const branch = await prisma.branch.findUnique({
+    where: { code: branch_code.toUpperCase().trim() }
+  });
+
+  if (!branch) {
+    return res.status(404).json({
       success: false,
-      message: 'target_type must be "incremental"',
+      message: `Branch with code ${branch_code} not found`,
     });
   }
 
+  // Convert KPI category string to enum
+  const kpiEnum = KPI_CATEGORY_TO_ENUM[kpi_category] || kpi_category;
+
   // Check if plan already exists
-  const existingPlan = await Plan.findOne({
-    branch_code,
-    kpi_category,
-    period,
-    status: { $in: ['Draft', 'Active'] },
+  const existingPlan = await prisma.plan.findFirst({
+    where: {
+      branch_code: branch_code.toUpperCase().trim(),
+      kpi_category: kpiEnum,
+      period,
+      status: { in: ['Draft', 'Active'] },
+    },
   });
 
   if (existingPlan) {
@@ -44,24 +53,27 @@ export const createPlan = asyncHandler(async (req, res) => {
   }
 
   // Create plan
-  const plan = await Plan.create({
-    branch_code,
-    kpi_category,
-    period,
-    target_value: parseFloat(target_value),
-    target_type: target_type || 'incremental',
-    status: 'Active',
-    createdBy: req.user._id,
+  const plan = await prisma.plan.create({
+    data: {
+      branch_code: branch_code.toUpperCase().trim(),
+      branchId: branch.id,
+      kpi_category: kpiEnum,
+      period,
+      target_value: parseFloat(target_value),
+      target_type: target_type || 'incremental',
+      status: 'Active',
+      createdById: req.user.id,
+    },
   });
 
   // Cascade to staff
   const cascadeResult = await cascadeBranchPlan(plan);
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'Plan Created',
     'Plan',
-    plan._id,
+    plan.id,
     `${kpi_category} - ${branch_code}`,
     `Created plan: ${kpi_category} for ${branch_code}`,
     req
@@ -70,7 +82,7 @@ export const createPlan = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     message: 'Plan created and cascaded successfully',
-    data: plan,
+    data: { ...plan, _id: plan.id },
     cascade: cascadeResult,
   });
 });
@@ -87,17 +99,14 @@ export const uploadPlan = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Parse Excel/CSV file - XLSX handles both formats
     const workbook = XLSX.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    // Parse to JSON - XLSX automatically handles CSV headers
-    let data = XLSX.utils.sheet_to_json(worksheet, { 
+    let data = XLSX.utils.sheet_to_json(worksheet, {
       defval: '',
-      raw: false 
+      raw: false
     });
-    
-    // Normalize all keys to lowercase with underscores for consistency
+
     data = data.map((row) => {
       const normalizedRow = {};
       Object.keys(row).forEach(key => {
@@ -108,7 +117,7 @@ export const uploadPlan = asyncHandler(async (req, res) => {
     });
 
     if (!data || data.length === 0) {
-      fs.unlinkSync(req.file.path);
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
         message: 'File is empty or invalid',
@@ -121,138 +130,123 @@ export const uploadPlan = asyncHandler(async (req, res) => {
       processed: 0,
     };
 
-    // Process each row
+    const validKpiCategories = [
+      'Deposit Mobilization',
+      'Digital Channel Growth',
+      'Member Registration',
+      'Shareholder Recruitment',
+      'Loan & NPL',
+      'Customer Base',
+    ];
+
+    const validPeriods = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];
+
     for (const [index, row] of data.entries()) {
       try {
         results.processed++;
-        
-        // Normalize keys to lowercase with underscores
-        const normalizedRow = {};
-        Object.keys(row).forEach(key => {
-          const normalizedKey = String(key).toLowerCase().trim().replace(/\s+/g, '_');
-          normalizedRow[normalizedKey] = row[key];
-        });
-        
-        const branch_code = normalizedRow.branch_code || normalizedRow.branchcode || '';
-        const kpi_category = normalizedRow.kpi_category || normalizedRow.kpicategory || '';
-        const period = normalizedRow.period || '';
-        const target_value = parseFloat(normalizedRow.target_value || normalizedRow.targetvalue || 0);
-        const target_type = (normalizedRow.target_type || normalizedRow.targettype || 'incremental').toLowerCase().trim();
 
-        // Validate required fields
+        const branch_code = (row.branch_code || row.branchcode || '').toUpperCase().trim();
+        const kpi_category = row.kpi_category || row.kpicategory || '';
+        const period = row.period || '';
+        const target_value = parseFloat(row.target_value || row.targetvalue || 0);
+
         if (!branch_code || !kpi_category || !period || isNaN(target_value) || target_value <= 0) {
-          results.errors.push(`Row ${index + 2}: Missing or invalid required fields. Found: branch_code="${branch_code}", kpi_category="${kpi_category}", period="${period}", target_value="${target_value}"`);
+          results.errors.push(`Row ${index + 2}: Missing or invalid required fields.`);
           continue;
         }
 
-        // Validate target_type
-        if (target_type && target_type !== 'incremental') {
-          results.errors.push(`Row ${index + 2}: Invalid target_type: "${target_type}". Must be "incremental"`);
-          continue;
-        }
-
-        // Validate kpi_category against enum
-        const validKpiCategories = [
-          'Deposit Mobilization',
-          'Digital Channel Growth',
-          'Member Registration',
-          'Shareholder Recruitment',
-          'Loan & NPL',
-          'Customer Base',
-        ];
         if (!validKpiCategories.includes(kpi_category)) {
-          results.errors.push(`Row ${index + 2}: Invalid kpi_category: "${kpi_category}". Must be one of: ${validKpiCategories.join(', ')}`);
+          results.errors.push(`Row ${index + 2}: Invalid kpi_category: "${kpi_category}"`);
           continue;
         }
 
-        // Validate period against enum
-        const validPeriods = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];
         if (!validPeriods.includes(period)) {
-          results.errors.push(`Row ${index + 2}: Invalid period: "${period}". Must be one of: ${validPeriods.join(', ')}`);
+          results.errors.push(`Row ${index + 2}: Invalid period: "${period}"`);
           continue;
         }
+
+        // Find branchId
+        const branch = await prisma.branch.findUnique({
+          where: { code: branch_code }
+        });
+
+        if (!branch) {
+          results.errors.push(`Row ${index + 2}: Branch with code ${branch_code} not found`);
+          continue;
+        }
+
+        const kpiEnum = KPI_CATEGORY_TO_ENUM[kpi_category];
 
         // Check if plan already exists
-        const existingPlan = await Plan.findOne({
-          branch_code: String(branch_code).trim(),
-          kpi_category: String(kpi_category).trim(),
-          period: String(period).trim(),
-          status: { $in: ['Draft', 'Active'] },
+        const existingPlan = await prisma.plan.findFirst({
+          where: {
+            branch_code,
+            kpi_category: kpiEnum,
+            period,
+            status: { in: ['Draft', 'Active'] },
+          },
         });
 
         if (existingPlan) {
-          results.errors.push(`Row ${index + 2}: Plan already exists for branch_code="${branch_code}", kpi_category="${kpi_category}", period="${period}"`);
+          results.errors.push(`Row ${index + 2}: Plan already exists`);
           continue;
         }
 
-        // Check if plan share config exists BEFORE creating plan
-        let planShareConfig = await PlanShareConfig.findOne({
-          kpi_category: String(kpi_category).trim(),
-          branch_code: String(branch_code).trim(),
-          isActive: true,
+        // Check plan share config
+        let planShareConfig = await prisma.planShareConfig.findFirst({
+          where: {
+            kpi_category: kpiEnum,
+            branch_code,
+            isActive: true,
+          },
         });
 
-        // If no branch-specific config, check for default (branch_code = null)
         if (!planShareConfig) {
-          planShareConfig = await PlanShareConfig.findOne({
-            kpi_category: String(kpi_category).trim(),
-            branch_code: null,
-            isActive: true,
+          planShareConfig = await prisma.planShareConfig.findFirst({
+            where: {
+              kpi_category: kpiEnum,
+              branch_code: null,
+              isActive: true,
+            },
           });
         }
 
         if (!planShareConfig) {
-          const errorMsg = `Row ${index + 2}: No plan share configuration found for KPI category "${kpi_category}" and branch "${branch_code}". Please create a plan share config first in Plan Share Config page.`;
-          results.errors.push(errorMsg);
-          console.error(`❌ ${errorMsg}`);
-          console.error(`   Searched for: kpi_category="${kpi_category}", branch_code="${branch_code}" and default (null)`);
+          results.errors.push(`Row ${index + 2}: No plan share config found`);
           continue;
         }
-
-        console.log(`✅ Row ${index + 2}: Plan share config found for ${kpi_category} - ${branch_code || 'Default'}`);
-        console.log(`   Config ID: ${planShareConfig._id}, Total: ${planShareConfig.total_percent}%`);
 
         // Create plan
-        let plan;
-        try {
-          plan = await Plan.create({
-            branch_code: String(branch_code).trim(),
-            kpi_category: String(kpi_category).trim(),
-            period: String(period).trim(),
-            target_value: target_value,
+        const plan = await prisma.plan.create({
+          data: {
+            branch_code,
+            branchId: branch.id,
+            kpi_category: kpiEnum,
+            period,
+            target_value,
             target_type: 'incremental',
             status: 'Active',
-            createdBy: req.user._id,
-          });
-          console.log(`✅ Row ${index + 2}: Plan created successfully - ID: ${plan._id}`);
-        } catch (createError) {
-          results.errors.push(`Row ${index + 2}: Failed to create plan - ${createError.message}`);
-          console.error(`❌ Row ${index + 2}: Plan creation error:`, createError);
-          continue;
-        }
+            createdById: req.user.id,
+          },
+        });
 
         // Cascade to staff
         try {
-          const cascadeResult = await cascadeBranchPlan(plan);
-          console.log(`✅ Row ${index + 2}: Plan cascaded successfully - ${cascadeResult.staffPlansCount} staff plans created`);
+          await cascadeBranchPlan(plan);
           results.created++;
         } catch (cascadeError) {
-          // If cascade fails, delete the plan we just created
-          console.error(`❌ Row ${index + 2}: Cascade failed, deleting plan ${plan._id}:`, cascadeError);
-          await Plan.findByIdAndDelete(plan._id);
-          results.errors.push(`Row ${index + 2}: Plan created but cascade failed - ${cascadeError.message}. Plan was rolled back.`);
+          await prisma.plan.delete({ where: { id: plan.id } });
+          results.errors.push(`Row ${index + 2}: Cascade failed - ${cascadeError.message}`);
         }
       } catch (error) {
-        results.errors.push(`Row ${index + 2}: Unexpected error - ${error.message || 'Unknown error'}`);
-        console.error(`❌ Row ${index + 2}: Unexpected error:`, error);
+        results.errors.push(`Row ${index + 2}: Error - ${error.message}`);
       }
     }
 
-    // Delete uploaded file
-    fs.unlinkSync(req.file.path);
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
     await logAudit(
-      req.user._id,
+      req.user.id,
       'Plan Upload',
       'Plan',
       null,
@@ -267,10 +261,7 @@ export const uploadPlan = asyncHandler(async (req, res) => {
       data: results,
     });
   } catch (error) {
-    // Clean up file on error
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     throw error;
   }
 });
@@ -280,27 +271,30 @@ export const uploadPlan = asyncHandler(async (req, res) => {
 // @access  Private
 export const getPlans = asyncHandler(async (req, res) => {
   const { branch_code, kpi_category, period, status } = req.query;
-  
-  const query = {};
-  
-  // Role-based filtering
-  if (req.user.role !== 'admin' && req.user.branch_code) {
-    query.branch_code = req.user.branch_code;
-  }
-  
-  if (branch_code) query.branch_code = branch_code;
-  if (kpi_category) query.kpi_category = kpi_category;
-  if (period) query.period = period;
-  if (status) query.status = status;
 
-  const plans = await Plan.find(query)
-    .populate('createdBy', 'name email')
-    .sort({ createdAt: -1 });
+  const where = {};
+
+  if (req.user.role !== 'admin' && req.user.branch_code) {
+    where.branch_code = req.user.branch_code;
+  }
+
+  if (branch_code) where.branch_code = branch_code.toUpperCase().trim();
+  if (kpi_category) where.kpi_category = KPI_CATEGORY_TO_ENUM[kpi_category] || kpi_category;
+  if (period) where.period = period;
+  if (status) where.status = status;
+
+  const plans = await prisma.plan.findMany({
+    where,
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
 
   res.status(200).json({
     success: true,
     count: plans.length,
-    data: plans,
+    data: plans.map(p => ({ ...p, _id: p.id })),
   });
 });
 
@@ -308,8 +302,12 @@ export const getPlans = asyncHandler(async (req, res) => {
 // @route   GET /api/plans/:id
 // @access  Private
 export const getPlan = asyncHandler(async (req, res) => {
-  const plan = await Plan.findById(req.params.id)
-    .populate('createdBy', 'name email');
+  const plan = await prisma.plan.findUnique({
+    where: { id: req.params.id },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+    },
+  });
 
   if (!plan) {
     return res.status(404).json({
@@ -320,7 +318,7 @@ export const getPlan = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: plan,
+    data: { ...plan, _id: plan.id },
   });
 });
 
@@ -328,7 +326,7 @@ export const getPlan = asyncHandler(async (req, res) => {
 // @route   PUT /api/plans/:id
 // @access  Private (Admin)
 export const updatePlan = asyncHandler(async (req, res) => {
-  let plan = await Plan.findById(req.params.id);
+  let plan = await prisma.plan.findUnique({ where: { id: req.params.id } });
 
   if (!plan) {
     return res.status(404).json({
@@ -337,24 +335,26 @@ export const updatePlan = asyncHandler(async (req, res) => {
     });
   }
 
-  // If target_value changed, re-cascade
-  const targetChanged = req.body.target_value && req.body.target_value !== plan.target_value;
+  const targetChanged = req.body.target_value && parseFloat(req.body.target_value) !== plan.target_value;
 
-  plan = await Plan.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
+  const updateData = { ...req.body };
+  if (updateData.target_value) updateData.target_value = parseFloat(updateData.target_value);
+  if (updateData.kpi_category) updateData.kpi_category = KPI_CATEGORY_TO_ENUM[updateData.kpi_category] || updateData.kpi_category;
+
+  plan = await prisma.plan.update({
+    where: { id: req.params.id },
+    data: updateData,
   });
 
-  // Re-cascade if target changed
   if (targetChanged) {
     await cascadeBranchPlan(plan);
   }
 
   await logAudit(
-    req.user._id,
+    req.user.id,
     'Plan Update',
     'Plan',
-    plan._id,
+    plan.id,
     `${plan.kpi_category} - ${plan.branch_code}`,
     `Updated plan`,
     req
@@ -362,6 +362,6 @@ export const updatePlan = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: plan,
+    data: { ...plan, _id: plan.id },
   });
 });

@@ -1,8 +1,5 @@
-import PerformanceScore from '../models/PerformanceScore.js';
-import StaffPlan from '../models/StaffPlan.js';
-import DailyTask from '../models/DailyTask.js';
-import AccountMapping from '../models/AccountMapping.js';
-import JuneBalance from '../models/JuneBalance.js';
+import prisma from '../config/database.js';
+import { KPI_CATEGORY_TO_ENUM, TASK_TYPE_TO_ENUM } from './prismaHelpers.js';
 
 /**
  * Calculate incremental growth for a user in a given period
@@ -12,22 +9,26 @@ import JuneBalance from '../models/JuneBalance.js';
 export const calculateIncrementalGrowth = async (userId, branch_code, kpi_category, period) => {
   try {
     // Get all mapped accounts for this user
-    const mappedAccounts = await AccountMapping.find({
-      mappedTo: userId,
-      status: 'Active',
-      current_balance: { $gte: 500 }, // Only active accounts ≥ 500 ETB
+    const mappedAccounts = await prisma.accountMapping.findMany({
+      where: {
+        mappedToId: userId,
+        status: 'Active',
+        current_balance: { gte: 500 }, // Only active accounts ≥ 500 ETB
+      },
     });
 
     let totalGrowth = 0;
 
     for (const account of mappedAccounts) {
       // Get active baseline balance for this account
-      const juneBalance = await JuneBalance.findOne({
-        $or: [
-          { account_id: account.accountNumber },
-          { accountNumber: account.accountNumber },
-        ],
-        is_active: true, // Use active baseline
+      const juneBalance = await prisma.juneBalance.findFirst({
+        where: {
+          OR: [
+            { account_id: account.accountNumber },
+            { accountNumber: account.accountNumber },
+          ],
+          is_active: true, // Use active baseline
+        },
       });
 
       const june_balance = juneBalance?.june_balance || 0;
@@ -53,11 +54,13 @@ export const calculateIncrementalGrowth = async (userId, branch_code, kpi_catego
 export const calculateKPIScore = async (userId, branch_code, period) => {
   try {
     // Get all staff plans for this user and period
-    const staffPlans = await StaffPlan.find({
-      userId,
-      branch_code,
-      period,
-      status: 'Active',
+    const staffPlans = await prisma.staffPlan.findMany({
+      where: {
+        userId,
+        branch_code,
+        period,
+        status: 'Active',
+      },
     });
 
     if (!staffPlans || staffPlans.length === 0) {
@@ -65,7 +68,7 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
     }
 
     const kpiScores = {};
-    let totalKPIScore = 0;
+    let totalScorePoints = 0;
 
     // Calculate score for each KPI category
     for (const plan of staffPlans) {
@@ -74,73 +77,86 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
       // Calculate incremental growth for this KPI
       let actualGrowth = 0;
 
-      if (kpi_category === 'Deposit Mobilization') {
+      if (kpi_category === 'Deposit_Mobilization') {
         actualGrowth = await calculateIncrementalGrowth(userId, branch_code, kpi_category, period);
-      } else if (kpi_category === 'Digital Channel Growth') {
-        // Count approved + CBS-validated digital activation tasks
-        const tasks = await DailyTask.find({
-          submittedBy: userId,
-          taskType: 'Digital Activation',
-          approvalStatus: 'Approved',
-          cbsValidated: true,
+      } else if (kpi_category === 'Digital_Channel_Growth') {
+        actualGrowth = await prisma.dailyTask.count({
+          where: {
+            submittedById: userId,
+            taskType: 'Digital_Activation',
+            approvalStatus: 'Approved',
+            cbsValidated: true,
+          }
         });
-        actualGrowth = tasks.length;
-      } else if (kpi_category === 'Member Registration') {
-        const tasks = await DailyTask.find({
-          submittedBy: userId,
-          taskType: 'Member Registration',
-          approvalStatus: 'Approved',
-          cbsValidated: true,
+      } else if (kpi_category === 'Member_Registration') {
+        actualGrowth = await prisma.dailyTask.count({
+          where: {
+            submittedById: userId,
+            taskType: 'Member_Registration',
+            approvalStatus: 'Approved',
+            cbsValidated: true,
+          }
         });
-        actualGrowth = tasks.length;
-      } else if (kpi_category === 'Customer Base') {
-        const tasks = await DailyTask.find({
-          submittedBy: userId,
-          taskType: 'New Customer',
-          approvalStatus: 'Approved',
-          cbsValidated: true,
+      } else if (kpi_category === 'Customer_Base') {
+        actualGrowth = await prisma.dailyTask.count({
+          where: {
+            submittedById: userId,
+            taskType: 'New_Customer',
+            approvalStatus: 'Approved',
+            cbsValidated: true,
+          }
         });
-        actualGrowth = tasks.length;
-      } else if (kpi_category === 'Loan & NPL') {
-        // Sum loan recovery amounts
-        const tasks = await DailyTask.find({
-          submittedBy: userId,
-          taskType: 'Loan Follow-up',
-          approvalStatus: 'Approved',
-          cbsValidated: true,
+      } else if (kpi_category === 'Loan_NPL') {
+        const tasks = await prisma.dailyTask.findMany({
+          where: {
+            submittedById: userId,
+            taskType: 'Loan_Follow_up',
+            approvalStatus: 'Approved',
+            cbsValidated: true,
+          },
+          select: { amount: true }
         });
         actualGrowth = tasks.reduce((sum, task) => sum + (task.amount || 0), 0);
+      } else if (kpi_category === 'Shareholder_Recruitment') {
+        actualGrowth = await prisma.dailyTask.count({
+          where: {
+            submittedById: userId,
+            taskType: 'Shareholder_Recruitment',
+            approvalStatus: 'Approved',
+            cbsValidated: true,
+          }
+        });
       }
 
       // Calculate percentage and score
       const percent = individual_target > 0 ? (actualGrowth / individual_target) * 100 : 0;
-      
+
       // KPI weight (85% total, distributed by category)
       const weights = {
-        'Deposit Mobilization': 25,
-        'Digital Channel Growth': 20,
-        'Loan & NPL': 20,
-        'Customer Base': 15,
-        'Member Registration': 10,
-        'Shareholder Recruitment': 10,
+        'Deposit_Mobilization': 25,
+        'Digital_Channel_Growth': 20,
+        'Loan_NPL': 20,
+        'Customer_Base': 15,
+        'Member_Registration': 10,
+        'Shareholder_Recruitment': 10,
       };
-      
+
       const weight = weights[kpi_category] || 0;
-      const score = (percent / 100) * weight;
+      const categoryScore = (percent / 100) * weight;
 
       kpiScores[kpi_category] = {
         target: individual_target,
         actual: actualGrowth,
         percent: Math.round(percent * 100) / 100,
         weight: weight,
-        score: Math.round(score * 100) / 100,
+        score: Math.round(categoryScore * 100) / 100,
       };
 
-      totalKPIScore += score;
+      totalScorePoints += categoryScore;
     }
 
     // Total KPI score (85% weight)
-    const kpiTotalScore = (totalKPIScore / 100) * 85;
+    const kpiTotalScore = (totalScorePoints / 100) * 85;
 
     return {
       kpiScores,
@@ -156,8 +172,8 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
  */
 export const calculateRating = (finalScore) => {
   if (finalScore >= 90) return 'Outstanding';
-  if (finalScore >= 80) return 'Very Good';
+  if (finalScore >= 80) return 'Very_Good';
   if (finalScore >= 70) return 'Good';
-  if (finalScore >= 60) return 'Needs Support';
+  if (finalScore >= 60) return 'Needs_Support';
   return 'Unsatisfactory';
 };
