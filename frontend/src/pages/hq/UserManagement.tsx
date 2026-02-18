@@ -245,11 +245,12 @@ export function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Employee ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Position</TableHead>
                   <TableHead>Branch</TableHead>
+                  <TableHead>Position</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -257,13 +258,16 @@ export function UserManagement() {
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                    <TableCell colSpan={8} className="text-center text-slate-500 py-8">
                       No users found
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((user) => (
                     <TableRow key={user._id}>
+                      <TableCell className="font-mono text-xs font-bold text-blue-600">
+                        {user.employeeId}
+                      </TableCell>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>

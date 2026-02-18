@@ -38,19 +38,15 @@ import { TeamManagement } from './pages/TeamManagement';
 import { BulkMappingUpload } from './pages/BulkMappingUpload';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loadUser } = useUser();
-  const [loading, setLoading] = React.useState(true);
+  const { isAuthenticated, isLoading } = useUser();
 
-  React.useEffect(() => {
-    const checkAuth = async () => {
-      await loadUser();
-      setLoading(false);
-    };
-    checkAuth();
-  }, []);
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p className="text-slate-600 font-medium">Verifying session...</p>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -62,10 +58,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function DashboardRoute() {
   const { role, user } = useUser();
-  
+
   // Ensure role is mapped correctly (in case user object has backend role)
   const mappedRole = user?.role ? mapBackendRoleToFrontend(user.role) : role;
-  
+
   switch (mappedRole) {
     case 'admin':
       return <HQDashboard />;

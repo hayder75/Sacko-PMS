@@ -1,37 +1,40 @@
+import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
-import Plan from '../models/Plan.js';
-import { connectDB } from '../config/database.js';
 
-// Load environment variables
 dotenv.config({ path: './.env' });
+
+const prisma = new PrismaClient();
 
 const removeAllPlans = async () => {
   try {
-    await connectDB();
-    console.log('✅ Connected to MongoDB');
+    await prisma.$connect();
+    console.log('✅ Connected to PostgreSQL');
     
-    const countBefore = await Plan.countDocuments({});
+    const countBefore = await prisma.plan.count();
     console.log(`📋 Found ${countBefore} plan(s) in the database`);
     
     if (countBefore === 0) {
       console.log('✅ No plans to delete.');
-      await mongoose.connection.close();
+      await prisma.$disconnect();
       return;
     }
     
-    const result = await Plan.deleteMany({});
-    console.log(`✅ Successfully deleted ${result.deletedCount} plan(s) from the database.`);
+    // First delete related staff plans (foreign key constraint)
+    await prisma.staffPlan.deleteMany({});
+    console.log('✅ Deleted all staff plans');
     
-    await mongoose.connection.close();
+    // Then delete plans
+    const result = await prisma.plan.deleteMany({});
+    console.log(`✅ Successfully deleted ${result.count} plan(s) from the database.`);
+    
+    await prisma.$disconnect();
     console.log('✅ Database connection closed.');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error removing plans:', error);
-    await mongoose.connection.close();
+    await prisma.$disconnect();
     process.exit(1);
   }
 };
 
 removeAllPlans();
-

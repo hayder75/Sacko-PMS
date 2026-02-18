@@ -139,7 +139,7 @@ const checkAccountMapping = async (accountNumber, userId, branch_code) => {
 // @route   POST /api/tasks
 // @access  Private
 export const createTask = asyncHandler(async (req, res) => {
-  const { taskType, productType, accountNumber, amount, remarks, evidence, taskDate } = req.body;
+  const { taskType, productType, accountNumber, customerName, amount, remarks, evidence, taskDate } = req.body;
 
   const allowedPositions = ['Member_Service_Officer_I', 'Member_Service_Officer_II', 'Member_Service_Officer_III', 'Accountant'];
   if (!allowedPositions.includes(req.user.position)) {
@@ -149,11 +149,37 @@ export const createTask = asyncHandler(async (req, res) => {
     });
   }
 
+  let accountMappingId = null;
+  let mappingStatus = 'Unmapped';
+  let canCountForKPI = false;
+
   const mappingCheck = await checkAccountMapping(
     accountNumber,
     req.user.id,
     req.user.branch_code
   );
+
+  accountMappingId = mappingCheck.accountMapping?.id || null;
+  mappingStatus = mappingCheck.mappingStatus;
+  canCountForKPI = mappingCheck.canCountForKPI;
+
+  // If mapping doesn't exist AND we have a customer name, create it as Unmapped
+  if (!accountMappingId && customerName) {
+    const newMapping = await prisma.accountMapping.create({
+      data: {
+        accountNumber,
+        customerName,
+        accountType: 'Savings',
+        status: 'Active',
+        branchId: req.user.branchId,
+        notes: 'Created during task entry',
+        mappedToId: req.user.id, // Fixed: Mandatory in schema
+        mappedById: req.user.id,
+      }
+    });
+    accountMappingId = newMapping.id;
+    mappingStatus = 'Unmapped';
+  }
 
   const approvalChainData = await buildApprovalChain(req.user);
 
@@ -164,13 +190,13 @@ export const createTask = asyncHandler(async (req, res) => {
         taskType: TASK_TYPE_TO_ENUM[taskType] || taskType,
         productType,
         accountNumber,
-        accountId: mappingCheck.accountMapping?.id || null,
+        accountId: accountMappingId,
         amount: amount || 0,
         remarks,
         evidence,
         submittedById: req.user.id,
         branchId: req.user.branchId,
-        mappingStatus: MAPPING_STATUS_TO_ENUM[mappingCheck.mappingStatus],
+        mappingStatus: MAPPING_STATUS_TO_ENUM[mappingStatus],
         taskDate: taskDate ? new Date(taskDate) : new Date(),
         approvalStatus: 'Pending',
       },
@@ -204,8 +230,8 @@ export const createTask = asyncHandler(async (req, res) => {
     success: true,
     data: { ...task, _id: task.id },
     mappingInfo: {
-      status: mappingCheck.mappingStatus,
-      canCountForKPI: mappingCheck.canCountForKPI,
+      status: mappingStatus,
+      canCountForKPI: canCountForKPI,
     },
   });
 });
@@ -234,6 +260,15 @@ export const getTasks = asyncHandler(async (req, res) => {
   if (branchId) where.branchId = branchId;
   if (submittedBy) where.submittedById = submittedBy;
   if (approvalStatus) where.approvalStatus = APPROVAL_STATUS_TO_ENUM[approvalStatus] || approvalStatus;
+
+  if (req.query.pendingApprovalByMe === 'true') {
+    where.approvalChain = {
+      some: {
+        approverId: req.user.id,
+        status: 'Pending'
+      }
+    };
+  }
 
   if (taskDate) {
     const date = new Date(taskDate);

@@ -1,10 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  CheckSquare, 
-  Network, 
-  Target, 
-  FileText, 
+import {
+  LayoutDashboard,
+  CheckSquare,
+  Network,
+  Target,
+  FileText,
   Settings,
   Menu,
   X,
@@ -33,9 +33,9 @@ const getNavItems = (role: string): NavItem[] => {
   if (role === 'admin') {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/hq' },
-      { 
-        title: 'PLAN MANAGEMENT', 
-        icon: Upload, 
+      {
+        title: 'PLAN MANAGEMENT',
+        icon: Upload,
         path: '/plan-cascade',
         children: [
           { title: 'Create Plans', path: '/plan-cascade' },
@@ -113,7 +113,8 @@ const getNavItems = (role: string): NavItem[] => {
   if (role === 'subTeamLeader') {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/staff' },
-      { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
+      { title: 'MY TASKS', icon: CheckSquare, path: '/tasks' },
+      { title: 'TEAM TASKS', icon: ClipboardList, path: '/team-tasks' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
       { title: 'MY PERFORMANCE', icon: Target, path: '/kpi' },
       { title: 'SETTINGS', icon: Settings, path: '/settings' },
@@ -171,7 +172,7 @@ export function Sidebar() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
-            
+
             return (
               <div key={item.title}>
                 <Link

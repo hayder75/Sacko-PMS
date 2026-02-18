@@ -1,63 +1,104 @@
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import User from '../models/User.js';
-import Region from '../models/Region.js';
-import Area from '../models/Area.js';
-import Branch from '../models/Branch.js';
 
 dotenv.config();
 
+const prisma = new PrismaClient();
+
 const seedAllUsers = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB\n');
+    await prisma.$connect();
+    console.log('✅ Connected to PostgreSQL\n');
 
-    let region = await Region.findOne({ code: 'SOUTH' });
+    // Create region
+    let region = await prisma.region.findUnique({
+      where: { code: 'SOUTH' },
+    });
     if (!region) {
-      region = await Region.create({ name: 'South Region', code: 'SOUTH' });
+      region = await prisma.region.create({
+        data: { name: 'South Region', code: 'SOUTH' },
+      });
+      console.log('✅ Created South Region');
     }
 
-    let area = await Area.findOne({ code: 'HAWASSA_AREA' });
+    // Create area
+    let area = await prisma.area.findUnique({
+      where: { code: 'HAWASSA_AREA' },
+    });
     if (!area) {
-      area = await Area.create({ name: 'Hawassa Area', code: 'HAWASSA_AREA', regionId: region._id });
+      area = await prisma.area.create({
+        data: { name: 'Hawassa Area', code: 'HAWASSA_AREA', regionId: region.id },
+      });
+      console.log('✅ Created Hawassa Area');
     }
 
-    let branch = await Branch.findOne({ code: 'HAWASSA_MAIN' });
+    // Create branch
+    let branch = await prisma.branch.findUnique({
+      where: { code: 'HAWASSA_MAIN' },
+    });
     if (!branch) {
-      branch = await Branch.create({ name: 'Hawassa Main Branch', code: 'HAWASSA_MAIN', regionId: region._id, areaId: area._id });
+      branch = await prisma.branch.create({
+        data: {
+          name: 'Hawassa Main Branch',
+          code: 'HAWASSA_MAIN',
+          regionId: region.id,
+          areaId: area.id,
+        },
+      });
+      console.log('✅ Created Hawassa Main Branch');
     }
 
-    await User.deleteMany({});
+    // Delete all existing users
+    await prisma.user.deleteMany({});
     console.log('✅ Cleared existing users\n');
 
-    const users = [
-      { employeeId: 'ADMIN001', name: 'System Administrator', email: 'admin@sako.com', password: 'admin123', role: 'SAKO HQ / Admin', branchId: branch._id, isActive: true },
-      { employeeId: 'RD001', name: 'Regional Director Test', email: 'regional@sako.com', password: 'regional123', role: 'Regional Director', branchId: branch._id, isActive: true },
-      { employeeId: 'AM001', name: 'Area Manager Test', email: 'areamanager@sako.com', password: 'area123', role: 'Area Manager', branchId: branch._id, isActive: true },
-      { employeeId: 'BM001', name: 'Branch Manager Test', email: 'branchmanager@sako.com', password: 'branch123', role: 'Branch Manager', branchId: branch._id, isActive: true },
-      { employeeId: 'LM001', name: 'Line Manager Test', email: 'linemanager@sako.com', password: 'line123', role: 'Line Manager', branchId: branch._id, isActive: true },
-      { employeeId: 'STL001', name: 'Sub-Team Leader Test', email: 'subteam@sako.com', password: 'subteam123', role: 'Sub-Team Leader', branchId: branch._id, isActive: true },
-      { employeeId: 'STAFF001', name: 'Staff Member Test', email: 'staff@sako.com', password: 'staff123', role: 'Staff / MSO', branchId: branch._id, isActive: true },
+    const usersData = [
+      { employeeId: 'ADMIN001', name: 'System Administrator', email: 'admin@sako.com', password: 'admin123', role: 'admin', position: 'Branch_Manager', isActive: true },
+      { employeeId: 'RD001', name: 'Regional Director Test', email: 'regional@sako.com', password: 'regional123', role: 'regionalDirector', position: 'Regional_Director', isActive: true },
+      { employeeId: 'AM001', name: 'Area Manager Test', email: 'areamanager@sako.com', password: 'area123', role: 'areaManager', position: 'Area_Manager', isActive: true },
+      { employeeId: 'BM001', name: 'Branch Manager Test', email: 'branchmanager@sako.com', password: 'branch123', role: 'branchManager', position: 'Branch_Manager', isActive: true },
+      { employeeId: 'LM001', name: 'Line Manager Test', email: 'linemanager@sako.com', password: 'line123', role: 'lineManager', position: 'Member_Service_Manager', isActive: true },
+      { employeeId: 'STL001', name: 'Sub-Team Leader Test', email: 'subteam@sako.com', password: 'subteam123', role: 'subTeamLeader', position: 'Accountant', isActive: true },
+      { employeeId: 'STAFF001', name: 'Staff Member Test', email: 'staff@sako.com', password: 'staff123', role: 'staff', position: 'Member_Service_Officer_I', isActive: true },
     ];
 
-    for (const userData of users) {
-      await User.create(userData);
+    // Hash passwords and create users
+    for (const userData of usersData) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(userData.password, salt);
+
+      await prisma.user.create({
+        data: {
+          employeeId: userData.employeeId,
+          name: userData.name,
+          email: userData.email,
+          password: hashedPassword,
+          role: userData.role,
+          position: userData.position,
+          branchId: branch.id,
+          branch_code: branch.code,
+          isActive: userData.isActive,
+        },
+      });
     }
 
     console.log('\n✅ All users created successfully!\n');
     console.log('📋 LOGIN CREDENTIALS:\n');
-    console.log('SAKO HQ / Admin:     admin@sako.com | admin123');
-    console.log('Regional Director:   regional@sako.com | regional123');
-    console.log('Area Manager:        areamanager@sako.com | area123');
-    console.log('Branch Manager:      branchmanager@sako.com | branch123');
-    console.log('Line Manager:        linemanager@sako.com | line123');
-    console.log('Sub-Team Leader:     subteam@sako.com | subteam123');
+    console.log('Admin:              admin@sako.com | admin123');
+    console.log('Regional Director:  regional@sako.com | regional123');
+    console.log('Area Manager:       areamanager@sako.com | area123');
+    console.log('Branch Manager:     branchmanager@sako.com | branch123');
+    console.log('Line Manager:       linemanager@sako.com | line123');
+    console.log('Sub-Team Leader:    subteam@sako.com | subteam123');
     console.log('Staff / MSO:        staff@sako.com | staff123');
     console.log('\n');
 
+    await prisma.$disconnect();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding users:', error);
+    await prisma.$disconnect();
     process.exit(1);
   }
 };

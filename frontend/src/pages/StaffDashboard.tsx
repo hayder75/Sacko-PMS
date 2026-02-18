@@ -6,14 +6,15 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Plus, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { dashboardAPI, tasksAPI } from '@/lib/api';
+import { dashboardAPI, mappingsAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
+import { mapBackendRoleToFrontend } from '@/lib/roleMapper';
 
 export function StaffDashboard() {
   const { user } = useUser();
   const [dashboardData, setDashboardData] = useState<any>(null);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [loading] = useState(false);
+  const [mappings, setMappings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Load data in background, don't block UI
@@ -22,19 +23,31 @@ export function StaffDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [dashboardRes, tasksRes] = await Promise.all([
+      setLoading(true);
+      const params: any = {};
+      const userRole = mapBackendRoleToFrontend(user?.role || '');
+
+      // If subTeamLeader, we want to explicitly filter by their ID to see THEIR mappings
+      // because the backend might return branch-wide mappings for managers.
+      if (userRole === 'subTeamLeader') {
+        params.mappedTo = user?._id;
+      }
+
+      const [dashboardRes, mappingRes] = await Promise.all([
         dashboardAPI.getStaff(),
-        tasksAPI.getAll({ submittedBy: user?._id, limit: 5 }),
+        mappingsAPI.getAll(params),
       ]);
 
       if (dashboardRes.success) {
         setDashboardData(dashboardRes.data);
       }
-      if (tasksRes.success) {
-        setTasks(tasksRes.data || []);
+      if (mappingRes.success) {
+        setMappings(mappingRes.data || []);
       }
     } catch (error) {
-      // Silently fail, use default data
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -153,49 +166,64 @@ export function StaffDashboard() {
         </Card>
       )}
 
-      {/* Today's Tasks */}
+      {/* My Mapped Accounts */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Today's Tasks</CardTitle>
-          <Link to="/tasks/new">
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Task
-            </Button>
-          </Link>
+          <CardTitle>My Mapped Accounts</CardTitle>
+          <div className="flex gap-2">
+            <Link to="/tasks/new">
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Task
+              </Button>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Task Type</TableHead>
                 <TableHead>Account #</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Customer Name</TableHead>
+                <TableHead className="text-right">June 30 Balance</TableHead>
+                <TableHead className="text-right">Current Balance</TableHead>
+                <TableHead className="text-right">Growth</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks.length === 0 ? (
+              {mappings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                    No tasks found
+                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                    No mapped accounts found
                   </TableCell>
                 </TableRow>
               ) : (
-                tasks.map((task) => (
-                  <TableRow key={task._id}>
-                    <TableCell className="font-medium">{task.taskType}</TableCell>
-                    <TableCell>{task.accountNumber}</TableCell>
-                    <TableCell>
-                      {task.amount > 0 ? `${task.amount.toLocaleString()} Birr` : '-'}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(task.approvalStatus)}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">View</Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                mappings.map((mapping) => {
+                  const growth = mapping.current_balance - mapping.june_balance;
+                  return (
+                    <TableRow key={mapping._id}>
+                      <TableCell className="font-mono text-sm font-bold text-blue-600">
+                        {mapping.accountNumber}
+                      </TableCell>
+                      <TableCell className="font-medium">{mapping.customerName}</TableCell>
+                      <TableCell className="text-right">
+                        {mapping.june_balance?.toLocaleString() || '0'}
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        {mapping.current_balance?.toLocaleString() || '0'}
+                      </TableCell>
+                      <TableCell className={`text-right font-bold ${growth >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {growth > 0 ? '+' : ''}{growth.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Link to={`/tasks/new?accountNumber=${mapping.accountNumber}`}>
+                          <Button variant="outline" size="sm">Add Task</Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { authAPI, getToken, removeToken } from '@/lib/api';
 import { mapBackendRoleToFrontend } from '@/lib/roleMapper';
 
-export type UserRole = 
+export type UserRole =
   | 'admin'
   | 'regionalDirector'
   | 'areaManager'
@@ -22,6 +22,7 @@ interface UserContextType {
   user: any;
   setUser: (user: any) => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
   logout: () => void;
   loadUser: () => Promise<void>;
 }
@@ -34,18 +35,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [userName, setUserName] = useState('');
   const [user, setUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadUser = useCallback(async () => {
     const token = getToken();
     if (!token) {
       setIsAuthenticated(false);
       setUser(null);
+      setIsLoading(false);
       return;
     }
 
     try {
       const response = await authAPI.getMe();
-      
+
       if (response.success && response.data) {
         setUser(response.data);
         // Map backend role to frontend role
@@ -70,6 +73,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
       setIsAuthenticated(false);
       setUser(null);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -87,16 +92,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [loadUser]);
 
   return (
-    <UserContext.Provider value={{ 
-      role, 
-      setRole, 
-      currentBranch, 
-      setCurrentBranch, 
+    <UserContext.Provider value={{
+      role,
+      setRole,
+      currentBranch,
+      setCurrentBranch,
       userName,
       setUserName,
       user,
       setUser,
       isAuthenticated,
+      isLoading,
       logout,
       loadUser,
     }}>

@@ -55,7 +55,7 @@ export function MappingManagement() {
   };
 
   const filteredMappings = mappings.filter((mapping) => {
-    const matchesSearch = 
+    const matchesSearch =
       mapping.accountNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mapping.customerName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
@@ -119,7 +119,8 @@ export function MappingManagement() {
                   <TableHead>Account #</TableHead>
                   <TableHead>Customer Name</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Balance</TableHead>
+                  <TableHead className="text-right">June 30 Balance</TableHead>
+                  <TableHead className="text-right">Current Balance</TableHead>
                   <TableHead>Mapped To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Action</TableHead>
@@ -128,7 +129,7 @@ export function MappingManagement() {
               <TableBody>
                 {filteredMappings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-slate-500 py-8">
+                    <TableCell colSpan={8} className="text-center text-slate-500 py-8">
                       No accounts found
                     </TableCell>
                   </TableRow>
@@ -138,7 +139,8 @@ export function MappingManagement() {
                       <TableCell className="font-medium">{mapping.accountNumber}</TableCell>
                       <TableCell>{mapping.customerName}</TableCell>
                       <TableCell>{mapping.accountType}</TableCell>
-                      <TableCell>{mapping.balance.toLocaleString()} Birr</TableCell>
+                      <TableCell className="text-right">{mapping.june_balance?.toLocaleString() || '0'}</TableCell>
+                      <TableCell className="text-right font-bold">{mapping.current_balance?.toLocaleString() || '0'}</TableCell>
                       <TableCell>
                         {mapping.mappedTo?.name || (
                           <span className="text-slate-400">Not assigned</span>

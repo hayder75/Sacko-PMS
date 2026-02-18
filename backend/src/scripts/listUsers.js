@@ -1,15 +1,29 @@
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
-import User from '../models/User.js';
-import { connectDB } from '../config/database.js';
 
 dotenv.config({ path: './.env' });
 
+const prisma = new PrismaClient();
+
 const listUsers = async () => {
   try {
-    await connectDB();
+    console.log('🔄 Connecting to PostgreSQL...');
+    await prisma.$connect();
+    console.log('✅ Connected to PostgreSQL via Prisma\n');
 
-    const users = await User.find({}).select('employeeId name email role position branch_code isActive').sort({ name: 1 });
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        email: true,
+        role: true,
+        position: true,
+        branch_code: true,
+        isActive: true,
+      },
+      orderBy: { name: 'asc' },
+    });
 
     console.log('\n📋 Current Users in System:\n');
     console.log('='.repeat(80));
@@ -32,7 +46,7 @@ const listUsers = async () => {
     console.log(`\nTotal Users: ${users.length}\n`);
 
     // Show default admin credentials
-    const admin = users.find(u => u.email === 'admin@sako.com' || u.role?.includes('admin'));
+    const admin = users.find(u => u.email === 'admin@sako.com' || u.role === 'admin');
     if (admin) {
       console.log('🔑 Default Admin Credentials:');
       console.log('   Email: admin@sako.com');
@@ -40,12 +54,13 @@ const listUsers = async () => {
       console.log('   ⚠️  Please change password after first login!\n');
     }
 
+    await prisma.$disconnect();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error listing users:', error);
+    await prisma.$disconnect();
     process.exit(1);
   }
 };
 
 listUsers();
-

@@ -217,14 +217,7 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
   }
 
   const targetBranchId = req.body.branchId || req.user.branchId;
-  const branch = await prisma.branch.findUnique({ where: { id: targetBranchId } });
-  if (!branch) {
-    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    return res.status(404).json({
-      success: false,
-      message: 'Branch not found',
-    });
-  }
+  // Branch check removed here to allow automatic detection from staff employeeId in rows
 
   try {
     const workbook = XLSX.readFile(req.file.path);
@@ -243,6 +236,7 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
     const results = {
       created: 0,
       updated: 0,
+      successful: [], // Added for better frontend feedback
       errors: [],
     };
 
@@ -257,20 +251,46 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
         const phoneNumber = String(row.phoneNumber || row['Phone Number'] || '').trim();
 
         if (!accountNumber || !customerName || !staffID) {
-          results.errors.push({ row: i + 2, error: 'Account Number, Customer Name, and Staff ID are required' });
+          results.errors.push({
+            row: i + 2,
+            accountNumber,
+            customerName,
+            staffID,
+            error: 'Account Number, Customer Name, and Staff ID are required'
+          });
           continue;
         }
 
+        // Search for staff globally first if targetBranchId isn't reliable
         const staffMember = await prisma.user.findFirst({
           where: {
             employeeId: staffID,
-            branchId: targetBranchId,
             isActive: true,
           }
         });
 
         if (!staffMember) {
-          results.errors.push({ row: i + 2, error: `Staff with ID '${staffID}' not found in branch` });
+          results.errors.push({
+            row: i + 2,
+            accountNumber,
+            customerName,
+            staffID,
+            error: `Staff with ID '${staffID}' not found in system`
+          });
+          continue;
+        }
+
+        // Use the staff member's branch - this makes it work for anyone uploading
+        const mappingBranchId = staffMember.branchId;
+
+        if (!mappingBranchId) {
+          results.errors.push({
+            row: i + 2,
+            accountNumber,
+            customerName,
+            staffID,
+            error: `Staff '${staffMember.name}' is not assigned to any branch`
+          });
           continue;
         }
 
@@ -285,13 +305,21 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
               current_balance: balance,
               june_balance: juneBalance,
               mappedToId: staffMember.id,
-              branchId: targetBranchId,
+              branchId: mappingBranchId,
               mappedById: req.user.id,
               phoneNumber: phoneNumber || undefined,
               status: 'Active',
             }
           });
           results.updated++;
+          results.successful.push({
+            row: i + 2,
+            accountNumber,
+            customerName,
+            staffID,
+            staffName: staffMember.name,
+            status: 'Updated'
+          });
         } else {
           await prisma.accountMapping.create({
             data: {
@@ -302,16 +330,28 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
               current_balance: balance,
               june_balance: juneBalance,
               mappedToId: staffMember.id,
-              branchId: targetBranchId,
+              branchId: mappingBranchId,
               mappedById: req.user.id,
               phoneNumber: phoneNumber || undefined,
               status: 'Active',
             }
           });
           results.created++;
+          results.successful.push({
+            row: i + 2,
+            accountNumber,
+            customerName,
+            staffID,
+            staffName: staffMember.name,
+            status: 'Created'
+          });
         }
       } catch (error) {
-        results.errors.push({ row: i + 2, error: error.message });
+        results.errors.push({
+          row: i + 2,
+          accountNumber: data[i].accountNumber || 'N/A',
+          error: error.message
+        });
       }
     }
 

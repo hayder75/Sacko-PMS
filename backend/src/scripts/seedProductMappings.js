@@ -1,48 +1,46 @@
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import ProductKpiMapping from '../models/ProductKpiMapping.js';
-import User from '../models/User.js';
-import { connectDB } from '../config/database.js';
 
 dotenv.config({ path: './.env' });
 
+const prisma = new PrismaClient();
+
 // Product mappings from CSV
 const productMappings = [
-  { cbs_product_name: 'Felagot Saving', kpi_category: 'Deposit Mobilization' },
-  { cbs_product_name: 'Digital Saving', kpi_category: 'Digital Channel Growth' },
-  { cbs_product_name: 'Weekly Sa 360', kpi_category: 'Deposit Mobilization' },
-  { cbs_product_name: 'Sixty Days L Sa', kpi_category: 'Loan & NPL', conditions: { min_balance: 0 } },
-  { cbs_product_name: 'Thirty Days L S', kpi_category: 'Loan & NPL', conditions: { min_balance: 0 } },
-  { cbs_product_name: 'Revol Loan Savi', kpi_category: 'Loan & NPL' },
-  { cbs_product_name: 'Medebegna Savin', kpi_category: 'Deposit Mobilization' },
-  { cbs_product_name: 'Share Account', kpi_category: 'Shareholder Recruitment' },
-  { cbs_product_name: 'Non Member', kpi_category: 'Customer Base' },
-  { cbs_product_name: 'Special Saving', kpi_category: 'Deposit Mobilization' },
-  { cbs_product_name: 'Taxi Saving', kpi_category: 'Deposit Mobilization' },
-  { cbs_product_name: 'Fixed Time 1Y', kpi_category: 'Deposit Mobilization' },
+  { cbs_product_name: 'Felagot Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
+  { cbs_product_name: 'Digital Saving', kpi_category: 'Digital_Channel_Growth', min_balance: 0 },
+  { cbs_product_name: 'Weekly Sa 360', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
+  { cbs_product_name: 'Sixty Days L Sa', kpi_category: 'Loan_NPL', min_balance: 0 },
+  { cbs_product_name: 'Thirty Days L S', kpi_category: 'Loan_NPL', min_balance: 0 },
+  { cbs_product_name: 'Revol Loan Savi', kpi_category: 'Loan_NPL', min_balance: 0 },
+  { cbs_product_name: 'Medebegna Savin', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
+  { cbs_product_name: 'Share Account', kpi_category: 'Shareholder_Recruitment', min_balance: 0 },
+  { cbs_product_name: 'Non Member', kpi_category: 'Customer_Base', min_balance: 0 },
+  { cbs_product_name: 'Special Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
+  { cbs_product_name: 'Taxi Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
+  { cbs_product_name: 'Fixed Time 1Y', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
 ];
 
 const seedProductMappings = async () => {
   try {
-    await connectDB();
+    await prisma.$connect();
+    console.log('✅ Connected to PostgreSQL');
 
-    // Get admin user (try both role formats)
-    let admin = await User.findOne({ role: 'admin' });
-    if (!admin) {
-      admin = await User.findOne({ role: 'SAKO HQ / Admin' });
-    }
-    if (!admin) {
-      // Try to find any user with admin in email or role
-      admin = await User.findOne({ 
-        $or: [
-          { email: 'admin@sako.com' },
-          { role: { $regex: /admin/i } }
-        ]
-      });
-    }
+    // Get admin user
+    let admin = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { role: 'admin' },
+          { email: { contains: 'admin', mode: 'insensitive' } },
+        ],
+      },
+    });
+
     if (!admin) {
       console.error('❌ No admin user found. Please create an admin user first.');
       console.error('   Run: npm run seed');
+      await prisma.$disconnect();
       process.exit(1);
     }
 
@@ -52,24 +50,32 @@ const seedProductMappings = async () => {
     let updated = 0;
 
     for (const mappingData of productMappings) {
-      const existing = await ProductKpiMapping.findOne({
-        cbs_product_name: mappingData.cbs_product_name,
+      const existing = await prisma.productKpiMapping.findUnique({
+        where: { cbs_product_name: mappingData.cbs_product_name },
       });
 
       if (existing) {
-        existing.kpi_category = mappingData.kpi_category;
-        existing.conditions = mappingData.conditions || {};
-        existing.status = 'active';
-        existing.mapped_by = admin._id;
-        existing.mapped_at = new Date();
-        await existing.save();
+        await prisma.productKpiMapping.update({
+          where: { cbs_product_name: mappingData.cbs_product_name },
+          data: {
+            kpi_category: mappingData.kpi_category,
+            min_balance: mappingData.min_balance || 0,
+            status: 'active',
+            mappedById: admin.id,
+            mapped_at: new Date(),
+          },
+        });
         updated++;
         console.log(`✅ Updated: ${mappingData.cbs_product_name} → ${mappingData.kpi_category}`);
       } else {
-        await ProductKpiMapping.create({
-          ...mappingData,
-          mapped_by: admin._id,
-          status: 'active',
+        await prisma.productKpiMapping.create({
+          data: {
+            cbs_product_name: mappingData.cbs_product_name,
+            kpi_category: mappingData.kpi_category,
+            min_balance: mappingData.min_balance || 0,
+            mappedById: admin.id,
+            status: 'active',
+          },
         });
         created++;
         console.log(`✅ Created: ${mappingData.cbs_product_name} → ${mappingData.kpi_category}`);
@@ -81,12 +87,13 @@ const seedProductMappings = async () => {
     console.log(`   Updated: ${updated}`);
     console.log(`   Total: ${productMappings.length}\n`);
 
+    await prisma.$disconnect();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding product mappings:', error);
+    await prisma.$disconnect();
     process.exit(1);
   }
 };
 
 seedProductMappings();
-
