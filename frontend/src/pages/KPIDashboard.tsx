@@ -4,30 +4,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { Star } from 'lucide-react';
-import { performanceAPI } from '@/lib/api';
+import { dashboardAPI } from '@/lib/api';
 
 const timeRanges = ['Day', 'Week', 'Month', 'Quarter', 'Year'];
 
 export function KPIDashboard() {
   const [timeRange, setTimeRange] = useState('Month');
-  const [performanceData, setPerformanceData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
   useEffect(() => {
-    loadPerformanceData();
-  }, [timeRange]);
+    loadDashboardData();
+  }, []);
 
-  const loadPerformanceData = async () => {
+  const loadDashboardData = async () => {
     try {
-      setLoading(true);
-      const response = await performanceAPI.getAll({ period: timeRange });
-      if (response.success && response.data && response.data.length > 0) {
-        setPerformanceData(response.data[0]);
+      const response = await dashboardAPI.getStaff();
+      if (response.success) {
+        setDashboardData(response.data);
       }
     } catch (error) {
-      console.error('Error loading performance data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error loading dashboard data:', error);
     }
   };
 
@@ -39,14 +35,45 @@ export function KPIDashboard() {
     return 1;
   };
 
-  const finalScore = performanceData?.finalScore || 0;
-  const kpiScore = performanceData?.kpiScore || 0;
-  const behavioralScore = performanceData?.behavioralScore || 0;
-  const rating = performanceData?.rating || 'N/A';
+  // Use real-time data from dashboard API
+  const kpiBreakdown = dashboardData?.kpiBreakdown || {};
+  const depositKPI = kpiBreakdown.deposit || {};
+  
+  // Calculate overall score from KPI data
+  const kpiScore = depositKPI.percent || 0;
+  const behavioralScore = 0; // No behavioral data yet
+  const finalScore = kpiScore * 0.85 + behavioralScore * 0.15;
+  
+  const rating = finalScore >= 90 ? 'Outstanding' : 
+                 finalScore >= 80 ? 'Very Good' : 
+                 finalScore >= 70 ? 'Good' : 
+                 finalScore >= 60 ? 'Needs Support' : 'Unsatisfactory';
   const stars = getRatingStars(finalScore);
-  const dailyData = performanceData?.dailyData || [];
-  const kpiContribution = performanceData?.kpiContribution || [];
-  const radarData = performanceData?.radarData || [];
+  
+  // Generate daily data from KPIs (mock for now)
+  const dailyData = depositKPI.target ? [
+    { date: 'Mon', target: depositKPI.target / 4, actual: Math.min(depositKPI.actual * 0.25, depositKPI.target / 4) },
+    { date: 'Tue', target: depositKPI.target / 4, actual: Math.min(depositKPI.actual * 0.25, depositKPI.target / 4) },
+    { date: 'Wed', target: depositKPI.target / 4, actual: Math.min(depositKPI.actual * 0.25, depositKPI.target / 4) },
+    { date: 'Thu', target: depositKPI.target / 4, actual: Math.min(depositKPI.actual * 0.25, depositKPI.target / 4) },
+  ] : [];
+  
+  // Generate KPI contribution from breakdown
+  const kpiContribution = Object.entries(kpiBreakdown).map(([key, value]: [string, any]) => ({
+    category: key.charAt(0).toUpperCase() + key.slice(1),
+    target: value.target || 0,
+    actual: value.actual || 0,
+    percent: value.percent || 0,
+  }));
+  
+  // Radar data for behavioral evaluation
+  const radarData = [
+    { competency: 'Teamwork', score: 0 },
+    { competency: 'Communication', score: 0 },
+    { competency: 'Leadership', score: 0 },
+    { competency: 'Innovation', score: 0 },
+    { competency: 'Customer Focus', score: 0 },
+  ];
 
   return (
     <div className="space-y-6">
@@ -78,7 +105,7 @@ export function KPIDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-2">Final Score</p>
-              <p className="text-4xl font-bold text-slate-800">{finalScore}%</p>
+              <p className="text-4xl font-bold text-slate-800">{Math.round(finalScore)}%</p>
               <div className="flex items-center justify-center gap-1 mt-2">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
@@ -93,11 +120,11 @@ export function KPIDashboard() {
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-2">KPI Score (85%)</p>
-              <p className="text-4xl font-bold text-slate-800">{kpiScore}%</p>
+              <p className="text-4xl font-bold text-slate-800">{Math.round(kpiScore)}%</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-2">Behavioral Score (15%)</p>
-              <p className="text-4xl font-bold text-slate-800">{behavioralScore}%</p>
+              <p className="text-4xl font-bold text-slate-800">{Math.round(behavioralScore)}%</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-2">Overall Rating</p>
@@ -121,16 +148,20 @@ export function KPIDashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={dailyData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" />
+                  <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
                   <Legend />
                   <Line type="monotone" dataKey="target" stroke="#e2e8f0" strokeWidth={2} name="Target" />
-                  <Line type="monotone" dataKey="achievement" stroke="#3b82f6" strokeWidth={2} name="Achievement" />
+                  <Line type="monotone" dataKey="actual" stroke="#3b82f6" strokeWidth={2} name="Actual" />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-center text-slate-500 py-16">No daily data available</div>
+              <div className="text-center py-8">
+                <p className="text-slate-600">Deposit Target: {depositKPI.target?.toLocaleString() || 0} ETB</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-2">{depositKPI.actual?.toLocaleString() || 0} ETB</p>
+                <p className="text-sm text-slate-500 mt-1">Achieved ({depositKPI.percent?.toFixed(1) || 0}%)</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -148,11 +179,17 @@ export function KPIDashboard() {
                   <XAxis dataKey="category" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="target" fill="#e2e8f0" name="Target" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="actual" fill="#3b82f6" name="Actual" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-center text-slate-500 py-16">No KPI contribution data available</div>
+              <div className="text-center py-8">
+                <p className="text-slate-600">KPI Breakdown</p>
+                <p className="text-sm text-slate-500 mt-1">Target: {depositKPI.target?.toLocaleString() || 0} ETB</p>
+                <p className="text-sm text-slate-500">Actual: {depositKPI.actual?.toLocaleString() || 0} ETB</p>
+                <p className="text-sm text-slate-500">Progress: {depositKPI.percent?.toFixed(1) || 0}%</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -168,14 +205,18 @@ export function KPIDashboard() {
             <ResponsiveContainer width="100%" height={400}>
               <RadarChart data={radarData}>
                 <PolarGrid />
-                <PolarAngleAxis dataKey="subject" />
+                <PolarAngleAxis dataKey="competency" />
                 <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                <Radar name="Performance" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                <Radar name="Performance" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
                 <Tooltip />
               </RadarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center text-slate-500 py-16">No radar chart data available</div>
+            <div className="text-center py-8">
+              <p className="text-slate-600">Behavioral Evaluation</p>
+              <p className="text-sm text-slate-500 mt-1">Not yet evaluated</p>
+              <p className="text-sm text-slate-500">Complete tasks and get rated by your manager</p>
+            </div>
           )}
         </CardContent>
       </Card>

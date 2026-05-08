@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Plus, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dashboardAPI, mappingsAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
@@ -51,25 +50,12 @@ export function StaffDashboard() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Approved':
-        return <Badge variant="success"><CheckCircle2 className="h-3 w-3 mr-1" /> Approved</Badge>;
-      case 'Pending':
-        return <Badge variant="warning"><Clock className="h-3 w-3 mr-1" /> Pending...</Badge>;
-      case 'Rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>;
-      default:
-        return null;
-    }
-  };
-
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
   }
 
   const performanceScore = dashboardData?.performanceScore;
-  const kpiScores = performanceScore?.kpiScores || {};
+  const kpiScores = performanceScore?.kpiScores || dashboardData?.kpiBreakdown || {};
 
   return (
     <div className="space-y-6">

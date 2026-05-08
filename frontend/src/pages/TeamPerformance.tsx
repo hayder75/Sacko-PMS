@@ -26,12 +26,13 @@ export function TeamPerformance() {
 
   const teamMembers = data?.teamPerformance || data?.teamMembers || [];
 
+  // Map the API response to match the expected format
   const chartData = teamMembers.map((member: any) => ({
     name: member.name.split(' ')[0],
-    deposit: member.deposit,
-    digital: member.digital,
-    loan: member.loan,
-    customer: member.customer,
+    deposit: member.actual || 0,
+    target: member.target || 0,
+    actual: member.actual || 0,
+    overall: member.overall || 0,
   }));
 
   const getRatingColor = (score: number) => {
@@ -105,10 +106,8 @@ export function TeamPerformance() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="deposit" fill="#3b82f6" name="Deposit" />
-                <Bar dataKey="digital" fill="#10b981" name="Digital" />
-                <Bar dataKey="loan" fill="#f59e0b" name="Loan" />
-                <Bar dataKey="customer" fill="#8b5cf6" name="Customer" />
+                <Bar dataKey="actual" fill="#3b82f6" name="Actual" />
+                <Bar dataKey="target" fill="#e2e8f0" name="Target" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -141,10 +140,10 @@ export function TeamPerformance() {
                   <TableRow key={member._id || member.id || index}>
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell>{member.role || member.position || 'N/A'}</TableCell>
-                    <TableCell>{member.deposit || 0}%</TableCell>
-                    <TableCell>{member.digital || 0}%</TableCell>
-                    <TableCell>{member.loan || 0}%</TableCell>
-                    <TableCell>{member.customer || 0}%</TableCell>
+                    <TableCell>{member.target ? Math.round((member.actual / member.target) * 100) : 0}%</TableCell>
+                    <TableCell>0%</TableCell>
+                    <TableCell>0%</TableCell>
+                    <TableCell>0%</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress value={member.overall || 0} className="w-24" />

@@ -2,19 +2,11 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { dashboardAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
-const COLORS = {
-  Good: '#10b981',
-  Warning: '#f59e0b',
-  Critical: '#ef4444',
-  'No Data': '#6b7280',
-};
-
 export function RegionalDirectorDashboard() {
-  const { user } = useUser();
+  useUser(); // Required for auth context
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,10 +37,6 @@ export function RegionalDirectorDashboard() {
     bottomBranches: [],
     branches: [],
     areaManagers: [],
-  };
-
-  const getStatusColor = (status: string) => {
-    return COLORS[status as keyof typeof COLORS] || COLORS['No Data'];
   };
 
   const getStatusBadge = (achievement: number) => {

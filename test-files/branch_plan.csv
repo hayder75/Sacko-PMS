@@ -1,0 +1,5 @@
+branch_code,kpi_category,period,target_value,target_type,start_date,end_date,status
+ATOTE,Deposit Mobilization,2025-H2,1000000,incremental,2025-07-01,2025-12-31,Active
+ATOTE,Digital Channel Growth,2025-H2,50,incremental,2025-07-01,2025-12-31,Active
+ATOTE,Member Registration,2025-H2,20,incremental,2025-07-01,2025-12-31,Active
+ATOTE,Customer Base,2025-H2,30,incremental,2025-07-01,2025-12-31,Active

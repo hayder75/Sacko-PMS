@@ -3,22 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { dashboardAPI, tasksAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
-
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'good':
-      return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
-    case 'warning':
-      return <AlertCircle className="h-5 w-5 text-amber-500" />;
-    case 'critical':
-      return <XCircle className="h-5 w-5 text-red-500" />;
-    default:
-      return null;
-  }
-};
 
 export function BranchManagerDashboard() {
   const { user, role } = useUser();
@@ -184,18 +171,14 @@ export function BranchManagerDashboard() {
                   <TableRow key={member._id || member.id || member.name}>
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell>{member.role || member.position || 'N/A'}</TableCell>
-                    <TableCell>{(member.mappedAccounts || member.mappedAccountsCount || 0).toLocaleString()}</TableCell>
+                    <TableCell>0</TableCell>
                     <TableCell>
-                      <Badge variant={member.deposit >= 80 ? 'success' : member.deposit >= 60 ? 'warning' : 'destructive'}>
-                        {member.deposit || 0}%
+                      <Badge variant={member.overall >= 80 ? 'success' : member.overall >= 60 ? 'warning' : member.overall > 0 ? 'destructive' : 'outline'}>
+                        {member.target ? Math.round((member.actual / member.target) * 100) : 0}%
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={member.digital >= 80 ? 'success' : 'warning'}>
-                        {member.digital || 0}%
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getStatusIcon(member.status || 'good')}</TableCell>
+                    <TableCell>0%</TableCell>
+                    <TableCell>{member.status === 'good' ? '✅' : member.status === 'warning' ? '⚠️' : '❌'}</TableCell>
                   </TableRow>
                 ))
               ) : (

@@ -177,3 +177,84 @@ export const calculateRating = (finalScore) => {
   if (finalScore >= 60) return 'Needs_Support';
   return 'Unsatisfactory';
 };
+
+/**
+ * Calculate deposit growth for entire branch (sum of all staff)
+ */
+export const calculateBranchDepositGrowth = async (branch_code, period) => {
+  try {
+    // Get branch ID from branch code
+    const branch = await prisma.branch.findFirst({ where: { code: branch_code } });
+    if (!branch) return 0;
+
+    // Get june baselines (note: branch_code might be null, use account_id)
+    const juneBaseline = await prisma.juneBalance.findMany({
+      where: { is_active: true }
+    });
+
+    const accountIds = juneBaseline.map(j => j.account_id).filter(Boolean);
+    const accountNumbers = juneBaseline.map(j => j.accountNumber).filter(Boolean);
+    
+    if (accountIds.length === 0 && accountNumbers.length === 0) return 0;
+
+    const currentBalances = await prisma.accountMapping.findMany({
+      where: {
+        branchId: branch.id,
+        status: 'Active',
+        current_balance: { gte: 500 },
+        OR: [
+          { accountNumber: { in: accountIds } },
+          { accountNumber: { in: accountNumbers } }
+        ]
+      },
+    });
+
+    let totalGrowth = 0;
+    for (const mapping of currentBalances) {
+      const baseline = juneBaseline.find(j => 
+        j.account_id === mapping.accountNumber || j.accountNumber === mapping.accountNumber
+      );
+      if (baseline) {
+        const growth = mapping.current_balance - baseline.june_balance;
+        if (growth > 0) totalGrowth += growth;
+      }
+    }
+
+    return totalGrowth;
+  } catch (error) {
+    console.error('Branch deposit growth error:', error);
+    return 0;
+  }
+};
+
+/**
+ * Calculate digital channel growth for branch
+ */
+export const calculateBranchDigitalGrowth = async (branch_code, period) => {
+  try {
+    // Get all active staff with digital targets
+    const staffPlans = await prisma.staffPlan.findMany({
+      where: {
+        branch_code,
+        status: 'Active',
+        kpi_category: 'Digital_Channel_Growth'
+      }
+    });
+
+    let totalDigital = 0;
+    for (const plan of staffPlans) {
+      // Count digital transactions for each staff's mapped accounts
+      const digitalCount = await prisma.transaction.count({
+        where: {
+          account_no: { in: [] }, // Would need transaction type tracking
+        }
+      });
+      totalDigital += digitalCount;
+    }
+
+    return totalDigital;
+  } catch (error) {
+    console.error('Branch digital growth error:', error);
+    return 0;
+  }
+};
