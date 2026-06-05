@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800;
+  }
+}
+
+@layer components {
+  .card-corporate {
+    @apply bg-white border border-primary-100;
+  }
+  .text-corporate {
+    @apply text-slate-800;
+  }
+  .text-corporate-muted {
+    @apply text-slate-500;
+  }
+}
