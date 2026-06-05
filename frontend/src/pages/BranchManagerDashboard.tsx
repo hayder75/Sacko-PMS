@@ -171,7 +171,7 @@ export function BranchManagerDashboard() {
                   <TableRow key={member._id || member.id || member.name}>
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell>{member.role || member.position || 'N/A'}</TableCell>
-                    <TableCell>0</TableCell>
+                    <TableCell>{member.mappedAccounts || 0}</TableCell>
                     <TableCell>
                       <Badge variant={member.overall >= 80 ? 'success' : member.overall >= 60 ? 'warning' : member.overall > 0 ? 'destructive' : 'outline'}>
                         {member.target ? Math.round((member.actual / member.target) * 100) : 0}%

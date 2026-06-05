@@ -155,7 +155,7 @@ export function Sidebar() {
       >
         <div className="p-6 border-b border-primary-600">
           <h1 className="text-xl font-bold text-white">SAKO PMS</h1>
-          <p className="text-xs text-blue-100 mt-1">{role}</p>
+          <p className="text-xs text-blue-100 mt-1">{role === 'regionalDirector' ? 'Regional Director' : role === 'areaManager' ? 'Area Manager' : role === 'branchManager' ? 'Branch Manager' : role === 'lineManager' ? 'Line Manager' : role === 'subTeamLeader' ? 'Sub-Team Leader' : role === 'admin' ? 'Admin' : role}</p>
         </div>
         <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-100px)]">
           {navItems.map((item) => {

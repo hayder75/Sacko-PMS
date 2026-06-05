@@ -191,12 +191,14 @@ export const getRegionalDashboard = asyncHandler(async (req, res) => {
   });
 
   const areas = areasInRegion.map(area => {
-    const areaBranches = branches.filter(b => b.areaId === area.id);
+    const areaBranchPerf = branchPerformance.filter(bp => bp.area === area.name);
+    const totalAchievement = areaBranchPerf.reduce((sum, bp) => sum + bp.achievement, 0);
+    const avgAchievement = areaBranchPerf.length > 0 ? Math.round(totalAchievement / areaBranchPerf.length) : 0;
     return {
       id: area.id,
       name: area.name,
-      branches: areaBranches.length,
-      achievement: 0,
+      branches: areaBranchPerf.length,
+      achievement: avgAchievement,
     };
   });
 
@@ -391,6 +393,11 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
     }
 
     const percent = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+    
+    const mappedCount = await prisma.accountMapping.count({
+      where: { mappedToId: member.id, status: 'Active' }
+    });
+
     teamPerformance.push({
       id: member.id,
       name: member.name,
@@ -398,6 +405,7 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
       target: totalTarget,
       actual: totalActual,
       overall: Math.round(percent),
+      mappedAccounts: mappedCount,
       status: percent >= 80 ? 'good' : percent >= 60 ? 'warning' : percent > 0 ? 'critical' : 'no-data',
     });
   }
