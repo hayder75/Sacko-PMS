@@ -143,14 +143,13 @@ async function main() {
     await prisma.plan.create({
       data: {
         name: plan.name,
-        type: 'Branch',
+        branch_code: 'HAWASSA_MAIN',
         period: '2025-H2',
         branchId: branch.id,
         kpi_category: plan.kpi_category,
         target_value: plan.target_value,
-        weight: plan.weight,
-        startDate: new Date('2025-07-01'),
-        endDate: new Date('2025-12-31'),
+        target_type: 'incremental',
+        createdById: bm.id,
         status: 'Active',
       },
     });
