@@ -161,15 +161,16 @@ async function main() {
     await prisma.staffPlan.create({
       data: {
         userId: staff.id,
-        planId: bp.id,
         branchPlanId: bp.id,
+        branch_code: 'HAWASSA_MAIN',
+        branchId: branch.id,
+        position: 'Member_Service_Officer_I',
         kpi_category: bp.kpi_category,
+        period: '2025-H2',
         individual_target: Math.round(bp.target_value * 0.1),
         monthly_target: Math.round(bp.target_value * 0.1 / 6),
-        branch_code: 'HAWASSA_MAIN',
+        plan_share_percent: 100,
         status: 'Active',
-        startDate: new Date('2025-07-01'),
-        endDate: new Date('2025-12-31'),
       },
     });
   }
