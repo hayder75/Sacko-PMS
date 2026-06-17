@@ -358,6 +358,14 @@ async function seedPerformanceScores(branch, users) {
 
     const finalScore = demoFinalScores[demoIdx];
     const rating = demoRating[demoIdx];
+    const behavioralScore = demoBehavioralScores[demoIdx];
+    const kpiTotalScore = Math.round(
+      Object.values(kpiScores).reduce((sum, k: any) => sum + (k.score || 0), 0)
+    );
+    const behavioralEval = await prisma.behavioralEvaluation.findFirst({
+      where: { evaluatedUserId: staff.id, branchId: branch.id, approvalStatus: 'Approved' },
+      orderBy: { createdAt: 'desc' },
+    });
 
     const existingScore = await prisma.performanceScore.findFirst({
       where: { userId: staff.id, branchId: branch.id, period: 'Quarterly', year: 2025 },
