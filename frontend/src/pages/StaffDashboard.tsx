@@ -1,47 +1,36 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Phone, TrendingUp, TrendingDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { dashboardAPI, mappingsAPI } from '@/lib/api';
+import { dashboardAPI, mappedAccountsAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
-import { mapBackendRoleToFrontend } from '@/lib/roleMapper';
 
 export function StaffDashboard() {
   const { user } = useUser();
   const [dashboardData, setDashboardData] = useState<any>(null);
-  const [mappings, setMappings] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Load data in background, don't block UI
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const params: any = {};
-      const userRole = mapBackendRoleToFrontend(user?.role || '');
-
-      // If subTeamLeader, we want to explicitly filter by their ID to see THEIR mappings
-      // because the backend might return branch-wide mappings for managers.
-      if (userRole === 'subTeamLeader') {
-        params.mappedTo = user?._id;
-      }
-
       const [dashboardRes, mappingRes] = await Promise.all([
         dashboardAPI.getStaff(),
-        mappingsAPI.getAll(params),
+        mappedAccountsAPI.getDashboard(user?.id),
       ]);
 
       if (dashboardRes.success) {
         setDashboardData(dashboardRes.data);
       }
       if (mappingRes.success) {
-        setMappings(mappingRes.data || []);
+        setAccounts(mappingRes.data?.accounts || []);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -154,65 +143,73 @@ export function StaffDashboard() {
 
       {/* My Mapped Accounts */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>My Mapped Accounts</CardTitle>
-          <div className="flex gap-2">
-            <Link to="/tasks/new">
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add New Task
-              </Button>
-            </Link>
-          </div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">
+            Accounts Mapped to You
+            <span className="ml-2 text-sm font-normal text-slate-400">({accounts.length})</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Account #</TableHead>
-                <TableHead>Customer Name</TableHead>
-                <TableHead className="text-right">June 30 Balance</TableHead>
-                <TableHead className="text-right">Current Balance</TableHead>
-                <TableHead className="text-right">Growth</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mappings.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
-                    No mapped accounts found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                mappings.map((mapping) => {
-                  const growth = mapping.current_balance - mapping.june_balance;
-                  return (
-                    <TableRow key={mapping._id}>
-                      <TableCell className="font-mono text-sm font-bold text-blue-600">
-                        {mapping.accountNumber}
-                      </TableCell>
-                      <TableCell className="font-medium">{mapping.customerName}</TableCell>
-                      <TableCell className="text-right">
-                        {mapping.june_balance?.toLocaleString() || '0'}
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        {mapping.current_balance?.toLocaleString() || '0'}
-                      </TableCell>
-                      <TableCell className={`text-right font-bold ${growth >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {growth > 0 ? '+' : ''}{growth.toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/tasks/new?accountNumber=${mapping.accountNumber}`}>
-                          <Button variant="outline" size="sm">Add Task</Button>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="text-left px-4 py-3 font-medium text-slate-600">Account #</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600">Customer</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600">Phone</th>
+                  <th className="text-right px-4 py-3 font-medium text-slate-600">June Balance</th>
+                  <th className="text-right px-4 py-3 font-medium text-slate-600">Current Balance</th>
+                  <th className="text-right px-4 py-3 font-medium text-slate-600">Difference</th>
+                  <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
+                  <th className="text-center px-4 py-3 font-medium text-slate-600">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accounts.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-8 text-slate-400">No accounts mapped to you yet</td>
+                  </tr>
+                ) : (
+                  accounts.map((acct: any) => (
+                    <tr key={acct.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs text-slate-700">{acct.accountNumber}</td>
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-slate-800">{acct.customerName}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {acct.phoneNumber ? (
+                          <a href={`tel:${acct.phoneNumber}`} className="flex items-center gap-1 text-blue-600 hover:text-blue-800">
+                            <Phone className="h-3 w-3" />
+                            <span>{acct.phoneNumber}</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-300">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm">{acct.juneBalance?.toLocaleString() || '0'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm">{acct.currentBalance?.toLocaleString() || '0'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${(acct.difference || 0) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {(acct.difference || 0) > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {(acct.difference || 0) > 0 ? '+' : ''}{(acct.difference || 0).toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">
+                          {acct.activeStatus ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Link to={`/tasks/new?accountNumber=${acct.accountNumber}`}>
+                          <Button variant="outline" size="sm" className="text-xs">Add Task</Button>
                         </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>
