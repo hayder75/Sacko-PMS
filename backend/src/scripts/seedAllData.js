@@ -118,7 +118,7 @@ async function main() {
       email: 'bekele.molla@hawassa_main.et',
       password: hashedPwd,
       role: 'staff',
-      position: 'Member_Service_Officer',
+      position: 'Member_Service_Officer_I',
       employeeId: 'HAWASSA_MAIN_STAFF001',
       branchId: branch.id,
       regionId: region.id,
