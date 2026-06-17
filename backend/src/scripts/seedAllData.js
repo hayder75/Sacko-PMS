@@ -33,7 +33,7 @@ async function main() {
   await prisma.area.deleteMany();
   await prisma.region.deleteMany();
 
-  const hashedPwd = await bcrypt.hash('password123', 10);
+  const hashedPwd = await bcrypt.hash('1234', 10);
 
   // 1. South Region
   const region = await prisma.region.create({
@@ -111,8 +111,8 @@ async function main() {
   await prisma.branch.update({ where: { id: branch.id }, data: { managerId: bm.id } });
   console.log(`✅ Branch Manager: ${bm.name}`);
 
-  // 7. Single Staff (MSO)
-  const staff = await prisma.user.create({
+  // 7. Staff (MSOs)
+  const staff1 = await prisma.user.create({
     data: {
       name: 'Bekele Molla',
       email: 'bekele.molla@hawassa_main.et',
@@ -127,7 +127,23 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`✅ Staff: ${staff.name}`);
+  const staff2 = await prisma.user.create({
+    data: {
+      name: 'Chaltu Desta',
+      email: 'chaltu.desta@hawassa_main.et',
+      password: hashedPwd,
+      role: 'staff',
+      position: 'Member_Service_Officer_II',
+      employeeId: 'HAWASSA_MAIN_STAFF002',
+      branchId: branch.id,
+      regionId: region.id,
+      areaId: area.id,
+      branch_code: 'HAWASSA_MAIN',
+      isActive: true,
+    },
+  });
+  const allStaff = [staff1, staff2];
+  console.log(`✅ Staff: ${allStaff.map(s => s.name).join(', ')}`);
 
   // 8. Plans
   const plans = [
@@ -155,24 +171,26 @@ async function main() {
   }
   console.log('✅ Plans created');
 
-  // 9. Staff Plan for the single staff
+  // 9. Staff Plans for all staff
   const branchPlans = await prisma.plan.findMany({ where: { branchId: branch.id } });
-  for (const bp of branchPlans) {
-    await prisma.staffPlan.create({
-      data: {
-        userId: staff.id,
-        branchPlanId: bp.id,
-        branch_code: 'HAWASSA_MAIN',
-        branchId: branch.id,
-        position: 'Member_Service_Officer_I',
-        kpi_category: bp.kpi_category,
-        period: '2025-H2',
-        individual_target: Math.round(bp.target_value * 0.1),
-        monthly_target: Math.round(bp.target_value * 0.1 / 6),
-        plan_share_percent: 100,
-        status: 'Active',
-      },
-    });
+  for (const s of allStaff) {
+    for (const bp of branchPlans) {
+      await prisma.staffPlan.create({
+        data: {
+          userId: s.id,
+          branchPlanId: bp.id,
+          branch_code: 'HAWASSA_MAIN',
+          branchId: branch.id,
+          position: s.position,
+          kpi_category: bp.kpi_category,
+          period: '2025-H2',
+          individual_target: Math.round(bp.target_value * 0.1),
+          monthly_target: Math.round(bp.target_value * 0.1 / 6),
+          plan_share_percent: 100,
+          status: 'Active',
+        },
+      });
+    }
   }
   console.log('✅ Staff plans created');
 
@@ -181,10 +199,11 @@ async function main() {
   console.log(`============================================================`);
   console.log(`\n📋 LOGIN CREDENTIALS:`);
   console.log(`   Admin:              admin@sako.com / admin123`);
-  console.log(`   Regional Director:  getachew.lemma@south.gov.et / password123`);
-  console.log(`   Area Manager:       tadesse.woldemariam@hawassa_area.et / password123`);
-  console.log(`   Branch Manager:     abebe.tadesse@hawassa_main.et / password123`);
-  console.log(`   Staff:              bekele.molla@hawassa_main.et / password123`);
+  console.log(`   Regional Director:  getachew.lemma@south.gov.et / 1234`);
+  console.log(`   Area Manager:       tadesse.woldemariam@hawassa_area.et / 1234`);
+  console.log(`   Branch Manager:     abebe.tadesse@hawassa_main.et / 1234`);
+  console.log(`   Staff:              bekele.molla@hawassa_main.et / 1234`);
+  console.log(`   Staff:              chaltu.desta@hawassa_main.et / 1234`);
 }
 
 main()

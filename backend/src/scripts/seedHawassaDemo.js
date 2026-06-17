@@ -56,14 +56,14 @@ async function getHawassaUsers() {
   if (!branch) throw new Error(`Branch ${BRANCH_CODE} not found. Run seedAllData first.`);
 
   const bm = await prisma.user.findFirst({ where: { branchId: branch.id, role: 'branchManager' } });
-  const staff = await prisma.user.findFirst({ where: { branchId: branch.id, role: 'staff' } });
+  const allStaff = await prisma.user.findMany({ where: { branchId: branch.id, role: 'staff' }, orderBy: { name: 'asc' } });
 
-  if (!bm || !staff) {
+  if (!bm || allStaff.length === 0) {
     throw new Error('Hawassa BM or staff not found. Run seedAllData first.');
   }
 
-  console.log(`\n👥 Found: BM=${bm.name}, Staff=${staff.name}`);
-  return { branch, bm, staff };
+  console.log(`\n👥 Found: BM=${bm.name}, Staff=${allStaff.map(s => s.name).join(', ')}`);
+  return { branch, bm, allStaff };
 }
 
 function randomBalance(juneBal) {
@@ -92,14 +92,15 @@ async function seedJuneBalances() {
   return juneBaselines;
 }
 
-async function seedAccountMappings(branch, juneBaselines, staff) {
+async function seedAccountMappings(branch, juneBaselines, allStaff) {
   let created = 0;
-  for (const c of HABESHA_CUSTOMERS) {
-    const idx = HABESHA_CUSTOMERS.indexOf(c);
-    const accountNumber = `HAW${String(100001 + idx).slice(-6)}`;
+  for (let i = 0; i < HABESHA_CUSTOMERS.length; i++) {
+    const c = HABESHA_CUSTOMERS[i];
+    const accountNumber = `HAW${String(100001 + i).slice(-6)}`;
     const jb = juneBaselines.find(j => j.account_id === accountNumber);
     const juneBal = jb?.june_balance || 1500;
     const { current } = randomBalance(juneBal);
+    const staff = allStaff[i % allStaff.length];
 
     await prisma.accountMapping.upsert({
       where: { accountNumber },
@@ -129,7 +130,7 @@ async function seedAccountMappings(branch, juneBaselines, staff) {
     });
     created++;
   }
-  console.log(`✅ Created ${created} account mappings for ${staff.name}`);
+  console.log(`✅ Created ${created} account mappings across ${allStaff.length} staff (${allStaff.map(s => `${s.name}: ${HABESHA_CUSTOMERS.length / allStaff.length}`).join(', ')})`);
 }
 
 async function seedDailyTasks(branch, users) {
@@ -139,69 +140,52 @@ async function seedDailyTasks(branch, users) {
   todayEnd.setHours(23, 59, 59, 999);
 
   const taskTypes = ['Deposit_Mobilization', 'Digital_Activation', 'Member_Registration', 'New_Customer', 'Loan_Follow_up'];
-  const mappings = await prisma.accountMapping.findMany({
-    where: { mappedToId: users.staff.id, branchId: branch.id, status: 'Active' },
-  });
-
-  if (mappings.length === 0) return 0;
-
-  const numTasks = Math.min(6, mappings.length);
   let totalTasks = 0;
 
-  for (let i = 0; i < numTasks; i++) {
-    const mapping = mappings[i];
-    const taskType = taskTypes[i % taskTypes.length];
-    const amount = taskType === 'Deposit_Mobilization' || taskType === 'Loan_Follow_up'
-      ? Math.floor(Math.random() * 5000) + 500
-      : 0;
-
-    const taskDate = new Date(today);
-    taskDate.setHours(8 + i, Math.floor(Math.random() * 60), 0, 0);
-
-    const existingTask = await prisma.dailyTask.findFirst({
-      where: {
-        accountNumber: mapping.accountNumber,
-        taskDate: { gte: today, lt: todayEnd },
-        submittedById: users.staff.id,
-      },
+  for (const staff of users.allStaff) {
+    const mappings = await prisma.accountMapping.findMany({
+      where: { mappedToId: staff.id, branchId: branch.id, status: 'Active' },
     });
-    if (existingTask) continue;
+    if (mappings.length === 0) continue;
 
-    const task = await prisma.dailyTask.create({
-      data: {
-        taskType,
-        accountNumber: mapping.accountNumber,
-        accountId: mapping.id,
-        amount,
-        remarks: `${taskType.replace(/_/g, ' ')} - ${mapping.customerName}`,
-        submittedById: users.staff.id,
-        branchId: branch.id,
-        mappingStatus: 'Mapped_to_You',
-        approvalStatus: 'Approved',
-        cbsValidated: true,
-        cbsValidatedAt: new Date(),
-        taskDate,
-      },
-    });
+    const numTasks = Math.min(4, mappings.length);
+    for (let i = 0; i < numTasks; i++) {
+      const mapping = mappings[i];
+      const taskType = taskTypes[i % taskTypes.length];
+      const amount = taskType === 'Deposit_Mobilization' || taskType === 'Loan_Follow_up'
+        ? Math.floor(Math.random() * 5000) + 500
+        : 0;
 
-    await prisma.taskApproval.create({
-      data: {
-        taskId: task.id,
-        approverId: users.bm.id,
-        role: 'branchManager',
-        status: 'Approved',
-        approvedAt: new Date(),
-      },
-    });
+      const taskDate = new Date(today);
+      taskDate.setHours(8 + i, Math.floor(Math.random() * 60), 0, 0);
 
-    totalTasks++;
+      const existingTask = await prisma.dailyTask.findFirst({
+        where: { accountNumber: mapping.accountNumber, taskDate: { gte: today, lt: todayEnd }, submittedById: staff.id },
+      });
+      if (existingTask) continue;
+
+      const task = await prisma.dailyTask.create({
+        data: {
+          taskType, accountNumber: mapping.accountNumber, accountId: mapping.id, amount,
+          remarks: `${taskType.replace(/_/g, ' ')} - ${mapping.customerName}`,
+          submittedById: staff.id, branchId: branch.id,
+          mappingStatus: 'Mapped_to_You', approvalStatus: 'Approved',
+          cbsValidated: true, cbsValidatedAt: new Date(), taskDate,
+        },
+      });
+
+      await prisma.taskApproval.create({
+        data: { taskId: task.id, approverId: users.bm.id, role: 'branchManager', status: 'Approved', approvedAt: new Date() },
+      });
+      totalTasks++;
+    }
   }
   console.log(`✅ Created ${totalTasks} daily tasks for today`);
   return totalTasks;
 }
 
 async function seedBehavioralEvaluations(branch, users) {
-  const competencies = [
+  const baseCompetencies = [
     { competencyName: 'Communication', score: 3, maxScore: 5 },
     { competencyName: 'Teamwork', score: 3, maxScore: 5 },
     { competencyName: 'Problem Solving', score: 2, maxScore: 5 },
@@ -211,108 +195,96 @@ async function seedBehavioralEvaluations(branch, users) {
     { competencyName: 'Initiative', score: 3, maxScore: 5 },
     { competencyName: 'Reliability', score: 3, maxScore: 5 },
   ];
-  const totalScore = competencies.reduce((s, c) => s + c.score, 0);
 
-  const existing = await prisma.behavioralEvaluation.findFirst({
-    where: { evaluatedUserId: users.staff.id, branchId: branch.id, year: 2025 },
-  });
-  if (existing) {
-    console.log('✅ Behavioral evaluation already exists, skipping');
-    return;
+  let count = 0;
+  for (const staff of users.allStaff) {
+    const existing = await prisma.behavioralEvaluation.findFirst({
+      where: { evaluatedUserId: staff.id, branchId: branch.id, year: 2025 },
+    });
+    if (existing) continue;
+
+    const variance = users.allStaff.indexOf(staff);
+    const competencies = baseCompetencies.map(c => ({
+      ...c,
+      score: Math.max(1, Math.min(5, c.score + (variance > 0 ? 1 : 0))),
+    }));
+    const totalScore = competencies.reduce((s, c) => s + c.score, 0);
+
+    const evaluation = await prisma.behavioralEvaluation.create({
+      data: {
+        evaluatedUserId: staff.id, evaluatedById: users.bm.id, branchId: branch.id,
+        period: 'Quarterly', year: 2025, quarter: 2,
+        competencies, totalScore,
+        overallComments: 'Good performance this period.', approvalStatus: 'Approved',
+      },
+    });
+
+    await prisma.evaluationApproval.create({
+      data: {
+        evaluationId: evaluation.id, approverId: users.bm.id, role: 'branchManager',
+        status: 'Approved', approvedAt: new Date(), comments: 'Good performance this quarter.',
+      },
+    });
+    count++;
   }
-
-  const evaluation = await prisma.behavioralEvaluation.create({
-    data: {
-      evaluatedUserId: users.staff.id,
-      evaluatedById: users.bm.id,
-      branchId: branch.id,
-      period: 'Quarterly',
-      year: 2025,
-      quarter: 2,
-      competencies,
-      totalScore,
-      overallComments: 'Good performance this period.',
-      approvalStatus: 'Approved',
-    },
-  });
-
-  await prisma.evaluationApproval.create({
-    data: {
-      evaluationId: evaluation.id,
-      approverId: users.bm.id,
-      role: 'branchManager',
-      status: 'Approved',
-      approvedAt: new Date(),
-      comments: 'Good performance this quarter.',
-    },
-  });
-
-  console.log('✅ Created behavioral evaluation for staff');
+  console.log(`✅ Created ${count} behavioral evaluations`);
 }
 
 async function seedPerformanceScores(branch, users) {
-  const mappings = await prisma.accountMapping.findMany({
-    where: { mappedToId: users.staff.id, branchId: branch.id, status: 'Active' },
-  });
+  const demoFinalScores = [86, 78];
+  const demoRatings = ['Very_Good', 'Good'];
 
-  const kpiScores = {
-    Deposit_Mobilization: { target: 150000, actual: 112500, percent: 75, weight: 25, score: 18.75 },
-    Digital_Channel_Growth: { target: 8, actual: 6, percent: 75, weight: 20, score: 15 },
-    Member_Registration: { target: 5, actual: 4, percent: 80, weight: 10, score: 8 },
-    Customer_Base: { target: 8, actual: 6, percent: 75, weight: 15, score: 11.25 },
-  };
+  let count = 0;
+  for (const staff of users.allStaff) {
+    const idx = users.allStaff.indexOf(staff);
+    const finalScore = demoFinalScores[idx];
+    const rating = demoRatings[idx];
 
-  const kpiTotalScore = Math.round(
-    Object.values(kpiScores).reduce((sum, k) => sum + (k.score || 0), 0)
-  );
-  const finalScore = 86;
-  const behavioralEval = await prisma.behavioralEvaluation.findFirst({
-    where: { evaluatedUserId: users.staff.id, branchId: branch.id, approvalStatus: 'Approved' },
-    orderBy: { createdAt: 'desc' },
-  });
+    const kpiScores = {
+      Deposit_Mobilization: { target: 150000, actual: 112500, percent: 75, weight: 25, score: 18.75 },
+      Digital_Channel_Growth: { target: 8, actual: 6, percent: 75, weight: 20, score: 15 },
+      Member_Registration: { target: 5, actual: 4, percent: 80, weight: 10, score: 8 },
+      Customer_Base: { target: 8, actual: 6, percent: 75, weight: 15, score: 11.25 },
+    };
 
-  const existingScore = await prisma.performanceScore.findFirst({
-    where: { userId: users.staff.id, branchId: branch.id, period: 'Quarterly', year: 2025 },
-  });
-
-  const scoreData = {
-    kpiScores,
-    kpiTotalScore,
-    behavioralScore: 14,
-    behavioralEvaluationId: behavioralEval?.id,
-    finalScore,
-    rating: 'Very_Good',
-    status: 'Calculated',
-  };
-
-  if (existingScore) {
-    await prisma.performanceScore.update({ where: { id: existingScore.id }, data: scoreData });
-  } else {
-    await prisma.performanceScore.create({
-      data: {
-        userId: users.staff.id,
-        branchId: branch.id,
-        period: 'Quarterly',
-        year: 2025,
-        quarter: 2,
-        month: 6,
-        ...scoreData,
-      },
+    const kpiTotalScore = Math.round(Object.values(kpiScores).reduce((sum, k) => sum + (k.score || 0), 0));
+    const behavioralEval = await prisma.behavioralEvaluation.findFirst({
+      where: { evaluatedUserId: staff.id, branchId: branch.id, approvalStatus: 'Approved' },
+      orderBy: { createdAt: 'desc' },
     });
+
+    const existingScore = await prisma.performanceScore.findFirst({
+      where: { userId: staff.id, branchId: branch.id, period: 'Quarterly', year: 2025 },
+    });
+
+    const scoreData = {
+      kpiScores, kpiTotalScore, behavioralScore: 14,
+      behavioralEvaluationId: behavioralEval?.id, finalScore, rating,
+      status: 'Calculated',
+    };
+
+    if (existingScore) {
+      await prisma.performanceScore.update({ where: { id: existingScore.id }, data: scoreData });
+    } else {
+      await prisma.performanceScore.create({
+        data: { userId: staff.id, branchId: branch.id, period: 'Quarterly', year: 2025, quarter: 2, month: 6, ...scoreData },
+      });
+    }
+    count++;
   }
-  console.log(`✅ Performance score created: ${finalScore}% (Very Good)`);
+  console.log(`✅ Created ${count} performance scores`);
 }
 
 async function main() {
   console.log('🌱 Seeding Hawassa demo data...\n');
-  const { branch, bm, staff } = await getHawassaUsers();
+  const { branch, bm, allStaff } = await getHawassaUsers();
   await clearDemoData(branch.id);
 
   const juneBaselines = await seedJuneBalances();
-  await seedAccountMappings(branch, juneBaselines, staff);
-  await seedDailyTasks(branch, { bm, staff });
-  await seedBehavioralEvaluations(branch, { bm, staff });
-  await seedPerformanceScores(branch, { bm, staff });
+  await seedAccountMappings(branch, juneBaselines, allStaff);
+  await seedDailyTasks(branch, { bm, allStaff });
+  await seedBehavioralEvaluations(branch, { bm, allStaff });
+  await seedPerformanceScores(branch, { bm, allStaff });
 
   console.log(`\n============================================================`);
   console.log(`✅ HAWASSA DEMO DATA SEEDED SUCCESSFULLY!`);
@@ -320,9 +292,9 @@ async function main() {
   console.log(`\n📋 Summary:`);
   console.log(`   Branch: ${branch.name}`);
   console.log(`   Branch Manager: ${bm.name}`);
-  console.log(`   Staff: ${staff.name}`);
+  console.log(`   Staff: ${allStaff.map(s => s.name).join(', ')}`);
   console.log(`   Customers: ${HABESHA_CUSTOMERS.length} mapped accounts`);
-  console.log(`\n🔑 Login: use <email> / password123`);
+  console.log(`\n🔑 Login: use <email> / 1234`);
   console.log(`   (emails are name@hawassa_main.et)`);
 }
 

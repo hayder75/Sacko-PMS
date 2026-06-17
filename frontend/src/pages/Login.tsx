@@ -6,12 +6,11 @@ import { Input } from '@/components/ui/input';
 import { authAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 import { mapBackendRoleToFrontend } from '@/lib/roleMapper';
-import { AlertCircle, Search, Check } from 'lucide-react';
+import { AlertCircle, ChevronDown, Check } from 'lucide-react';
 
 export function Login() {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [search, setSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -43,16 +42,17 @@ export function Login() {
     } catch (_) {}
   };
 
-  const filteredUsers = users.filter(u =>
-    !search || u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    (u.position || u.role || '').toLowerCase().includes(search.toLowerCase()) ||
-    (u.location || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const groupedUsers = users.reduce((acc: any, u: any) => {
+    const role = u.position || u.role || 'Other';
+    if (!acc[role]) acc[role] = [];
+    acc[role].push(u);
+    return acc;
+  }, {});
+
+  const roleOrder = ['Regional_Director', 'Area_Manager', 'Branch_Manager', 'Member_Service_Manager', 'Accountant', 'Member_Service_Officer_I', 'Member_Service_Officer_II', 'Member_Service_Officer_III'];
 
   const selectUser = (user: any) => {
     setSelectedUser(user);
-    setSearch(user.name);
     setShowDropdown(false);
     setError('');
   };
@@ -139,60 +139,51 @@ export function Login() {
               <label className="text-sm font-medium text-slate-700">Select User</label>
               <div className="relative">
                 <div
-                  className="flex items-center border border-slate-300 rounded-md px-3 py-2 cursor-pointer bg-white hover:border-slate-400 transition-colors"
+                  className="flex items-center justify-between border border-slate-300 rounded-md px-3 py-2.5 cursor-pointer bg-white hover:border-slate-400 transition-colors"
                   onClick={() => setShowDropdown(!showDropdown)}
                 >
-                  <Search className="h-4 w-4 text-slate-400 mr-2" />
-                  <span className={selectedUser ? 'text-slate-900' : 'text-slate-400'}>
-                    {selectedUser ? (
-                      <span className="flex items-center gap-2">
-                        <span className="font-medium">{selectedUser.name}</span>
-                        <span className="text-xs text-slate-500">({selectedUser.position || selectedUser.role})</span>
-                        {selectedUser.location && <span className="text-xs text-slate-400">- {selectedUser.location.replace(/_/g, ' ')}</span>}
-                      </span>
-                    ) : 'Search and select a user...'}
-                  </span>
+                  {selectedUser ? (
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium text-slate-900">{selectedUser.name}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{selectedUser.position || selectedUser.role}</span>
+                      {selectedUser.location && <span className="text-xs text-slate-400">{selectedUser.location.replace(/_/g, ' ')}</span>}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">Select a user...</span>
+                  )}
+                  <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
                 </div>
                 {showDropdown && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-72 overflow-hidden flex flex-col">
-                    <div className="p-2 border-b border-slate-100">
-                      <Input
-                        placeholder="Type name, email, branch..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="h-8 text-sm"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="overflow-y-auto flex-1">
-                      {filteredUsers.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-slate-400">No users found</div>
-                      ) : (
-                        filteredUsers.map((u) => (
-                          <div
-                            key={u._id || u.id}
-                            className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm hover:bg-slate-50 transition-colors ${selectedUser?._id === u._id || selectedUser?.id === u.id ? 'bg-blue-50' : ''}`}
-                            onClick={() => selectUser(u)}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-slate-800 truncate">{u.name}</span>
-                                <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{u.position || u.role}</span>
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-80 overflow-y-auto">
+                    {roleOrder.map(role => {
+                      const roleUsers = groupedUsers[role];
+                      if (!roleUsers || roleUsers.length === 0) return null;
+                      return (
+                        <div key={role}>
+                          <div className="px-3 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 uppercase tracking-wider border-b border-slate-100">
+                            {role.replace(/_/g, ' ')}
+                          </div>
+                          {roleUsers.map((u: any) => (
+                            <div
+                              key={u._id || u.id}
+                              className={`flex items-center justify-between px-3 py-2.5 cursor-pointer text-sm hover:bg-blue-50 transition-colors ${selectedUser?._id === u._id || selectedUser?.id === u.id ? 'bg-blue-50 border-l-2 border-blue-500' : 'border-l-2 border-transparent'}`}
+                              onClick={() => selectUser(u)}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <span className="font-medium text-slate-800">{u.name}</span>
+                                {u.location && <span className="text-xs text-slate-400 ml-2">{u.location.replace(/_/g, ' ')}</span>}
                               </div>
-                              {u.location && (
-                                <div className="text-xs text-slate-400 mt-0.5">{u.location.replace(/_/g, ' ')}</div>
+                              {(selectedUser?._id === u._id || selectedUser?.id === u.id) && (
+                                <Check className="h-4 w-4 text-blue-500 shrink-0 ml-2" />
                               )}
                             </div>
-                            {(selectedUser?._id === u._id || selectedUser?.id === u.id) && (
-                              <Check className="h-4 w-4 text-blue-500 shrink-0 ml-2" />
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <div className="p-1.5 border-t border-slate-100 text-center text-xs text-slate-400 bg-slate-50">
-                      {users.length} users
-                    </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                    {Object.keys(groupedUsers).length === 0 && (
+                      <div className="p-4 text-center text-sm text-slate-400">No users available</div>
+                    )}
                   </div>
                 )}
               </div>
