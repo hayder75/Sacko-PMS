@@ -9,22 +9,24 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding minimal data for SAKO PMS...\n');
 
-  // Clear existing data (respecting FK order)
-  await prisma.$executeRawUnsafe('DELETE FROM evaluation_approvals');
-  await prisma.$executeRawUnsafe('DELETE FROM performance_scores');
-  await prisma.$executeRawUnsafe('DELETE FROM behavioral_evaluations');
-  await prisma.$executeRawUnsafe('DELETE FROM daily_tasks');
-  await prisma.$executeRawUnsafe('DELETE FROM account_mappings');
-  await prisma.$executeRawUnsafe('DELETE FROM plan_share_configs');
-  await prisma.$executeRawUnsafe('DELETE FROM product_kpi_mappings');
-  await prisma.$executeRawUnsafe('DELETE FROM staff_plans');
-  await prisma.$executeRawUnsafe('DELETE FROM plans');
-  await prisma.$executeRawUnsafe('DELETE FROM team_members');
-  await prisma.$executeRawUnsafe('DELETE FROM teams');
-  await prisma.$executeRawUnsafe('DELETE FROM users WHERE email != \'admin@sako.com\'');
-  await prisma.$executeRawUnsafe('DELETE FROM areas');
-  await prisma.$executeRawUnsafe('DELETE FROM regions');
-  await prisma.$executeRawUnsafe('DELETE FROM branches');
+  // Clear existing data using Prisma client (respecting FK order)
+  await prisma.evaluationApproval.deleteMany();
+  await prisma.performanceScore.deleteMany();
+  await prisma.behavioralEvaluation.deleteMany();
+  await prisma.taskApproval.deleteMany();
+  await prisma.dailyTask.deleteMany();
+  await prisma.accountMapping.deleteMany();
+  await prisma.juneBalance.deleteMany();
+  await prisma.planShareConfig.deleteMany();
+  await prisma.productKpiMapping.deleteMany();
+  await prisma.staffPlan.deleteMany();
+  await prisma.plan.deleteMany();
+  await prisma.subTeam.deleteMany();
+  await prisma.team.deleteMany();
+  await prisma.user.deleteMany({ where: { email: { not: 'admin@sako.com' } } });
+  await prisma.area.deleteMany();
+  await prisma.region.deleteMany();
+  await prisma.branch.deleteMany();
 
   const hashedPwd = await bcrypt.hash('password123', 10);
 

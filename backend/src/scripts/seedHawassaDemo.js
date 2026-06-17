@@ -41,11 +41,11 @@ const HABESHA_CUSTOMERS = [
 const BRANCH_CODE = 'HAWASSA_MAIN';
 
 async function clearDemoData(branchId) {
-  await prisma.$executeRawUnsafe('DELETE FROM evaluation_approvals USING behavioral_evaluations WHERE evaluation_approvals.evaluation_id = behavioral_evaluations._id AND behavioral_evaluations.branch_id = $1', branchId);
+  await prisma.evaluationApproval.deleteMany({ where: { evaluation: { branchId } } });
   await prisma.performanceScore.deleteMany({ where: { branchId } });
   await prisma.behavioralEvaluation.deleteMany({ where: { branchId } });
-  await prisma.dailyTask.deleteMany({ where: { branchId } });
   await prisma.taskApproval.deleteMany({ where: { task: { branchId } } });
+  await prisma.dailyTask.deleteMany({ where: { branchId } });
   await prisma.accountMapping.deleteMany({ where: { branchId } });
   await prisma.juneBalance.deleteMany({ where: { branch_code: BRANCH_CODE } });
   console.log('✅ Cleared existing demo data');
