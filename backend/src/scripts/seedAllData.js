@@ -131,18 +131,17 @@ async function main() {
 
   // 8. Plans
   const plans = [
-    { name: 'H2-2025 Deposit Target', kpi_category: 'Deposit_Mobilization', target_value: 10000000, weight: 30 },
-    { name: 'H2-2025 Digital Growth', kpi_category: 'Digital_Channel_Growth', target_value: 500, weight: 20 },
-    { name: 'H2-2025 Member Registration', kpi_category: 'Member_Registration', target_value: 300, weight: 15 },
-    { name: 'H2-2025 Customer Base', kpi_category: 'Customer_Base', target_value: 400, weight: 15 },
-    { name: 'H2-2025 Shareholder Recruitment', kpi_category: 'Shareholder_Recruitment', target_value: 100, weight: 10 },
-    { name: 'H2-2025 Loan & NPL', kpi_category: 'Loan_NPL', target_value: 5000000, weight: 10 },
+    { kpi_category: 'Deposit_Mobilization', target_value: 10000000 },
+    { kpi_category: 'Digital_Channel_Growth', target_value: 500 },
+    { kpi_category: 'Member_Registration', target_value: 300 },
+    { kpi_category: 'Customer_Base', target_value: 400 },
+    { kpi_category: 'Shareholder_Recruitment', target_value: 100 },
+    { kpi_category: 'Loan_NPL', target_value: 5000000 },
   ];
 
   for (const plan of plans) {
     await prisma.plan.create({
       data: {
-        name: plan.name,
         branch_code: 'HAWASSA_MAIN',
         period: '2025-H2',
         branchId: branch.id,
