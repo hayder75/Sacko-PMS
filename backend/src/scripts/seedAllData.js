@@ -24,10 +24,14 @@ async function main() {
   await prisma.auditLog.deleteMany();
   await prisma.subTeam.deleteMany();
   await prisma.team.deleteMany();
+  // Nullify FK references before deleting users
+  await prisma.region.updateMany({ where: { directorId: { not: null } }, data: { directorId: null } });
+  await prisma.area.updateMany({ where: { managerId: { not: null } }, data: { managerId: null } });
+  await prisma.branch.updateMany({ where: { managerId: { not: null } }, data: { managerId: null } });
   await prisma.user.deleteMany({ where: { email: { not: 'admin@sako.com' } } });
+  await prisma.branch.deleteMany();
   await prisma.area.deleteMany();
   await prisma.region.deleteMany();
-  await prisma.branch.deleteMany();
 
   const hashedPwd = await bcrypt.hash('password123', 10);
 
