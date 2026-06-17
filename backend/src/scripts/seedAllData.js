@@ -21,6 +21,7 @@ async function main() {
   await prisma.productKpiMapping.deleteMany();
   await prisma.staffPlan.deleteMany();
   await prisma.plan.deleteMany();
+  await prisma.auditLog.deleteMany();
   await prisma.subTeam.deleteMany();
   await prisma.team.deleteMany();
   await prisma.user.deleteMany({ where: { email: { not: 'admin@sako.com' } } });
