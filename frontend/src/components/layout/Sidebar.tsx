@@ -88,6 +88,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'BULK MAPPING UPLOAD', icon: Upload, path: '/bulk-mapping-upload' },
       { title: 'CBS VALIDATION', icon: CheckCircle2, path: '/cbs-validation' },
       { title: 'BEHAVIORAL EVALUATION', icon: ClipboardList, path: '/behavioral-evaluation' },
+      { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
       { title: 'REPORTS', icon: FileText, path: '/reports' },
     ];
   }
@@ -100,6 +101,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'HIERARCHY', icon: Users, path: '/hierarchy' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
       { title: 'BEHAVIORAL INPUT', icon: ClipboardList, path: '/behavioral-input' },
+      { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
       { title: 'REPORTS', icon: FileText, path: '/reports' },
     ];
   }
@@ -110,6 +112,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'MY TASKS', icon: CheckSquare, path: '/tasks' },
       { title: 'TEAM TASKS', icon: ClipboardList, path: '/team-tasks' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
+      { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
       { title: 'MY PERFORMANCE', icon: Target, path: '/kpi' },
     ];
   }
@@ -118,6 +121,7 @@ const getNavItems = (role: string): NavItem[] => {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/staff' },
       { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
+      { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
       { title: 'MY PERFORMANCE', icon: Target, path: '/kpi' },
       { title: 'MY SCORECARD', icon: FileText, path: '/reports/scorecard' },
     ];

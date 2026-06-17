@@ -44,9 +44,29 @@ export function MonthlyScorecard() {
     }
   };
 
-  const handleExportPDF = () => {
-    // In a real app, this would generate and download a PDF
-    alert('PDF export functionality would be implemented here');
+  const handleExportCSV = () => {
+    let csv = 'KPI Category,Target,Actual,Percentage,Score\n';
+    if (performanceScore?.kpiScores) {
+      Object.entries(performanceScore.kpiScores).forEach(([key, kpi]: [string, any]) => {
+        csv += `${key},${kpi.target || 0},${kpi.actual || 0},${kpi.percent || 0}%,${kpi.score?.toFixed(2) || 0}\n`;
+      });
+    }
+    csv += '\nBehavioral Score,,\n';
+    if (behavioralData?.competencies) {
+      behavioralData.competencies.forEach((comp: any) => {
+        csv += `${comp.competencyName || comp.competency || 'N/A'},${comp.score || 0}/${comp.maxScore || 5},,${comp.maxScore ? ((comp.score / comp.maxScore) * 100).toFixed(0) : 0}%,\n`;
+      });
+    }
+    csv += `\nFinal Score,${performanceScore?.finalScore || 0}%\n`;
+    csv += `Rating,${performanceScore?.rating || 'N/A'}\n`;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `scorecard-${user?.name?.replace(/\s+/g, '-') || 'staff'}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -71,9 +91,9 @@ export function MonthlyScorecard() {
           <h1 className="text-3xl font-bold text-slate-800">Monthly Scorecard Report</h1>
           <p className="text-slate-600 mt-1">Performance evaluation and assessment</p>
         </div>
-        <Button onClick={handleExportPDF}>
+        <Button onClick={handleExportCSV}>
           <Download className="h-4 w-4 mr-2" />
-          Export as PDF
+          Export as CSV
         </Button>
       </div>
 

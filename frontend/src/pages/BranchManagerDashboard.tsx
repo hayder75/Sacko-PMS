@@ -177,7 +177,13 @@ export function BranchManagerDashboard() {
                         {member.target ? Math.round((member.actual / member.target) * 100) : 0}%
                       </Badge>
                     </TableCell>
-                    <TableCell>0%</TableCell>
+                    <TableCell>
+                      {member.digitalTasks > 0 ? (
+                        <Badge variant="success">{member.digitalTasks} tasks</Badge>
+                      ) : (
+                        <span className="text-slate-400 text-sm">0</span>
+                      )}
+                    </TableCell>
                     <TableCell>{member.status === 'good' ? '✅' : member.status === 'warning' ? '⚠️' : '❌'}</TableCell>
                   </TableRow>
                 ))

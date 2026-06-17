@@ -11,6 +11,8 @@
     "seed:all": "node src/scripts/seedAllUsers.js",
     "seed:products": "node src/scripts/seedProductMappings.js",
     "seed:atote": "node src/scripts/seedAtoteUsers.js",
+    "seed:all-data": "node src/scripts/seedAllData.js",
+    "seed:hawassa": "node src/scripts/seedHawassaDemo.js",
     "seed:test": "node src/scripts/seedTestData.js",
     "clean:test": "node src/scripts/cleanSystemData.js",
     "db:migrate": "prisma migrate dev",

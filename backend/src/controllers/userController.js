@@ -545,3 +545,40 @@ export const resetPassword = asyncHandler(async (req, res) => {
     message: 'Password reset successfully',
   });
 });
+
+// @desc    Get public user list for login page
+// @route   GET /api/users/public-list
+// @access  Public
+export const getPublicUserList = asyncHandler(async (req, res) => {
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      position: true,
+      role: true,
+      branch_code: true,
+      sub_team: true,
+      branch: { select: { name: true } },
+      area: { select: { name: true } },
+      region: { select: { name: true } },
+    },
+    orderBy: { name: 'asc' },
+  });
+
+  const data = users.map(u => {
+    const location = u.branch?.name || u.area?.name || u.region?.name || u.branch_code || '';
+    return {
+      _id: u.id,
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      position: u.position,
+      role: u.role,
+      location,
+    };
+  });
+
+  res.status(200).json({ success: true, data });
+});

@@ -112,6 +112,10 @@ export const usersAPI = {
       method: 'DELETE',
     });
   },
+
+  getHierarchy: async () => {
+    return apiRequest('/users/hierarchy');
+  },
   
   resetPassword: async (id: string, newPassword: string) => {
     return apiRequest(`/users/${id}/reset-password`, {
@@ -646,6 +650,16 @@ export const transactionsAPI = {
   getTodayTotal: async (branch_code?: string) => {
     const queryString = branch_code ? `?branch_code=${branch_code}` : '';
     return apiRequest(`/transactions/today${queryString}`);
+  },
+};
+
+export const mappedAccountsAPI = {
+  getDashboard: async (userId?: string) => {
+    const qs = userId ? `?userId=${userId}` : '';
+    return apiRequest(`/mapped-accounts/dashboard${qs}`);
+  },
+  getAccountDetail: async (accountNumber: string) => {
+    return apiRequest(`/mapped-accounts/account/${encodeURIComponent(accountNumber)}`);
   },
 };
 

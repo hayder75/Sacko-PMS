@@ -118,9 +118,20 @@ const detectUnmappedProducts = async (cbsData) => {
 // Helper: Auto-map new accounts ≥ 500 ETB to task creators
 const autoMapNewAccounts = async (cbsData, branchId, validationDate) => {
   const date = new Date(validationDate);
-  const startDate = new Date(date.setHours(0, 0, 0, 0));
-  const endDate = new Date(date.setHours(23, 59, 59, 999));
+  const startDate = new Date(date);
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(date);
+  endDate.setHours(23, 59, 59, 999);
   const mapped = [];
+
+  // Get ALL approved tasks for this branch for the validation date
+  const tasks = await prisma.dailyTask.findMany({
+    where: {
+      branchId,
+      taskDate: { gte: startDate, lt: endDate },
+      approvalStatus: 'Approved',
+    }
+  });
 
   for (const record of cbsData) {
     const accountNumber = String(record.accountNumber || record['Account Number'] || record.account_id || '').trim();
@@ -128,36 +139,48 @@ const autoMapNewAccounts = async (cbsData, branchId, validationDate) => {
 
     if (!accountNumber || currentBalance < 500) continue;
 
+    // Check if account already exists and is mapped
     const existingMapping = await prisma.accountMapping.findUnique({ where: { accountNumber } });
     if (existingMapping && existingMapping.mappedToId) continue;
 
-    const pendingTask = await prisma.dailyTask.findFirst({
-      where: {
-        accountNumber,
-        branchId,
-        approvalStatus: 'Approved',
-        mappingStatus: 'Unmapped',
-        taskDate: { gte: startDate, lt: endDate },
-      }
-    });
+    // Find which task submitted this account
+    const matchingTask = tasks.find(t => t.accountNumber === accountNumber);
+    if (matchingTask) {
+      const submitterId = matchingTask.submittedById;
 
-    if (pendingTask) {
-      await prisma.accountMapping.update({
-        where: { accountNumber },
-        data: {
-          mappedToId: pendingTask.submittedById,
-          mappedById: pendingTask.submittedById,
-          mappedAt: new Date(),
-          status: 'Active',
-        }
-      });
+      // Create or update the account mapping with the submitter
+      if (existingMapping) {
+        await prisma.accountMapping.update({
+          where: { accountNumber },
+          data: {
+            mappedToId: submitterId,
+            mappedById: submitterId,
+            mappedAt: new Date(),
+            status: 'Active',
+            current_balance: currentBalance,
+          }
+        });
+      } else {
+        await prisma.accountMapping.create({
+          data: {
+            accountNumber,
+            customerName: String(record.customerName || record['Customer Name'] || `Account ${accountNumber}`).trim(),
+            current_balance: currentBalance,
+            mappedToId: submitterId,
+            mappedById: submitterId,
+            branchId,
+            accountType: 'Savings',
+            status: 'Active',
+          }
+        });
+      }
 
       await prisma.dailyTask.update({
-        where: { id: pendingTask.id },
+        where: { id: matchingTask.id },
         data: { mappingStatus: 'Mapped_to_You' }
       });
 
-      mapped.push({ accountNumber, mappedToId: pendingTask.submittedById, taskId: pendingTask.id });
+      mapped.push({ accountNumber, mappedToId: submitterId, taskId: matchingTask.id });
     }
   }
 
@@ -377,4 +400,47 @@ export const resolveDiscrepancy = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({ success: true, data: { ...discrepancy, _id: discrepancy.id } });
+});
+
+export const generateCBSReport = asyncHandler(async (req, res) => {
+  const { branchId, startDate, endDate } = req.query;
+  const where = {};
+
+  if (branchId) where.branchId = branchId;
+  else if (req.user.branchId && req.user.role !== 'admin') where.branchId = req.user.branchId;
+
+  if (startDate && endDate) {
+    where.validationDate = {
+      gte: new Date(startDate),
+      lt: new Date(endDate),
+    };
+  }
+
+  const validations = await prisma.cBSValidation.findMany({
+    where,
+    include: {
+      branch: { select: { name: true, code: true } },
+      discrepancies: true,
+      uploadedBy: { select: { name: true } },
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  const summary = {
+    totalValidations: validations.length,
+    totalRecords: validations.reduce((s, v) => s + v.totalRecords, 0),
+    totalMatched: validations.reduce((s, v) => s + v.matchedRecords, 0),
+    totalUnmatched: validations.reduce((s, v) => s + v.unmatchedRecords, 0),
+    totalDiscrepancies: validations.reduce((s, v) => s + v.discrepancyCount, 0),
+    totalUnmappedProducts: validations.reduce((s, v) => s + (v.unmappedProducts?.length || 0), 0),
+    averageMatchRate: validations.length > 0
+      ? validations.reduce((s, v) => s + (v.validationRate || 0), 0) / validations.length
+      : 0,
+  };
+
+  res.status(200).json({
+    success: true,
+    summary,
+    data: validations,
+  });
 });

@@ -38,6 +38,7 @@ import { TeamTasks } from './pages/TeamTasks';
 import { BehavioralInput } from './pages/BehavioralInput';
 import { TeamManagement } from './pages/TeamManagement';
 import { BulkMappingUpload } from './pages/BulkMappingUpload';
+import { MappedAccounts } from './pages/MappedAccounts';
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
   const { isAuthenticated, isLoading, role } = useUser();
@@ -400,6 +401,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <ProductMapping />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mapped-accounts"
+        element={
+          <ProtectedRoute allowedRoles={['branchManager', 'lineManager', 'subTeamLeader', 'staff']}>
+            <MappedAccounts />
           </ProtectedRoute>
         }
       />

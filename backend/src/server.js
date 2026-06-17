@@ -51,6 +51,8 @@ import mappingRoutes from './routes/mappingRoutes.js';
 import performanceRoutes from './routes/performanceRoutes.js';
 import behavioralRoutes from './routes/behavioralRoutes.js';
 import cbsRoutes from './routes/cbsRoutes.js';
+import cbsReportRoutes from './routes/cbsReportRoutes.js';
+import exportRoutes from './routes/exportRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import juneBalanceRoutes from './routes/juneBalanceRoutes.js';
 import planShareConfigRoutes from './routes/planShareConfigRoutes.js';
@@ -62,6 +64,7 @@ import regionRoutes from './routes/regionRoutes.js';
 import areaRoutes from './routes/areaRoutes.js';
 import staffPlanRoutes from './routes/staffPlanRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import mappedAccountsRoutes from './routes/mappedAccountsRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -71,6 +74,8 @@ app.use('/api/mappings', mappingRoutes);
 app.use('/api/performance', performanceRoutes);
 app.use('/api/behavioral', behavioralRoutes);
 app.use('/api/cbs', cbsRoutes);
+app.use('/api/cbs', cbsReportRoutes);
+app.use('/api/export', exportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/june-balance', juneBalanceRoutes);
 app.use('/api/plan-share-config', planShareConfigRoutes);
@@ -82,6 +87,7 @@ app.use('/api/regions', regionRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/staff-plans', staffPlanRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/mapped-accounts', mappedAccountsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

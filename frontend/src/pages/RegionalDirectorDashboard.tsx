@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { dashboardAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
 export function RegionalDirectorDashboard() {
-  useUser(); // Required for auth context
+  useUser();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,11 +32,16 @@ export function RegionalDirectorDashboard() {
   const data = dashboardData || {
     branchCount: 0,
     areaManagerCount: 0,
+    totalStaff: 0,
     avgBranchAchievement: 0,
     mappingCoverage: 0,
+    totalAccounts: 0,
     topBranches: [],
     bottomBranches: [],
     branches: [],
+    branchChartData: [],
+    trendData: [],
+    mappingData: [],
     areaManagers: [],
   };
 
@@ -93,10 +99,92 @@ export function RegionalDirectorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-slate-800">{data.mappingCoverage}</div>
-            <p className="text-xs text-slate-500 mt-1">Total Mappings</p>
+            <p className="text-xs text-slate-500 mt-1">of {data.totalAccounts || 0} Total Accounts</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Branch KPI Comparison</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.branchChartData && data.branchChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.branchChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="deposit" fill="#3b82f6" name="Deposit %" />
+                  <Bar dataKey="digital" fill="#10b981" name="Digital %" />
+                  <Bar dataKey="member" fill="#f59e0b" name="Member %" />
+                  <Bar dataKey="customer" fill="#8b5cf6" name="Customer %" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-slate-500 py-16">No branch data available</div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>30-Day Deposit Growth Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.trendData && data.trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={data.trendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="day" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="deposit" stroke="#3b82f6" strokeWidth={2} name="Daily Deposit (Birr)" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-slate-500 py-16">No trend data available</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Mapping Coverage Pie */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Mapping Coverage</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center">
+            {data.mappingData && data.mappingData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={data.mappingData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    dataKey="value"
+                  >
+                    {data.mappingData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || '#8884d8'} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-slate-500 py-16">No mapping data available</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Branch Performance Table */}
       <Card>

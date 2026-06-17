@@ -84,7 +84,7 @@ export function HQDashboard() {
             <CardTitle className="text-sm font-medium text-slate-600">Avg. Plan Achievement</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{hqData.avgPlanAchievement}%</div>
+            <div className="text-3xl font-bold text-slate-800">{hqData.avgPlanAchievement != null ? (hqData.avgPlanAchievement * 100).toFixed(0) : 0}%</div>
           </CardContent>
         </Card>
         <Card>
@@ -92,7 +92,7 @@ export function HQDashboard() {
             <CardTitle className="text-sm font-medium text-slate-600">CBS Validation Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{hqData.cbsValidationRate}%</div>
+            <div className="text-3xl font-bold text-slate-800">{hqData.cbsValidationRate ?? 0}%</div>
           </CardContent>
         </Card>
       </div>
@@ -199,8 +199,8 @@ export function HQDashboard() {
                       <TableCell>{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
                       <TableCell>{b.actual?.toLocaleString() || '0'}</TableCell>
                       <TableCell>
-                        <Badge variant={b.percent >= 80 ? 'success' : 'warning'}>
-                          {b.percent}%
+                        <Badge variant={(b.percent ?? 0) >= 80 ? 'success' : 'warning'}>
+                          {b.percent ?? 0}%
                         </Badge>
                       </TableCell>
                       <TableCell>{b.rating || 'N/A'}</TableCell>
@@ -243,8 +243,8 @@ export function HQDashboard() {
                       <TableCell>{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
                       <TableCell>{b.actual?.toLocaleString() || '0'}</TableCell>
                       <TableCell>
-                        <Badge variant={b.percent < 60 ? 'destructive' : 'warning'}>
-                          {b.percent}%
+                        <Badge variant={(b.percent ?? 0) < 60 ? 'destructive' : 'warning'}>
+                          {b.percent ?? 0}%
                         </Badge>
                       </TableCell>
                       <TableCell>{b.rating || 'N/A'}</TableCell>

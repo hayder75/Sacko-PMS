@@ -7,6 +7,7 @@ import {
   deleteUser,
   resetPassword,
   getHierarchy,
+  getPublicUserList,
 } from '../controllers/userController.js';
 import { protect } from '../middleware/auth.js';
 import { isHQAdmin, isManagerOrAbove } from '../middleware/rbac.js';
@@ -14,6 +15,7 @@ import { isHQAdmin, isManagerOrAbove } from '../middleware/rbac.js';
 const router = express.Router();
 
 router.get('/hierarchy', protect, getHierarchy);
+router.get('/public-list', getPublicUserList);
 
 // GET: HQ Admin sees all, Managers see their branch/team
 router.route('/')
