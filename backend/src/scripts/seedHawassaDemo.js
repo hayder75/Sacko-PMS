@@ -360,7 +360,7 @@ async function seedPerformanceScores(branch, users) {
     const rating = demoRating[demoIdx];
     const behavioralScore = demoBehavioralScores[demoIdx];
     const kpiTotalScore = Math.round(
-      Object.values(kpiScores).reduce((sum, k: any) => sum + (k.score || 0), 0)
+      Object.values(kpiScores).reduce((sum, k) => sum + (k.score || 0), 0)
     );
     const behavioralEval = await prisma.behavioralEvaluation.findFirst({
       where: { evaluatedUserId: staff.id, branchId: branch.id, approvalStatus: 'Approved' },
