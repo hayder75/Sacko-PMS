@@ -94,18 +94,19 @@ Rebrand and restructure the PMS system from SAKO's org model to Ghion SACCOS's o
 
 ## Phase 4: Frontend — Core Structure
 
-### Status: ⏳ Not Started
+### Status: ✅ Complete
 
 #### Tasks
-- [ ] Update `App.tsx`: new role routing, add SupervisorDashboard, remove old routes
-- [ ] Update `Login.tsx`: new positions in dropdown
-- [ ] Update `Sidebar.tsx`: new nav links, new branding "GHION SACCOS PMS"
-- [ ] Update `TopNav.tsx`: role display
-- [ ] Create `pages/SupervisorDashboard.tsx`: team overview, approvals, behavioral input
-- [ ] Rename `HQDashboard.tsx` → `CEODashboard.tsx`
-- [ ] Remove `RegionalDirectorDashboard.tsx`
-- [ ] Remove `HierarchyManagement.tsx`
-- [ ] Remove `TeamManagement.tsx`, `TeamPerformance.tsx`, `TeamTasks.tsx`
+- [x] Update `App.tsx`: new role routing, add SupervisorDashboard, remove old routes
+- [x] Update `Login.tsx`: new positions in dropdown, updated getDashboardPath
+- [x] Update `Sidebar.tsx`: new nav links, new branding "GHION SACCOS PMS", removed old role nav
+- [x] Update `TopNav.tsx`: removed old role notifications, added supervisor, branding update
+- [x] Create `pages/SupervisorDashboard.tsx`: team overview, approvals, behavioral input
+- [x] Rename `HQDashboard.tsx` → `CEODashboard.tsx` (fixed export name)
+- [x] Remove `RegionalDirectorDashboard.tsx`
+- [x] Remove `HierarchyManagement.tsx`
+- [x] Remove `TeamManagement.tsx`, `TeamPerformance.tsx`, `TeamTasks.tsx`
+- [x] Fixed TypeScript errors in UserContext, BranchManagerDashboard, Tasks (old role refs)
 
 ---
 
@@ -164,4 +165,5 @@ Rebrand and restructure the PMS system from SAKO's org model to Ghion SACCOS's o
 - Phase 1 (Schema): Rewrote Prisma schema — all enums updated (UserRole, Position, KpiCategory, TaskType, PerformanceRating), removed Region/Team/SubTeam/EvaluationApproval/PlanShareConfig models, added supervisorId to User, isProductive to AccountMapping. Migration SQL with data mapping. Ran on server.
 - Phase 2 (Auth): Updated rbac.js, roleNormalizer.js, frontend roleMapper.ts
 - Phase 3 (Backend Routes/Controllers): Removed old routes/controllers, updated server.js, rewrote planCascade.js with client's cascading matrix, cleaned region refs from all controllers. Backend running and responding on port 5001.
-- Next: Phase 4 — Frontend Core Structure (App.tsx, Login, Sidebar, SupervisorDashboard)
+- Phase 4 (Frontend Core): Updated App.tsx routing, Login.tsx with new positions, Sidebar/TopNav branding, created SupervisorDashboard, renamed HQ→CEO dashboard, removed 6 old page files, fixed TS types
+- Next: Phase 5 — Frontend Dashboards & Pages (BranchManager, AreaManager, Staff, CEO dashboards, TaskEntryForm, etc.)

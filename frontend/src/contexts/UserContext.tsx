@@ -5,11 +5,9 @@ import { mapBackendRoleToFrontend } from '@/lib/roleMapper';
 
 export type UserRole =
   | 'admin'
-  | 'regionalDirector'
   | 'areaManager'
   | 'branchManager'
-  | 'lineManager'
-  | 'subTeamLeader'
+  | 'supervisor'
   | 'staff';
 
 interface UserContextType {

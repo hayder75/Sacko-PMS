@@ -49,7 +49,7 @@ export function Login() {
     return acc;
   }, {});
 
-  const roleOrder = ['Regional_Director', 'Area_Manager', 'Branch_Manager', 'Member_Service_Manager', 'Accountant', 'Member_Service_Officer_I', 'Member_Service_Officer_II', 'Member_Service_Officer_III'];
+  const roleOrder = ['CEO', 'Area_Manager', 'Branch_Manager', 'Operation_Supervisor', 'Customer_Relationship_Supervisor', 'Customer_Service_Officer_I', 'Customer_Service_Officer_II', 'Sales_Marketing_Officer_I', 'Customer_Relationship_Officer_I', 'Internal_Auditor'];
 
   const selectUser = (user: any) => {
     setSelectedUser(user);
@@ -106,12 +106,12 @@ export function Login() {
     switch (role) {
       case 'admin':
         return '/dashboard/hq';
-      case 'regionalDirector':
-        return '/dashboard/regional';
       case 'areaManager':
         return '/dashboard/area';
       case 'branchManager':
         return '/dashboard/branch';
+      case 'supervisor':
+        return '/dashboard/supervisor';
       case 'staff':
         return '/dashboard/staff';
       default:

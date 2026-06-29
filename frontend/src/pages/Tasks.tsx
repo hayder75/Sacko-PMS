@@ -66,7 +66,7 @@ export function Tasks() {
           <h1 className="text-3xl font-bold text-slate-800">My Daily Tasks</h1>
           <p className="text-slate-600 mt-1">Track the status and approval progress of your submissions</p>
         </div>
-        {(role === 'staff' || role === 'subTeamLeader') && (
+        {(role === 'staff' || role === 'supervisor') && (
           <Link to="/tasks/new">
             <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />

@@ -8,7 +8,7 @@ import { dashboardAPI, tasksAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
 export function BranchManagerDashboard() {
-  const { user, role } = useUser();
+  const { user } = useUser();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,13 +55,8 @@ export function BranchManagerDashboard() {
     teamPerformance: [],
   };
 
-  // Determine dashboard title based on role
-  const dashboardTitle = role === 'lineManager' 
-    ? 'Line Manager Dashboard' 
-    : 'Branch Manager Dashboard';
-  const dashboardSubtitle = role === 'lineManager'
-    ? `${user?.branchId?.name || user?.branch_code || 'Branch'} - Line Manager Overview`
-    : `${user?.branchId?.name || user?.branch_code || 'Branch'} Overview`;
+  const dashboardTitle = 'Branch Manager Dashboard';
+  const dashboardSubtitle = `${user?.branchId?.name || user?.branch_code || 'Branch'} Overview`;
 
   return (
     <div className="space-y-6">

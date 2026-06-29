@@ -19,11 +19,11 @@ const roleNotifications: Record<string, any[]> = {
     { id: 4, icon: UserPlus, title: 'New Staff Onboarded', description: '3 new MSOs have been added to the system this week', time: '1 day ago', color: 'text-purple-600', bg: 'bg-purple-50' },
     { id: 5, icon: FileText, title: 'Monthly Report Ready', description: 'June performance report is available for download', time: '2 days ago', color: 'text-slate-600', bg: 'bg-slate-50' },
   ],
-  regionalDirector: [
-    { id: 1, icon: TrendingUp, title: 'South Region Performance', description: 'Region achieved 87% overall - Hawassa leading at 92%', time: '30 min ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { id: 2, icon: AlertCircle, title: 'Area Review Needed', description: 'Hawassa Area has 2 staff below 60% target', time: '2 hours ago', color: 'text-amber-600', bg: 'bg-amber-50' },
-    { id: 3, icon: CheckCircle2, title: 'Branch KPI Submission', description: 'All area managers have submitted H2 branch KPIs', time: '5 hours ago', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { id: 4, icon: FileText, title: 'Quarterly Review', description: 'Q3 performance review meeting scheduled for next week', time: '1 day ago', color: 'text-purple-600', bg: 'bg-purple-50' },
+  supervisor: [
+    { id: 1, icon: TrendingUp, title: 'Team Performance', description: 'Your team achieved 82% of daily deposit target today', time: '20 min ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { id: 2, icon: Clock, title: 'Task Approvals', description: '3 tasks from officers need your approval', time: '1 hour ago', color: 'text-amber-600', bg: 'bg-amber-50' },
+    { id: 3, icon: UserPlus, title: 'New Account Mapping', description: '5 new accounts mapped to your team today', time: '3 hours ago', color: 'text-blue-600', bg: 'bg-blue-50' },
+    { id: 4, icon: AlertCircle, title: 'Behavioral Due', description: 'Monthly behavioral evaluations due in 3 days', time: '1 day ago', color: 'text-purple-600', bg: 'bg-purple-50' },
   ],
   areaManager: [
     { id: 1, icon: TrendingUp, title: 'Hawassa Area Performance', description: 'Hawassa Main: 92% | Atote: 78% - Overall area: 85%', time: '1 hour ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -37,17 +37,7 @@ const roleNotifications: Record<string, any[]> = {
     { id: 3, icon: CheckCircle2, title: 'CBS Upload Reminder', description: 'Upload today\'s CBS file before 5:00 PM for validation', time: '2 hours ago', color: 'text-blue-600', bg: 'bg-blue-50' },
     { id: 4, icon: AlertCircle, title: 'KPI Performance Alert', description: 'Digital Channel Growth at 45% - needs attention this week', time: '4 hours ago', color: 'text-amber-600', bg: 'bg-amber-50' },
   ],
-  lineManager: [
-    { id: 1, icon: TrendingUp, title: 'Team Performance', description: 'Your team achieved 82% of daily deposit target today', time: '20 min ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { id: 2, icon: Clock, title: 'Task Approvals', description: '3 tasks from MSOs need your approval', time: '1 hour ago', color: 'text-amber-600', bg: 'bg-amber-50' },
-    { id: 3, icon: UserPlus, title: 'New Account Mapping', description: '5 new accounts mapped to your team today', time: '3 hours ago', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { id: 4, icon: AlertCircle, title: 'Behavioral Due', description: 'Monthly behavioral evaluations due in 3 days', time: '1 day ago', color: 'text-purple-600', bg: 'bg-purple-50' },
-  ],
-  subTeamLeader: [
-    { id: 1, icon: TrendingUp, title: 'Team Deposit Status', description: 'Sub-team collected 18,500 ETB deposits today', time: '30 min ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { id: 2, icon: Clock, title: 'Pending Review', description: '2 accounts flagged for verification', time: '2 hours ago', color: 'text-amber-600', bg: 'bg-amber-50' },
-    { id: 3, icon: FileText, title: 'Monthly Report', description: 'Sub-team performance summary is ready', time: '5 hours ago', color: 'text-blue-600', bg: 'bg-blue-50' },
-  ],
+
   staff: [
     { id: 1, icon: CheckCircle2, title: 'Task Approved', description: 'Your deposit of 3,500 ETB for Amanuel G/Hiwot was approved', time: '10 min ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { id: 2, icon: TrendingUp, title: 'Daily Progress', description: 'You have completed 3 of 5 daily tasks today', time: '1 hour ago', color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -89,7 +79,7 @@ export function TopNav() {
     <header className="sticky top-0 z-30 w-full border-b border-primary-100 bg-white">
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-6">
-          <h2 className="text-lg font-semibold text-slate-800">SACCOS PMS</h2>
+          <h2 className="text-lg font-semibold text-slate-800">GHION SACCOS PMS</h2>
           {shouldShowBranch && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-600">Branch:</span>

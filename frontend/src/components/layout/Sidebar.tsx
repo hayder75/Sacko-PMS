@@ -39,14 +39,12 @@ const getNavItems = (role: string): NavItem[] => {
         children: [
           { title: 'Plans Overview', path: '/plan-cascade/overview' },
           { title: 'Create Plans', path: '/plan-cascade/create' },
-          { title: 'Plan Share Config', path: '/plan-share-config' },
         ]
       },
       { title: 'BASELINE BALANCE', icon: Upload, path: '/june-balance-import' },
       { title: 'PRODUCT MAPPING', icon: Target, path: '/product-mapping' },
       { title: 'MAPPING MANAGEMENT', icon: Network, path: '/mapping' },
       { title: 'CBS VALIDATION', icon: CheckCircle2, path: '/cbs-validation' },
-      { title: 'HIERARCHY', icon: Users, path: '/hierarchy' },
       { title: 'USER MANAGEMENT', icon: Users, path: '/user-management' },
       { title: 'BRANCH MANAGEMENT', icon: Network, path: '/branch-management' },
       { title: 'KPI FRAMEWORK', icon: Target, path: '/kpi-framework' },
@@ -55,23 +53,11 @@ const getNavItems = (role: string): NavItem[] => {
     ];
   }
 
-  if (role === 'regionalDirector') {
-    return [
-      { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/regional' },
-      { title: 'AREA PERFORMANCE', icon: BarChart3, path: '/area-performance' },
-      { title: 'HIERARCHY', icon: Users, path: '/hierarchy' },
-      { title: 'BEHAVIORAL EVALUATION', icon: ClipboardList, path: '/behavioral-evaluation' },
-      { title: 'REPORTS', icon: FileText, path: '/reports' },
-    ];
-  }
-
   if (role === 'areaManager') {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/area' },
       { title: 'BRANCH MONITORING', icon: Eye, path: '/branch-monitoring' },
-      { title: 'HIERARCHY', icon: Users, path: '/hierarchy' },
       { title: 'AREA PERFORMANCE', icon: BarChart3, path: '/area-performance' },
-      { title: 'HIERARCHY', icon: Users, path: '/hierarchy' },
       { title: 'BEHAVIORAL EVALUATION', icon: ClipboardList, path: '/behavioral-evaluation' },
       { title: 'REPORTS', icon: FileText, path: '/reports' },
     ];
@@ -80,10 +66,6 @@ const getNavItems = (role: string): NavItem[] => {
   if (role === 'branchManager') {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/branch' },
-      { title: 'TEAM PERFORMANCE', icon: BarChart3, path: '/team-performance' },
-      { title: 'TEAM TASKS', icon: CheckSquare, path: '/team-tasks' },
-      { title: 'HIERARCHY', icon: Users, path: '/hierarchy' },
-      { title: 'TEAM MANAGEMENT', icon: Users, path: '/teams' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
       { title: 'BULK MAPPING UPLOAD', icon: Upload, path: '/bulk-mapping-upload' },
       { title: 'CBS VALIDATION', icon: CheckCircle2, path: '/cbs-validation' },
@@ -93,27 +75,14 @@ const getNavItems = (role: string): NavItem[] => {
     ];
   }
 
-  if (role === 'lineManager') {
+  if (role === 'supervisor') {
     return [
-      { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/branch' },
-      { title: 'TEAM TASKS', icon: CheckSquare, path: '/team-tasks' },
-      { title: 'TEAM PERFORMANCE', icon: BarChart3, path: '/team-performance' },
-      { title: 'HIERARCHY', icon: Users, path: '/hierarchy' },
+      { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/supervisor' },
+      { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
+      { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
       { title: 'BEHAVIORAL INPUT', icon: ClipboardList, path: '/behavioral-input' },
-      { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
       { title: 'REPORTS', icon: FileText, path: '/reports' },
-    ];
-  }
-
-  if (role === 'subTeamLeader') {
-    return [
-      { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/staff' },
-      { title: 'MY TASKS', icon: CheckSquare, path: '/tasks' },
-      { title: 'TEAM TASKS', icon: ClipboardList, path: '/team-tasks' },
-      { title: 'MAPPING', icon: Network, path: '/mapping' },
-      { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
-      { title: 'MY PERFORMANCE', icon: Target, path: '/kpi' },
     ];
   }
 
@@ -158,8 +127,8 @@ export function Sidebar() {
         )}
       >
         <div className="p-6 border-b border-primary-600">
-          <h1 className="text-xl font-bold text-white">SACCOS PMS</h1>
-          <p className="text-xs text-blue-100 mt-1">{role === 'regionalDirector' ? 'Regional Director' : role === 'areaManager' ? 'Area Manager' : role === 'branchManager' ? 'Branch Manager' : role === 'lineManager' ? 'Line Manager' : role === 'subTeamLeader' ? 'Sub-Team Leader' : role === 'admin' ? 'Admin' : role}</p>
+          <h1 className="text-xl font-bold text-white">GHION SACCOS PMS</h1>
+          <p className="text-xs text-blue-100 mt-1">{role === 'admin' ? 'Admin' : role === 'areaManager' ? 'Area Manager' : role === 'branchManager' ? 'Branch Manager' : role === 'supervisor' ? 'Supervisor' : role}</p>
         </div>
         <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-100px)]">
           {navItems.map((item) => {
