@@ -6,36 +6,28 @@ export function normalizeRole(role) {
   if (!role) return null;
 
   const roleMap = {
-    // Old format → New format
-    'SAKO HQ / Admin': 'admin',
-    'Admin': 'admin',
     'admin': 'admin',
-    'Regional Director': 'regionalDirector',
-    'Regional Manager': 'regionalDirector',
-    'regionalDirector': 'regionalDirector',
-    'Area Manager': 'areaManager',
     'areaManager': 'areaManager',
-    'Branch Manager': 'branchManager',
     'branchManager': 'branchManager',
-    'Line Manager': 'lineManager',
-    'Member Service Manager (MSM)': 'lineManager',
-    'MSM': 'lineManager', // Legacy support
-    'lineManager': 'lineManager',
-    'Sub-Team Leader': 'subTeamLeader',
-    'Accountant': 'subTeamLeader',
-    'Auditor': 'subTeamLeader', // Legacy support - use Accountant instead
-    'subTeamLeader': 'subTeamLeader',
-    'Staff / MSO': 'staff',
-    'MSO': 'staff',
+    'supervisor': 'supervisor',
     'staff': 'staff',
+    // Position → Role mappings
+    'CEO': 'admin',
+    'Area Manager': 'areaManager',
+    'Branch Manager': 'branchManager',
+    'Operation Supervisor': 'supervisor',
+    'Customer Relationship Supervisor': 'supervisor',
+    'Customer Service Officer I': 'staff',
+    'Customer Service Officer II': 'staff',
+    'Sales & Marketing Officer I': 'staff',
+    'Customer Relationship Officer I': 'staff',
+    'Internal Auditor': 'staff',
   };
 
-  // Try exact match first
   if (roleMap[role]) {
     return roleMap[role];
   }
 
-  // Try case-insensitive match
   const lowerRole = role.toLowerCase().trim();
   for (const [key, value] of Object.entries(roleMap)) {
     if (key.toLowerCase() === lowerRole) {
@@ -43,7 +35,6 @@ export function normalizeRole(role) {
     }
   }
 
-  // Default fallback
   return role;
 }
 
