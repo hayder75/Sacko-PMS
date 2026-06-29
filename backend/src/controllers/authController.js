@@ -8,7 +8,7 @@ import { hashPassword, comparePassword, POSITION_TO_ENUM } from '../utils/prisma
 // @route   POST /api/auth/register
 // @access  Private (HQ Admin only)
 export const register = asyncHandler(async (req, res) => {
-  const { employeeId, name, email, password, role, branchId, position, branch_code, regionId, areaId, sub_team } = req.body;
+  const { employeeId, name, email, password, role, branchId, position, branch_code, areaId, sub_team } = req.body;
 
   // Hash password before saving
   const hashedPassword = await hashPassword(password);
@@ -25,7 +25,6 @@ export const register = asyncHandler(async (req, res) => {
       role,
       branchId: branchId || null,
       branch_code: branch_code || null,
-      regionId: regionId || null,
       areaId: areaId || null,
       sub_team: sub_team || null,
       position: positionEnum,
@@ -123,9 +122,6 @@ export const getMe = asyncHandler(async (req, res) => {
       branch: {
         select: { id: true, name: true, code: true },
       },
-      region: {
-        select: { id: true, name: true },
-      },
       area: {
         select: { id: true, name: true },
       },
@@ -138,10 +134,6 @@ export const getMe = asyncHandler(async (req, res) => {
     userData.branch._id = userData.branch.id;
     // Keep branchId as string, add branch object separately
     userData.branch = userData.branch;
-  }
-  if (userData.region) {
-    userData.region._id = userData.region.id;
-    userData.regionId = userData.region;
   }
   if (userData.area) {
     userData.area._id = userData.area.id;

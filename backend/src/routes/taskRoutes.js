@@ -1,21 +1,22 @@
 import express from 'express';
 import {
-  createTask,
   getTasks,
   getTask,
+  createTask,
+  updateTask,
+  deleteTask,
   approveTask,
 } from '../controllers/taskController.js';
 import { protect } from '../middleware/auth.js';
-import { canApprove } from '../middleware/rbac.js';
+import { isAdmin, isBranchManager, isSupervisor, isStaff } from '../middleware/rbac.js';
 
 const router = express.Router();
 
-router.route('/')
-  .get(protect, getTasks)
-  .post(protect, createTask);
-
+router.get('/', protect, getTasks);
 router.get('/:id', protect, getTask);
-router.put('/:id/approve', protect, canApprove, approveTask);
+router.post('/', protect, isStaff, createTask);
+router.put('/:id', protect, updateTask);
+router.delete('/:id', protect, deleteTask);
+router.put('/:id/approve', protect, isSupervisor, approveTask);
 
 export default router;
-

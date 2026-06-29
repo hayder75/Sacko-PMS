@@ -88,25 +88,25 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
             cbsValidated: true,
           }
         });
-      } else if (kpi_category === 'Member_Registration') {
+      } else if (kpi_category === 'New_Member_Registration') {
         actualGrowth = await prisma.dailyTask.count({
           where: {
             submittedById: userId,
-            taskType: 'Member_Registration',
+            taskType: 'New_Member_Registration',
             approvalStatus: 'Approved',
             cbsValidated: true,
           }
         });
-      } else if (kpi_category === 'Customer_Base') {
+      } else if (kpi_category === 'New_Account_Opening') {
         actualGrowth = await prisma.dailyTask.count({
           where: {
             submittedById: userId,
-            taskType: 'New_Customer',
+            taskType: 'New_Account_Opening',
             approvalStatus: 'Approved',
             cbsValidated: true,
           }
         });
-      } else if (kpi_category === 'Loan_NPL') {
+      } else if (kpi_category === 'Account_Productivity') {
         const tasks = await prisma.dailyTask.findMany({
           where: {
             submittedById: userId,
@@ -117,11 +117,11 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
           select: { amount: true }
         });
         actualGrowth = tasks.reduce((sum, task) => sum + (task.amount || 0), 0);
-      } else if (kpi_category === 'Shareholder_Recruitment') {
+      } else if (kpi_category === 'Share_Capital_Growth') {
         actualGrowth = await prisma.dailyTask.count({
           where: {
             submittedById: userId,
-            taskType: 'Shareholder_Recruitment',
+            taskType: 'Share_Capital',
             approvalStatus: 'Approved',
             cbsValidated: true,
           }
@@ -135,10 +135,10 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
       const weights = {
         'Deposit_Mobilization': 25,
         'Digital_Channel_Growth': 20,
-        'Loan_NPL': 20,
-        'Customer_Base': 15,
-        'Member_Registration': 10,
-        'Shareholder_Recruitment': 10,
+        'Account_Productivity': 20,
+        'New_Account_Opening': 15,
+        'New_Member_Registration': 10,
+        'Share_Capital_Growth': 10,
       };
 
       const weight = weights[kpi_category] || 0;
@@ -171,10 +171,10 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
  * Calculate rating based on final score
  */
 export const calculateRating = (finalScore) => {
-  if (finalScore >= 90) return 'Outstanding';
-  if (finalScore >= 80) return 'Very_Good';
-  if (finalScore >= 70) return 'Good';
-  if (finalScore >= 60) return 'Needs_Support';
+  if (finalScore >= 120) return 'Outstanding';
+  if (finalScore >= 100) return 'Exceeds_Expectations';
+  if (finalScore >= 90) return 'Meets_Expectations';
+  if (finalScore >= 80) return 'Needs_Improvement';
   return 'Unsatisfactory';
 };
 

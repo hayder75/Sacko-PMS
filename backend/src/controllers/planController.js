@@ -133,10 +133,10 @@ export const uploadPlan = asyncHandler(async (req, res) => {
     const validKpiCategories = [
       'Deposit Mobilization',
       'Digital Channel Growth',
-      'Member Registration',
-      'Shareholder Recruitment',
-      'Loan & NPL',
-      'Customer Base',
+      'New Member Registration',
+      'Share Capital Growth',
+      'Account Productivity',
+      'New Account Opening',
     ];
 
     const validPeriods = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];
@@ -189,30 +189,6 @@ export const uploadPlan = asyncHandler(async (req, res) => {
 
         if (existingPlan) {
           results.errors.push(`Row ${index + 2}: Plan already exists`);
-          continue;
-        }
-
-        // Check plan share config
-        let planShareConfig = await prisma.planShareConfig.findFirst({
-          where: {
-            kpi_category: kpiEnum,
-            branch_code,
-            isActive: true,
-          },
-        });
-
-        if (!planShareConfig) {
-          planShareConfig = await prisma.planShareConfig.findFirst({
-            where: {
-              kpi_category: kpiEnum,
-              branch_code: null,
-              isActive: true,
-            },
-          });
-        }
-
-        if (!planShareConfig) {
-          results.errors.push(`Row ${index + 2}: No plan share config found`);
           continue;
         }
 

@@ -11,9 +11,9 @@ export const getStaffPlans = asyncHandler(async (req, res) => {
   const where = {};
 
   // Role-based filtering
-  if (req.user.role === 'admin' || req.user.role === 'SAKO HQ / Admin' || req.user.role === 'regionalDirector' || req.user.role === 'areaManager') {
+  if (req.user.role === 'admin' || req.user.role === 'SAKO HQ / Admin' || req.user.role === 'areaManager') {
     // These roles can see all (or filtered by others)
-  } else if (req.user.role === 'branchManager' || req.user.role === 'lineManager' || req.user.role === 'subTeamLeader') {
+  } else if (req.user.role === 'branchManager' || req.user.role === 'supervisor') {
     // Branch/Line/Sub-team managers see plans for their branch
     where.branch_code = req.user.branch_code;
   } else {

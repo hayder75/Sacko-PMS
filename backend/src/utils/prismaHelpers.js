@@ -24,28 +24,32 @@ export const comparePassword = async (enteredPassword, hashedPassword) => {
  * Position enum values mapping (Prisma enum to display string)
  */
 export const POSITION_MAP = {
-    'Regional_Director': 'Regional Director',
+    'CEO': 'CEO',
     'Area_Manager': 'Area Manager',
     'Branch_Manager': 'Branch Manager',
-    'Member_Service_Manager': 'Member Service Manager (MSM)',
-    'Accountant': 'Accountant',
-    'Member_Service_Officer_I': 'Member Service Officer I',
-    'Member_Service_Officer_II': 'Member Service Officer II',
-    'Member_Service_Officer_III': 'Member Service Officer III',
+    'Operation_Supervisor': 'Operation Supervisor',
+    'Customer_Service_Officer_I': 'Customer Service Officer I',
+    'Customer_Service_Officer_II': 'Customer Service Officer II',
+    'Customer_Relationship_Supervisor': 'Customer Relationship Supervisor',
+    'Sales_Marketing_Officer_I': 'Sales & Marketing Officer I',
+    'Customer_Relationship_Officer_I': 'Customer Relationship Officer I',
+    'Internal_Auditor': 'Internal Auditor',
 };
 
 /**
  * Position string to enum value mapping
  */
 export const POSITION_TO_ENUM = {
-    'Regional Director': 'Regional_Director',
+    'CEO': 'CEO',
     'Area Manager': 'Area_Manager',
     'Branch Manager': 'Branch_Manager',
-    'Member Service Manager (MSM)': 'Member_Service_Manager',
-    'Accountant': 'Accountant',
-    'Member Service Officer I': 'Member_Service_Officer_I',
-    'Member Service Officer II': 'Member_Service_Officer_II',
-    'Member Service Officer III': 'Member_Service_Officer_III',
+    'Operation Supervisor': 'Operation_Supervisor',
+    'Customer Service Officer I': 'Customer_Service_Officer_I',
+    'Customer Service Officer II': 'Customer_Service_Officer_II',
+    'Customer Relationship Supervisor': 'Customer_Relationship_Supervisor',
+    'Sales & Marketing Officer I': 'Sales_Marketing_Officer_I',
+    'Customer Relationship Officer I': 'Customer_Relationship_Officer_I',
+    'Internal Auditor': 'Internal_Auditor',
 };
 
 /**
@@ -54,40 +58,57 @@ export const POSITION_TO_ENUM = {
 export const KPI_CATEGORY_MAP = {
     'Deposit_Mobilization': 'Deposit Mobilization',
     'Digital_Channel_Growth': 'Digital Channel Growth',
-    'Member_Registration': 'Member Registration',
-    'Shareholder_Recruitment': 'Shareholder Recruitment',
-    'Loan_NPL': 'Loan & NPL',
-    'Customer_Base': 'Customer Base',
+    'New_Member_Registration': 'New Member Registration',
+    'Share_Capital_Growth': 'Share Capital Growth',
+    'Account_Productivity': 'Account Productivity',
+    'New_Account_Opening': 'New Account Opening',
 };
 
 export const KPI_CATEGORY_TO_ENUM = {
     'Deposit Mobilization': 'Deposit_Mobilization',
     'Digital Channel Growth': 'Digital_Channel_Growth',
-    'Member Registration': 'Member_Registration',
-    'Shareholder Recruitment': 'Shareholder_Recruitment',
-    'Loan & NPL': 'Loan_NPL',
-    'Customer Base': 'Customer_Base',
+    'New Member Registration': 'New_Member_Registration',
+    'Share Capital Growth': 'Share_Capital_Growth',
+    'Account Productivity': 'Account_Productivity',
+    'New Account Opening': 'New_Account_Opening',
 };
 
 /**
- * Task Type mapping
+ * Task Type mapping (Ghion SACCOS)
+ * Maps display names and legacy names to new enum values
  */
 export const TASK_TYPE_TO_ENUM = {
     'Deposit Mobilization': 'Deposit_Mobilization',
-    'Loan Follow-up': 'Loan_Follow_up',
-    'New Customer': 'New_Customer',
-    'Digital Activation': 'Digital_Activation',
-    'Member Registration': 'Member_Registration',
-    'Shareholder Recruitment': 'Shareholder_Recruitment',
+    'Loan Follow-up': 'Deposit_Mobilization',
+    'New Customer': 'New_Member_Registration',
+    'New Member Registration': 'New_Member_Registration',
+    'Digital Activation': 'Mobile_Banking_Activation',
+    'Mobile Banking Activation': 'Mobile_Banking_Activation',
+    'Member Registration': 'New_Member_Registration',
+    'Shareholder Recruitment': 'Share_Capital',
+    'Share Capital': 'Share_Capital',
+    'Account Productivity': 'Account_Productivity',
+    'Account Productivity Improvement': 'Account_Productivity',
+    'New Account Opening': 'New_Account_Opening',
+    'Merchant POS Activation': 'Merchant_POS_Activation',
+    'Biller Recruitment': 'Biller_Recruitment',
+    'Transaction Processing': 'Transaction_Processing',
+    'SMS Alert Configuration': 'SMS_Alert_Config',
+    'Complaint Resolution': 'Complaint_Resolution',
 };
 
 export const TASK_TYPE_MAP = {
     'Deposit_Mobilization': 'Deposit Mobilization',
-    'Loan_Follow_up': 'Loan Follow-up',
-    'New_Customer': 'New Customer',
-    'Digital_Activation': 'Digital Activation',
-    'Member_Registration': 'Member Registration',
-    'Shareholder_Recruitment': 'Shareholder Recruitment',
+    'New_Member_Registration': 'New Member Registration',
+    'Mobile_Banking_Activation': 'Mobile Banking Activation',
+    'Share_Capital': 'Share Capital',
+    'Account_Productivity': 'Account Productivity',
+    'New_Account_Opening': 'New Account Opening',
+    'Merchant_POS_Activation': 'Merchant POS Activation',
+    'Biller_Recruitment': 'Biller Recruitment',
+    'Transaction_Processing': 'Transaction Processing',
+    'SMS_Alert_Config': 'SMS Alert Configuration',
+    'Complaint_Resolution': 'Complaint Resolution',
 };
 
 /**

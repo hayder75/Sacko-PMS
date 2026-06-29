@@ -1,19 +1,20 @@
 import express from 'express';
 import {
-  createBehavioralEvaluation,
-  getBehavioralEvaluations,
-  approveBehavioralEvaluation,
+  getEvaluations,
+  getEvaluation,
+  createEvaluation,
+  updateEvaluation,
+  approveEvaluation,
 } from '../controllers/behavioralController.js';
 import { protect } from '../middleware/auth.js';
-import { canApprove } from '../middleware/rbac.js';
+import { isSupervisor, isBranchManager, isAdmin } from '../middleware/rbac.js';
 
 const router = express.Router();
 
-router.route('/')
-  .get(protect, getBehavioralEvaluations)
-  .post(protect, createBehavioralEvaluation);
-
-router.put('/:id/approve', protect, canApprove, approveBehavioralEvaluation);
+router.get('/', protect, getEvaluations);
+router.get('/:id', protect, getEvaluation);
+router.post('/', protect, isSupervisor, createEvaluation);
+router.put('/:id', protect, updateEvaluation);
+router.put('/:id/approve', protect, isBranchManager, approveEvaluation);
 
 export default router;
-

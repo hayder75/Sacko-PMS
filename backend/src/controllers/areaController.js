@@ -5,16 +5,14 @@ import prisma from '../config/database.js';
 // @route   GET /api/areas
 // @access  Private (Admin)
 export const getAreas = asyncHandler(async (req, res) => {
-  const { isActive, regionId } = req.query;
+  const { isActive } = req.query;
 
   const where = {};
   if (isActive !== undefined) where.isActive = isActive === 'true';
-  if (regionId) where.regionId = regionId;
 
   const areas = await prisma.area.findMany({
     where,
     include: {
-      region: { select: { id: true, name: true, code: true } },
       manager: { select: { id: true, name: true, email: true } },
     },
     orderBy: { name: 'asc' },
@@ -24,7 +22,6 @@ export const getAreas = asyncHandler(async (req, res) => {
   const mappedAreas = areas.map(area => ({
     ...area,
     _id: area.id,
-    regionId: area.region ? { ...area.region, _id: area.region.id } : null,
     managerId: area.manager ? { ...area.manager, _id: area.manager.id } : null,
   }));
 
@@ -42,7 +39,6 @@ export const getArea = asyncHandler(async (req, res) => {
   const area = await prisma.area.findUnique({
     where: { id: req.params.id },
     include: {
-      region: { select: { id: true, name: true, code: true } },
       manager: { select: { id: true, name: true, email: true } },
     },
   });
@@ -64,12 +60,12 @@ export const getArea = asyncHandler(async (req, res) => {
 // @route   POST /api/areas
 // @access  Private (Admin)
 export const createArea = asyncHandler(async (req, res) => {
-  const { name, code, regionId, managerId } = req.body;
+  const { name, code, managerId } = req.body;
 
-  if (!name || !code || !regionId) {
+  if (!name || !code) {
     return res.status(400).json({
       success: false,
-      message: 'Please enter all required fields: name, code, regionId',
+      message: 'Please enter all required fields: name, code',
     });
   }
 
@@ -81,19 +77,10 @@ export const createArea = asyncHandler(async (req, res) => {
     });
   }
 
-  const region = await prisma.region.findUnique({ where: { id: regionId } });
-  if (!region) {
-    return res.status(404).json({
-      success: false,
-      message: 'Region not found',
-    });
-  }
-
   const area = await prisma.area.create({
     data: {
       name,
       code,
-      regionId,
       managerId: managerId || null,
     },
   });

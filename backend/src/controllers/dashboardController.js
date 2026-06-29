@@ -2,7 +2,6 @@ import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { calculateIncrementalGrowth, calculateBranchDepositGrowth, calculateBranchDigitalGrowth } from '../utils/performanceCalculator.js';
 
-// Helper to simplify KPI category names
 const simplifyKpiKey = (key) => {
   const map = {
     'Deposit_Mobilization': 'deposit',
@@ -20,17 +19,15 @@ const simplifyKpiKey = (key) => {
 // @access  Private (HQ Admin)
 export const getHQDashboard = asyncHandler(async (req, res) => {
   const totalBranches = await prisma.branch.count({ where: { isActive: true } });
-  const totalStaff = await prisma.user.count({ where: { isActive: true, role: { in: ['staff', 'subTeamLeader', 'lineManager'] } } });
+  const totalStaff = await prisma.user.count({ where: { isActive: true, role: { in: ['staff', 'supervisor'] } } });
 
   const now = new Date();
   let year = now.getFullYear();
   let month = now.getMonth() + 1;
 
-  // Calculate real-time branch performance
   const branches = await prisma.branch.findMany({
     where: { isActive: true },
     include: {
-      region: { select: { name: true } },
       area: { select: { name: true } },
     },
   });
@@ -41,7 +38,7 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
 
   for (const branch of branches) {
     const branchStaff = await prisma.user.findMany({
-      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'subTeamLeader', 'lineManager'] } }
+      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'supervisor'] } }
     });
 
     let totalTarget = 0;
@@ -66,7 +63,6 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
       branchId: branch.id,
       branch: branch.name,
       branchName: branch.name,
-      region: branch.region?.name || 'N/A',
       area: branch.area?.name || 'N/A',
       averageScore: avgScore,
       deposit: avgScore,
@@ -76,7 +72,6 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
 
   const avgPlanAchievement = allTotalTarget > 0 ? (allTotalActual / allTotalTarget) * 100 : 0;
 
-  // CBS validations
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const recentValidations = await prisma.cBSValidation.findMany({
     where: { validationDate: { gte: thirtyDaysAgo } },
@@ -133,152 +128,6 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get Regional Director Dashboard
-export const getRegionalDashboard = asyncHandler(async (req, res) => {
-  const branches = await prisma.branch.findMany({
-    where: { regionId: req.user.regionId, isActive: true },
-    include: { area: { select: { name: true } } }
-  });
-
-  const areaManagers = await prisma.user.findMany({
-    where: { regionId: req.user.regionId, role: 'areaManager', isActive: true },
-    select: { id: true, name: true, email: true }
-  });
-
-  const branchPerformance = [];
-  const branchChartData = [];
-  let totalTarget = 0;
-  let totalActual = 0;
-  let totalStaffCount = 0;
-
-  for (const branch of branches) {
-    const branchStaff = await prisma.user.findMany({
-      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'subTeamLeader', 'lineManager'] } }
-    });
-    totalStaffCount += branchStaff.length;
-    const branchStaffIds = branchStaff.map(s => s.id);
-
-    let bTarget = 0;
-    let bActual = 0;
-
-    for (const staff of branchStaff) {
-      const growth = await calculateIncrementalGrowth(staff.id, branch.code, 'Deposit_Mobilization', '2025-H2');
-      const staffPlans = await prisma.staffPlan.findMany({
-        where: { userId: staff.id, branch_code: branch.code, status: 'Active', kpi_category: 'Deposit_Mobilization' }
-      });
-      if (staffPlans.length > 0) {
-        bTarget += staffPlans[0].individual_target;
-        bActual += growth;
-        totalTarget += staffPlans[0].individual_target;
-        totalActual += growth;
-      }
-    }
-
-    const achievement = bTarget > 0 ? (bActual / bTarget) * 100 : 0;
-    const roundedAchievement = Math.round(achievement);
-
-    // Digital activations
-    const digitalCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'Digital_Activation', approvalStatus: 'Approved' }
-    });
-    const digitalPercent = Math.min(Math.round((digitalCount / Math.max(branchStaff.length * 3, 1)) * 100), 100);
-
-    // Member registrations
-    const memberCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'Member_Registration', approvalStatus: 'Approved' }
-    });
-    const memberPercent = Math.min(Math.round((memberCount / Math.max(branchStaff.length * 2, 1)) * 100), 100);
-
-    // New customers
-    const customerCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'New_Customer', approvalStatus: 'Approved' }
-    });
-    const customerPercent = Math.min(Math.round((customerCount / Math.max(branchStaff.length * 2, 1)) * 100), 100);
-
-    branchPerformance.push({
-      id: branch.id,
-      name: branch.name,
-      area: branch.area?.name || 'N/A',
-      achievement: roundedAchievement,
-      status: roundedAchievement >= 80 ? 'Good' : roundedAchievement >= 60 ? 'Warning' : roundedAchievement > 0 ? 'Critical' : 'No Data',
-    });
-
-    branchChartData.push({
-      name: branch.name,
-      deposit: roundedAchievement,
-      digital: digitalPercent,
-      member: memberPercent,
-      customer: customerPercent,
-    });
-  }
-
-  const avgBranchAchievement = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
-
-  const totalMappings = await prisma.accountMapping.count({
-    where: { branchId: { in: branches.map(b => b.id) }, status: 'Active' }
-  });
-
-  const totalAccounts = await prisma.accountMapping.count({
-    where: { branchId: { in: branches.map(b => b.id) } }
-  });
-
-  // Store branch performance by id for area calculation
-  const bPerf = {};
-  branchPerformance.forEach(b => { bPerf[b.id] = b; });
-
-  const areasInRegion = await prisma.area.findMany({
-    where: { regionId: req.user.regionId, isActive: true }
-  });
-
-  const areas = areasInRegion.map(area => {
-    const areaBranches = branches.filter(b => b.areaId === area.id);
-    const areaAchievement = areaBranches.length > 0
-      ? Math.round(areaBranches.reduce((s, b) => s + (bPerf[b.id]?.achievement || 0), 0) / areaBranches.length)
-      : 0;
-    return {
-      id: area.id,
-      name: area.name,
-      branches: areaBranches.length,
-      achievement: areaAchievement,
-    };
-  });
-
-  // Generate 30-day trend
-  const trendData = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dayStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    trendData.push({
-      day: dayStr,
-      deposit: Math.floor(avgBranchAchievement * (0.3 + Math.random() * 0.4)) * 1000 + 5000,
-    });
-  }
-
-  res.status(200).json({
-    success: true,
-    data: {
-      branchCount: branches.length,
-      areaManagerCount: areaManagers.length,
-      totalStaff: totalStaffCount,
-      areaManagers,
-      avgBranchAchievement: Math.round(avgBranchAchievement),
-      mappingCoverage: totalMappings,
-      totalAccounts,
-      topBranches: [...branchPerformance].sort((a, b) => b.achievement - a.achievement).slice(0, 5),
-      bottomBranches: [...branchPerformance].filter(b => b.achievement > 0).sort((a, b) => a.achievement - b.achievement).slice(0, 5),
-      branches: branchPerformance,
-      branchChartData,
-      trendData,
-      mappingData: [
-        { name: 'Mapped', value: totalMappings, color: '#10b981' },
-        { name: 'Unmapped', value: Math.max(totalAccounts - totalMappings, 0), color: '#ef4444' },
-      ],
-      areas,
-    },
-  });
-});
-
 // @desc    Get Area Manager Dashboard
 export const getAreaDashboard = asyncHandler(async (req, res) => {
   const branches = await prisma.branch.findMany({
@@ -295,11 +144,11 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
 
   for (const branch of branches) {
     const staffCount = await prisma.user.count({
-      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'subTeamLeader', 'lineManager'] } }
+      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'supervisor'] } }
     });
 
     const branchStaff = await prisma.user.findMany({
-      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'subTeamLeader', 'lineManager'] } }
+      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'supervisor'] } }
     });
 
     let bTarget = 0;
@@ -320,7 +169,6 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
 
     const achievement = bTarget > 0 ? (bActual / bTarget) * 100 : 0;
 
-    // Count approved digital tasks for this branch
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const branchStaffIds = branchStaff.map(s => s.id);
@@ -329,13 +177,11 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
     });
     const digitalPercent = Math.min(Math.round((digitalCount / Math.max(staffCount * 3, 1)) * 100), 100);
 
-    // Count member registrations
     const memberCount = await prisma.dailyTask.count({
       where: { submittedById: { in: branchStaffIds }, taskType: 'Member_Registration', approvalStatus: 'Approved' }
     });
     const memberPercent = Math.min(Math.round((memberCount / Math.max(staffCount * 2, 1)) * 100), 100);
 
-    // Count new customers
     const customerCount = await prisma.dailyTask.count({
       where: { submittedById: { in: branchStaffIds }, taskType: 'New_Customer', approvalStatus: 'Approved' }
     });
@@ -390,7 +236,6 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
 
   const unmapped = Math.max(totalAccounts - totalMappings, 0);
 
-  // Generate 30-day trend data
   const trendData = [];
   for (let i = 29; i >= 0; i--) {
     const d = new Date();
@@ -428,14 +273,13 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
   const branchCode = req.user.branch_code;
 
   const totalStaff = await prisma.user.count({
-    where: { branchId, isActive: true, role: { in: ['staff', 'subTeamLeader', 'lineManager'] } }
+    where: { branchId, isActive: true, role: { in: ['staff', 'supervisor'] } }
   });
 
   const mappedAccounts = await prisma.accountMapping.count({
     where: { branchId, status: 'Active' }
   });
 
-  // Get daily target from branch plan ( Deposit_Mobilization)
   const branchPlan = await prisma.plan.findFirst({
     where: { branch_code: branchCode, status: 'Active', kpi_category: 'Deposit_Mobilization' },
     orderBy: { createdAt: 'desc' }
@@ -443,7 +287,6 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
 
   const dailyDepositTarget = branchPlan ? Math.round(branchPlan.target_value / 30) : 0;
 
-  // Calculate today's achievement (from today's transactions)
   const today = new Date().toISOString().split('T')[0];
   const todayStart = new Date(today);
   const juneBaseline = await prisma.juneBalance.findMany({
@@ -454,7 +297,6 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
   let todayAchievement = 0;
   let todayAchievementPercent = 0;
   
-  // Get transactions table
   try {
     if (accountNos.length > 0) {
       const todayTransactions = await prisma.transaction.groupBy({
@@ -472,10 +314,8 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
     console.log('Transaction query skipped:', e.message);
   }
 
-  // Calculate KPI data from branch plan
   const kpiData = [];
   if (branchPlan) {
-    // Deposit Mobilization - use actual mapped account balances as fallback
     const branch = await prisma.branch.findFirst({ where: { code: branchCode } });
     const allBranchAccounts = await prisma.accountMapping.findMany({
       where: { branchId: branch?.id, status: 'Active', current_balance: { gte: 500 } }
@@ -484,7 +324,6 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
     const depositPercent = branchPlan.target_value > 0 ? Math.round((depositActual / branchPlan.target_value) * 100) : 0;
     kpiData.push({ category: 'Deposit Mobilization', name: 'Deposit Mobilization', value: depositPercent, target: branchPlan.target_value, actual: depositActual });
     
-    // Digital Channel - calculate from staff digital KPIs
     try {
       const digitalPlan = await prisma.staffPlan.findFirst({
         where: { branch_code: branchCode, status: 'Active', kpi_category: 'Digital_Channel_Growth' }
@@ -498,7 +337,6 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
       console.log('Digital plan query skipped');
     }
     
-    // Customer Growth
     try {
       const memberPlan = await prisma.staffPlan.findFirst({
         where: { branch_code: branchCode, status: 'Active', kpi_category: 'Member_Registration' }
@@ -512,7 +350,7 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
   }
 
   const teamMembers = await prisma.user.findMany({
-    where: { branchId, isActive: true, role: { in: ['staff', 'subTeamLeader', 'lineManager'] } },
+    where: { branchId, isActive: true, role: { in: ['staff', 'supervisor'] } },
     select: { id: true, name: true, position: true, employeeId: true }
   });
 
@@ -532,12 +370,10 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
 
     const percent = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
 
-    // Count mapped accounts for this staff
     const mappedAccountsCount = await prisma.accountMapping.count({
       where: { mappedToId: member.id, status: 'Active' }
     });
 
-    // Count digital activations approved today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const digitalTasks = await prisma.dailyTask.count({
@@ -581,20 +417,16 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const branchCode = req.user.branch_code;
 
-  // Get mapped accounts count
   const mappedAccounts = await prisma.accountMapping.count({
     where: { mappedToId: userId, status: 'Active', current_balance: { gte: 500 }, active_status: true }
   });
 
-  // Calculate real-time deposit growth
   const depositGrowth = await calculateIncrementalGrowth(userId, branchCode, 'Deposit_Mobilization', '2025-H2');
 
-  // Get staff plans
   const staffPlans = await prisma.staffPlan.findMany({
     where: { userId, branch_code: branchCode, status: 'Active' }
   });
 
-  // Get approved tasks for all KPI types
   const approvedTasks = await prisma.dailyTask.findMany({
     where: { submittedById: userId, approvalStatus: 'Approved' },
     select: { taskType: true, amount: true },
@@ -608,7 +440,6 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
     taskAmountByType[key] = (taskAmountByType[key] || 0) + (t.amount || 0);
   }
 
-  // KPI category to task type mapping
   const KPI_TO_TASK = {
     Deposit_Mobilization: ['Deposit_Mobilization'],
     Digital_Channel_Growth: ['Digital_Activation'],
@@ -638,7 +469,6 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
     };
   }
 
-  // Get latest behavioral evaluation
   const behavioralEval = await prisma.behavioralEvaluation.findFirst({
     where: { evaluatedUserId: userId, approvalStatus: 'Approved' },
     orderBy: { createdAt: 'desc' },
@@ -654,5 +484,71 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
       kpiBreakdown,
       behavioralEvaluation: behavioralEval || null,
     }
+  });
+});
+
+// @desc    Get Supervisor Dashboard
+// @route   GET /api/dashboard/supervisor
+// @access  Private (Supervisor)
+export const getSupervisorDashboard = asyncHandler(async (req, res) => {
+  const supervisorId = req.user.id;
+
+  const supervisees = await prisma.user.findMany({
+    where: { supervisorId, isActive: true, role: { in: ['staff', 'supervisor'] } },
+    select: { id: true, name: true, employeeId: true, position: true, branch_code: true },
+  });
+
+  let totalMappedAccounts = 0;
+  let totalKpiAchievement = 0;
+  let membersWithData = 0;
+
+  const teamMembers = [];
+
+  for (const member of supervisees) {
+    const mappedAccountsCount = await prisma.accountMapping.count({
+      where: { mappedToId: member.id, status: 'Active' }
+    });
+
+    const depositGrowth = await calculateIncrementalGrowth(member.id, member.branch_code, 'Deposit_Mobilization', '2025-H2');
+
+    const staffPlans = await prisma.staffPlan.findMany({
+      where: { userId: member.id, branch_code: member.branch_code, status: 'Active', kpi_category: 'Deposit_Mobilization' }
+    });
+
+    let target = 0;
+    if (staffPlans.length > 0) {
+      target = staffPlans[0].individual_target;
+    }
+
+    const kpiAchievement = target > 0 ? (depositGrowth / target) * 100 : 0;
+
+    if (target > 0) {
+      totalMappedAccounts += mappedAccountsCount;
+      totalKpiAchievement += kpiAchievement;
+      membersWithData++;
+    }
+
+    teamMembers.push({
+      id: member.id,
+      name: member.name,
+      employeeId: member.employeeId,
+      position: member.position?.replace(/_/g, ' '),
+      mappedAccounts: mappedAccountsCount,
+      kpiAchievement: Math.round(kpiAchievement),
+    });
+  }
+
+  const averageKpiAchievement = membersWithData > 0 ? totalKpiAchievement / membersWithData : 0;
+
+  res.status(200).json({
+    success: true,
+    data: {
+      teamMembers,
+      teamStats: {
+        totalMembers: supervisees.length,
+        totalMappedAccounts,
+        averageKpiAchievement: Math.round(averageKpiAchievement * 100) / 100,
+      },
+    },
   });
 });

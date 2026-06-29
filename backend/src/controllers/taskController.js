@@ -3,93 +3,41 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
 import { TASK_TYPE_TO_ENUM, MAPPING_STATUS_TO_ENUM, APPROVAL_STATUS_TO_ENUM, APPROVAL_STATUS_MAP } from '../utils/prismaHelpers.js';
 
-// Helper: Build approval chain based on position
+// Helper: Build approval chain based on supervisor hierarchy
+// Chain: Staff -> Supervisor (if exists) -> Branch Manager
+// Internal Auditor (no supervisor) -> Branch Manager
 const buildApprovalChain = async (submitter) => {
   const chain = [];
-  const submitterPosition = submitter.position;
   const branch_code = submitter.branch_code;
 
-  // MSO → Accountant → MSM → Branch Manager
-  if (['Member_Service_Officer_I', 'Member_Service_Officer_II', 'Member_Service_Officer_III'].includes(submitterPosition)) {
-    // Find Accountant in same branch
-    const accountant = await prisma.user.findFirst({
-      where: {
-        branch_code,
-        position: 'Accountant',
-        isActive: true,
-      }
+  // Add supervisor as first approver if the submitter has one
+  if (submitter.supervisorId) {
+    const supervisor = await prisma.user.findUnique({
+      where: { id: submitter.supervisorId }
     });
-    if (accountant) {
+    if (supervisor) {
       chain.push({
-        approverId: accountant.id,
-        role: 'Accountant',
-        status: 'Pending',
-      });
-    }
-
-    // Find MSM in same branch
-    const msm = await prisma.user.findFirst({
-      where: {
-        branch_code,
-        position: 'Member Service Manager (MSM)',
-        isActive: true,
-      }
-    });
-    if (msm) {
-      chain.push({
-        approverId: msm.id,
-        role: 'Member Service Manager (MSM)',
-        status: 'Pending',
-      });
-    }
-
-    // Find Branch Manager
-    const branchManager = await prisma.user.findFirst({
-      where: {
-        branch_code,
-        position: 'Branch Manager',
-        isActive: true,
-      }
-    });
-    if (branchManager) {
-      chain.push({
-        approverId: branchManager.id,
-        role: 'Branch Manager',
+        approverId: supervisor.id,
+        role: 'supervisor',
         status: 'Pending',
       });
     }
   }
-  // Accountant → MSM → Branch Manager
-  else if (submitterPosition === 'Accountant') {
-    const msm = await prisma.user.findFirst({
-      where: {
-        branch_code,
-        position: 'Member Service Manager (MSM)',
-        isActive: true,
-      }
-    });
-    if (msm) {
-      chain.push({
-        approverId: msm.id,
-        role: 'Member Service Manager (MSM)',
-        status: 'Pending',
-      });
-    }
 
-    const branchManager = await prisma.user.findFirst({
-      where: {
-        branch_code,
-        position: 'Branch Manager',
-        isActive: true,
-      }
-    });
-    if (branchManager) {
-      chain.push({
-        approverId: branchManager.id,
-        role: 'Branch Manager',
-        status: 'Pending',
-      });
+  // Add Branch Manager as final approver
+  const branchManager = await prisma.user.findFirst({
+    where: {
+      branch_code,
+      role: 'branchManager',
+      isActive: true,
     }
+  });
+  if (branchManager) {
+    chain.push({
+      approverId: branchManager.id,
+      role: 'Branch Manager',
+      status: 'Pending',
+    });
   }
 
   return chain;
@@ -141,11 +89,10 @@ const checkAccountMapping = async (accountNumber, userId, branch_code) => {
 export const createTask = asyncHandler(async (req, res) => {
   const { taskType, productType, accountNumber, customerName, amount, remarks, evidence, taskDate } = req.body;
 
-  const allowedPositions = ['Member_Service_Officer_I', 'Member_Service_Officer_II', 'Member_Service_Officer_III', 'Accountant'];
-  if (!allowedPositions.includes(req.user.position)) {
+  if (req.user.role !== 'staff') {
     return res.status(403).json({
       success: false,
-      message: `Your position '${req.user.position}' cannot log tasks`,
+      message: `Your role '${req.user.role}' cannot log tasks`,
     });
   }
 
@@ -173,7 +120,7 @@ export const createTask = asyncHandler(async (req, res) => {
         status: 'Active',
         branchId: req.user.branchId,
         notes: 'Created during task entry',
-        mappedToId: req.user.id, // Fixed: Mandatory in schema
+        mappedToId: req.user.id,
         mappedById: req.user.id,
       }
     });
@@ -183,7 +130,6 @@ export const createTask = asyncHandler(async (req, res) => {
 
   const approvalChainData = await buildApprovalChain(req.user);
 
-  // We use a transaction because we need to create the task and then the approval chain records
   const task = await prisma.$transaction(async (tx) => {
     const newTask = await tx.dailyTask.create({
       data: {
@@ -349,7 +295,7 @@ export const getTask = asyncHandler(async (req, res) => {
 // @route   PUT /api/tasks/:id/approve
 // @access  Private (Approvers)
 export const approveTask = asyncHandler(async (req, res) => {
-  const { status, comments } = req.body; // status: 'Approved' or 'Rejected'
+  const { status, comments } = req.body;
   const statusEnum = APPROVAL_STATUS_TO_ENUM[status] || status;
 
   const task = await prisma.dailyTask.findUnique({
@@ -375,7 +321,6 @@ export const approveTask = asyncHandler(async (req, res) => {
     });
   }
 
-  // Update this approval entry and task status
   await prisma.$transaction(async (tx) => {
     await tx.taskApproval.update({
       where: { id: approval.id },

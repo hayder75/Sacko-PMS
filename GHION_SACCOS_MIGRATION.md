@@ -60,7 +60,7 @@ Rebrand and restructure the PMS system from SAKO's org model to Ghion SACCOS's o
 
 ## Phase 2: Backend Middleware & Auth Changes
 
-### Status: ⏳ Not Started
+### Status: ✅ Complete
 
 #### Tasks
 - [ ] Update `rbac.js`: remove `isRegionalDirector`, `isLineManager`, `isSubTeamLeader`; add `isSupervisor`; update `isBranchManager`, `isAreaManager`, `canApprove`, `canApproveByPosition`
@@ -164,4 +164,5 @@ Rebrand and restructure the PMS system from SAKO's org model to Ghion SACCOS's o
 - Started Phase 1: Rewrote Prisma schema — updated all enums (UserRole, Position, KpiCategory, TaskType, PerformanceRating), removed models (Region, Team, SubTeam, EvaluationApproval, PlanShareConfig), updated User model (removed regionId/sub_team, added supervisorId), added isProductive to AccountMapping, removed regionId from Area/Branch
 - Generated migration SQL with data migration steps (old→new enum value mapping, table drops)
 - Ran migration on server via `prisma migrate deploy`
-- Next: Phase 2 — Backend Middleware & Auth Changes
+- Phase 2: Updated rbac.js (removed old role checkers, added isSupervisor, updated hierarchies), updated roleNormalizer.js (new position→role mapping), updated frontend roleMapper.ts (new role types)
+- Next: Phase 3 — Backend Routes & Controllers

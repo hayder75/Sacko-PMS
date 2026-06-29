@@ -22,7 +22,7 @@ const calculateBehavioralScore = (competencies) => {
 const buildBehavioralApprovalChain = async (user) => {
   const chain = [];
 
-  if (user.role === 'subTeamLeader' || user.role === 'lineManager') {
+  if (user.role === 'staff' || user.role === 'supervisor') {
     const bm = await prisma.user.findFirst({
       where: { branch_code: user.branch_code, position: 'Branch Manager', isActive: true }
     });
