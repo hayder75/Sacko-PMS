@@ -14,32 +14,35 @@ datasource db {
 
 enum UserRole {
   admin
-  regionalDirector
   areaManager
   branchManager
-  lineManager
-  subTeamLeader
+  supervisor
   staff
 }
 
 enum Position {
-  Regional_Director          @map("Regional Director")
-  Area_Manager               @map("Area Manager")
-  Branch_Manager             @map("Branch Manager")
-  Member_Service_Manager     @map("Member Service Manager (MSM)")
-  Accountant
-  Member_Service_Officer_I   @map("Member Service Officer I")
-  Member_Service_Officer_II  @map("Member Service Officer II")
-  Member_Service_Officer_III @map("Member Service Officer III")
+  CEO                          @map("CEO")
+  Area_Manager                 @map("Area Manager")
+  Branch_Manager               @map("Branch Manager")
+  Operation_Supervisor         @map("Operation Supervisor")
+  Customer_Service_Officer_I   @map("Customer Service Officer I")
+  Customer_Service_Officer_II  @map("Customer Service Officer II")
+  Customer_Relationship_Supervisor    @map("Customer Relationship Supervisor")
+  Sales_Marketing_Officer_I    @map("Sales & Marketing Officer I")
+  Customer_Relationship_Officer_I     @map("Customer Relationship Officer I")
+  Internal_Auditor             @map("Internal Auditor")
 }
 
 enum KpiCategory {
-  Deposit_Mobilization     @map("Deposit Mobilization")
-  Digital_Channel_Growth   @map("Digital Channel Growth")
-  Member_Registration      @map("Member Registration")
-  Shareholder_Recruitment  @map("Shareholder Recruitment")
-  Loan_NPL                 @map("Loan & NPL")
-  Customer_Base            @map("Customer Base")
+  Account_Productivity       @map("Account Productivity")
+  Deposit_Mobilization       @map("Deposit Mobilization")
+  New_Member_Registration    @map("New Member Registration")
+  New_Account_Opening        @map("New Account Opening")
+  Share_Capital_Growth       @map("Share Capital Growth")
+  Mobile_Banking_Users       @map("Mobile Banking Users")
+  Merchant_POS_Growth        @map("Merchant POS Growth")
+  Billers_Recruitment        @map("Billers Recruitment")
+  Internal_Operations        @map("Internal Operations")
 }
 
 enum PlanPeriod {
@@ -75,12 +78,17 @@ enum AccountStatus {
 }
 
 enum TaskType {
-  Deposit_Mobilization     @map("Deposit Mobilization")
-  Loan_Follow_up           @map("Loan Follow-up")
-  New_Customer             @map("New Customer")
-  Digital_Activation       @map("Digital Activation")
-  Member_Registration      @map("Member Registration")
-  Shareholder_Recruitment  @map("Shareholder Recruitment")
+  Account_Productivity         @map("Account Productivity Improvement")
+  Deposit_Mobilization         @map("Deposit Mobilization")
+  New_Member_Registration      @map("New Member Registration")
+  New_Account_Opening          @map("New Account Opening")
+  Share_Capital                @map("Share Capital")
+  Mobile_Banking_Activation    @map("Mobile Banking Activation")
+  Merchant_POS_Activation      @map("Merchant POS Activation")
+  Biller_Recruitment           @map("Biller Recruitment")
+  Transaction_Processing       @map("Transaction Processing")
+  SMS_Alert_Config             @map("SMS Alert Configuration")
+  Complaint_Resolution         @map("Complaint Resolution")
 }
 
 enum MappingStatus {
@@ -140,9 +148,9 @@ enum PerformanceScoreStatus {
 
 enum PerformanceRating {
   Outstanding
-  Very_Good     @map("Very Good")
-  Good
-  Needs_Support @map("Needs Support")
+  Exceeds_Expectations   @map("Exceeds Expectations")
+  Meets_Expectations     @map("Meets Expectations")
+  Needs_Improvement      @map("Needs Improvement")
   Unsatisfactory
 }
 
@@ -197,19 +205,19 @@ model User {
   branchId             String?
   branch               Branch?   @relation("BranchUsers", fields: [branchId], references: [id])
   branch_code          String?
-  sub_team             String?
-  regionId             String?
-  region               Region?   @relation("RegionUsers", fields: [regionId], references: [id])
   areaId               String?
   area                 Area?     @relation("AreaUsers", fields: [areaId], references: [id])
   position             Position
   isActive             Boolean   @default(true)
+  supervisorId         String?
+  supervisor           User?     @relation("Supervisor", fields: [supervisorId], references: [id])
   resetPasswordToken   String?
   resetPasswordExpire  DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
   // Relations
+  supervisees             User[]               @relation("Supervisor")
   createdPlans            Plan[]               @relation("PlanCreator")
   submittedTasks          DailyTask[]          @relation("TaskSubmitter")
   receivedEvaluations     BehavioralEvaluation[] @relation("EvaluatedUser")
@@ -220,52 +228,25 @@ model User {
   cbsValidations          CBSValidation[]      @relation("CBSUploader")
   juneBalanceImports      JuneBalance[]        @relation("JuneBalanceImporter")
   productKpiMappings      ProductKpiMapping[]  @relation("ProductMapper")
-  planShareConfigs        PlanShareConfig[]    @relation("PlanShareCreator")
-  updatedPlanShareConfigs PlanShareConfig[]    @relation("PlanShareUpdater")
   auditLogs               AuditLog[]
   staffPlans              StaffPlan[]
-  managedRegions          Region[]             @relation("RegionDirector")
   managedAreas            Area[]               @relation("AreaManager")
   managedBranches         Branch[]             @relation("BranchManager")
-  managedTeams            Team[]               @relation("TeamManager")
-  ledSubTeams             SubTeam[]            @relation("SubTeamLeader")
-  subTeamMemberships      SubTeam[]            @relation("SubTeamMembers")
   taskApprovals           TaskApproval[]
   cbsDiscrepancyResolvers CBSDiscrepancy[]     @relation("DiscrepancyResolver")
-  evaluationApprovals     EvaluationApproval[]
 
   @@index([branchId])
-  @@index([regionId])
   @@index([areaId])
   @@index([role])
   @@index([position])
+  @@index([supervisorId])
   @@map("users")
-}
-
-model Region {
-  id         String   @id @default(uuid()) @map("_id")
-  name       String   @unique
-  code       String   @unique
-  directorId String?
-  director   User?    @relation("RegionDirector", fields: [directorId], references: [id])
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relations
-  areas    Area[]
-  branches Branch[]
-  users    User[]   @relation("RegionUsers")
-
-  @@map("regions")
 }
 
 model Area {
   id        String   @id @default(uuid()) @map("_id")
   name      String
   code      String   @unique
-  regionId  String
-  region    Region   @relation(fields: [regionId], references: [id])
   managerId String?
   manager   User?    @relation("AreaManager", fields: [managerId], references: [id])
   isActive  Boolean  @default(true)
@@ -276,7 +257,6 @@ model Area {
   branches Branch[]
   users    User[]   @relation("AreaUsers")
 
-  @@index([regionId])
   @@map("areas")
 }
 
@@ -284,8 +264,6 @@ model Branch {
   id        String   @id @default(uuid()) @map("_id")
   name      String
   code      String   @unique
-  regionId  String
-  region    Region   @relation(fields: [regionId], references: [id])
   areaId    String
   area      Area     @relation(fields: [areaId], references: [id])
   managerId String?
@@ -298,8 +276,6 @@ model Branch {
 
   // Relations
   users                 User[]               @relation("BranchUsers")
-  teams                 Team[]
-  subTeams              SubTeam[]
   plans                 Plan[]
   staffPlans            StaffPlan[]
   dailyTasks            DailyTask[]
@@ -308,50 +284,8 @@ model Branch {
   cbsValidations        CBSValidation[]
   accountMappings       AccountMapping[]
 
-  @@index([regionId])
   @@index([areaId])
   @@map("branches")
-}
-
-model Team {
-  id        String   @id @default(uuid()) @map("_id")
-  name      String
-  code      String   @unique
-  branchId  String
-  branch    Branch   @relation(fields: [branchId], references: [id])
-  managerId String?
-  manager   User?    @relation("TeamManager", fields: [managerId], references: [id])
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  subTeams SubTeam[]
-
-  @@unique([branchId, code])
-  @@index([branchId])
-  @@map("teams")
-}
-
-model SubTeam {
-  id        String   @id @default(uuid()) @map("_id")
-  name      String
-  code      String   @unique
-  teamId    String
-  team      Team     @relation(fields: [teamId], references: [id])
-  branchId  String
-  branch    Branch   @relation(fields: [branchId], references: [id])
-  leaderId  String?
-  leader    User?    @relation("SubTeamLeader", fields: [leaderId], references: [id])
-  members   User[]   @relation("SubTeamMembers")
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([branchId, code])
-  @@index([branchId])
-  @@index([teamId])
-  @@map("sub_teams")
 }
 
 model Plan {
@@ -409,28 +343,6 @@ model StaffPlan {
   @@map("staff_plans")
 }
 
-model PlanShareConfig {
-  id                      String      @id @default(uuid()) @map("_id")
-  branch_code             String?
-  kpi_category            KpiCategory
-  share_branch_manager    Float       @default(30)
-  share_msm               Float       @default(25)
-  share_accountant        Float       @default(13)
-  share_mso               Float       @default(32)
-  total_percent           Float       @default(0)
-  isActive                Boolean     @default(true)
-  createdById             String?
-  createdBy               User?       @relation("PlanShareCreator", fields: [createdById], references: [id])
-  updatedById             String?
-  updatedBy               User?       @relation("PlanShareUpdater", fields: [updatedById], references: [id])
-  createdAt               DateTime    @default(now())
-  updatedAt               DateTime    @updatedAt
-
-  @@index([branch_code, kpi_category])
-  @@index([kpi_category, isActive])
-  @@map("plan_share_configs")
-}
-
 model AccountMapping {
   id                    String        @id @default(uuid()) @map("_id")
   accountNumber         String        @unique
@@ -441,6 +353,7 @@ model AccountMapping {
   current_balance       Float         @default(0)
   active_status         Boolean       @default(false)
   last_transaction_date DateTime?
+  isProductive          Boolean       @default(false)
   mappedToId            String
   mappedTo              User          @relation("MappedToUser", fields: [mappedToId], references: [id])
   branchId              String
@@ -461,6 +374,7 @@ model AccountMapping {
   @@index([mappedToId, branchId, status])
   @@index([accountNumber])
   @@index([branchId])
+  @@index([isProductive])
   @@map("account_mappings")
 }
 
@@ -551,53 +465,34 @@ model PerformanceScore {
 }
 
 model BehavioralEvaluation {
-  id              String                    @id @default(uuid()) @map("_id")
+  id              String                   @id @default(uuid()) @map("_id")
   evaluatedUserId String
-  evaluatedUser   User                      @relation("EvaluatedUser", fields: [evaluatedUserId], references: [id])
+  evaluatedUser   User                     @relation("EvaluatedUser", fields: [evaluatedUserId], references: [id])
   evaluatedById   String
-  evaluatedBy     User                      @relation("Evaluator", fields: [evaluatedById], references: [id])
+  evaluatedBy     User                     @relation("Evaluator", fields: [evaluatedById], references: [id])
   branchId        String
-  branch          Branch                    @relation(fields: [branchId], references: [id])
+  branch          Branch                   @relation(fields: [branchId], references: [id])
   period          EvaluationPeriod
   year            Int
   quarter         Int?
   month           Int?
   
   // Competencies stored as JSON
-  competencies    Json                      @default("{}")
-  totalScore      Float                     @default(0)
+  competencies    Json                     @default("{}")
+  totalScore      Float                    @default(0)
   overallComments String?
-  approvalStatus  EvaluationApprovalStatus  @default(Draft)
-  isLocked        Boolean                   @default(false)
+  approvalStatus  EvaluationApprovalStatus @default(Draft)
+  isLocked        Boolean                  @default(false)
   lockedAt        DateTime?
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
 
   // Relations
-  approvalChain     EvaluationApproval[]
   performanceScores PerformanceScore[]
 
   @@index([evaluatedUserId, period, year, month])
   @@index([branchId, approvalStatus])
   @@map("behavioral_evaluations")
-}
-
-model EvaluationApproval {
-  id           String                   @id @default(uuid()) @map("_id")
-  evaluationId String
-  evaluation   BehavioralEvaluation     @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
-  approverId   String
-  approver     User                     @relation(fields: [approverId], references: [id])
-  role         String
-  status       EvaluationApprovalStatus @default(Pending)
-  approvedAt   DateTime?
-  comments     String?
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
-
-  @@index([evaluationId])
-  @@index([approverId])
-  @@map("evaluation_approvals")
 }
 
 model CBSValidation {
