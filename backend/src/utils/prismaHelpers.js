@@ -62,6 +62,10 @@ export const KPI_CATEGORY_MAP = {
     'Share_Capital_Growth': 'Share Capital Growth',
     'Account_Productivity': 'Account Productivity',
     'New_Account_Opening': 'New Account Opening',
+    'Mobile_Banking_Users': 'Mobile Banking Users',
+    'Merchant_POS_Growth': 'Merchant POS Growth',
+    'Billers_Recruitment': 'Billers Recruitment',
+    'Internal_Operations': 'Internal Operations',
 };
 
 export const KPI_CATEGORY_TO_ENUM = {
@@ -71,6 +75,10 @@ export const KPI_CATEGORY_TO_ENUM = {
     'Share Capital Growth': 'Share_Capital_Growth',
     'Account Productivity': 'Account_Productivity',
     'New Account Opening': 'New_Account_Opening',
+    'Mobile Banking Users': 'Mobile_Banking_Users',
+    'Merchant POS Growth': 'Merchant_POS_Growth',
+    'Billers Recruitment': 'Billers_Recruitment',
+    'Internal Operations': 'Internal_Operations',
 };
 
 /**

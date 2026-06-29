@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertTriangle, XCircle, Search, User } from 'lucide-react';
-import { tasksAPI, mappingsAPI } from '@/lib/api';
+import { tasksAPI, mappingsAPI, productMappingAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
 const taskTypes = [
@@ -25,32 +25,55 @@ const taskTypes = [
   'Complaint Resolution',
 ];
 
-const productTypes: Record<string, string[]> = {
+const taskTypeToKpiCategory: Record<string, string> = {
+  'Account Productivity Improvement': 'Account Productivity',
+  'Deposit Mobilization': 'Deposit Mobilization',
+  'New Member Registration': 'New Member Registration',
+  'New Account Opening': 'New Account Opening',
+  'Share Capital': 'Share Capital Growth',
+  'Mobile Banking Activation': 'Mobile Banking Users',
+  'Merchant POS Activation': 'Merchant POS Growth',
+  'Biller Recruitment': 'Billers Recruitment',
+  'Transaction Processing': 'Internal Operations',
+  'SMS Alert Configuration': 'Internal Operations',
+  'Complaint Resolution': 'Internal Operations',
+};
+
+const FALLBACK_PRODUCTS: Record<string, string[]> = {
   'Deposit Mobilization': [
-    'Felagot Saving',
-    'Weekly Sa 360',
-    'Medebegna Savin',
-    'Special Saving',
-    'Taxi Saving',
-    'Fixed Time 1Y',
+    'LOAN SAVING RESERVE ACCOUNT',
+    'REPAYMENT ACCOUNT',
+    'MOTHERS SAVING ACCOUNT',
+    'YOUNG WOMEN SAVING',
+    'SPECIAL SAVING ACCOUNT',
+    'FIXED TIME DEPOSIT',
+    'CHILDREN SAVING ACCOUNT',
+    'ELDERS SAVING ACCOUNT',
+    'WADIAH SAVING ACCOUNT',
+    'Michu Current Account',
+    'GIHON REGULAR SAVING',
   ],
   'New Account Opening': [
-    'Digital Saving',
+    'Michu Current Account',
+    'GIHON REGULAR SAVING',
   ],
-  'Share Capital': [
-    'Share Account',
+  'Share Capital Growth': [
+    'COMMON SHARE',
   ],
-  'Mobile Banking Activation': [
-    'Digital Saving',
+  'Mobile Banking Users': [
+    'Michu Current Account',
+    'GIHON REGULAR SAVING',
   ],
-  'Merchant POS Activation': [
-    'Merchant Account',
+  'Merchant POS Growth': [
+    'MERCHANT ACCOUNT',
   ],
-  'Biller Recruitment': [
-    'Biller Service',
+  'Billers Recruitment': [
+    'BILLER SERVICE',
   ],
-  'Transaction Processing': [
-    'Transaction Fee',
+  'Internal Operations': [
+    'Transaction Processing',
+    'SMS Alert',
+    'Complaint',
   ],
 };
 
@@ -73,14 +96,32 @@ export function TaskEntryForm() {
   const [mappings, setMappings] = useState<any[]>([]);
   const [accountSearch, setAccountSearch] = useState('');
   const [showMappedOnly, setShowMappedOnly] = useState(true);
+  const [dynamicProducts, setDynamicProducts] = useState<Record<string, string[]> | null>(null);
 
   useEffect(() => {
     loadMappings();
+    loadProducts();
   }, []);
+
+  const loadProducts = async () => {
+    try {
+      const res = await productMappingAPI.getAll({ status: 'active' });
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const grouped: Record<string, string[]> = {};
+        for (const mapping of res.data) {
+          const kpiDisplay = mapping.kpi_category?.replace(/_/g, ' ');
+          if (!grouped[kpiDisplay]) grouped[kpiDisplay] = [];
+          if (!grouped[kpiDisplay].includes(mapping.cbs_product_name)) {
+            grouped[kpiDisplay].push(mapping.cbs_product_name);
+          }
+        }
+        setDynamicProducts(grouped);
+      }
+    } catch (_) {}
+  };
 
   const loadMappings = async () => {
     try {
-      // Fetch user's mapped accounts for quick selection
       const response = await mappingsAPI.getAll({ mappedTo: user?._id });
       if (response.success) {
         setMappings(response.data || []);
@@ -89,6 +130,13 @@ export function TaskEntryForm() {
       console.error('Error loading mappings:', error);
     }
   };
+
+  const getProductTypes = (): Record<string, string[]> => {
+    if (dynamicProducts) return dynamicProducts;
+    return FALLBACK_PRODUCTS;
+  };
+
+  const productTypes = getProductTypes();
 
   const selectedMapping = mappings.find(m => m.accountNumber === accountNumber);
   const isNewAccount = !selectedMapping && accountNumber.length > 0;
@@ -186,23 +234,27 @@ export function TaskEntryForm() {
               </Select>
             </div>
 
-            {taskType && productTypes[taskType] && (
-              <div className="space-y-2">
-                <Label htmlFor="productType">Product Type *</Label>
-                <Select value={productType} onValueChange={setProductType}>
-                  <SelectTrigger id="productType">
-                    <SelectValue placeholder="Select product type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productTypes[taskType].map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {(() => {
+              const kpiKey = taskTypeToKpiCategory[taskType] || taskType;
+              const products = productTypes[kpiKey];
+              return products && (
+                <div className="space-y-2">
+                  <Label htmlFor="productType">Product Type *</Label>
+                  <Select value={productType} onValueChange={setProductType}>
+                    <SelectTrigger id="productType">
+                      <SelectValue placeholder="Select product type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
 
             <div className="space-y-4 p-4 bg-blue-50/50 border border-blue-100 rounded-lg">
               <div className="flex items-center justify-between">
