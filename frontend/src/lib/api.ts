@@ -80,7 +80,14 @@ export const authAPI = {
       body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
+
+  getUsersList: async () => {
+    return apiRequest('/auth/users-list', {
+      method: 'GET',
+    });
+  },
 };
+
 
 // Users API
 export const usersAPI = {
@@ -113,10 +120,6 @@ export const usersAPI = {
     });
   },
 
-  getHierarchy: async () => {
-    return apiRequest('/users/hierarchy');
-  },
-  
   resetPassword: async (id: string, newPassword: string) => {
     return apiRequest(`/users/${id}/reset-password`, {
       method: 'PUT',

@@ -220,3 +220,24 @@ export const updatePassword = asyncHandler(async (req, res) => {
     message: 'Password updated successfully',
   });
 });
+
+// @desc    Get all active users for login dropdown
+// @route   GET /api/auth/users-list
+export const getUsersList = asyncHandler(async (req, res) => {
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      position: true,
+      employeeId: true,
+    },
+    orderBy: { name: "asc" },
+  });
+
+  const mapped = users.map(u => ({ ...u, _id: u.id }));
+
+  res.status(200).json({ success: true, count: mapped.length, data: mapped });
+});
