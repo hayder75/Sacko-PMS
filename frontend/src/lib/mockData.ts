@@ -1,4 +1,4 @@
-// Mock Data for SAKO PMS
+// Mock Data for SACCOS PMS
 
 export type UserRole = 
   | 'admin'

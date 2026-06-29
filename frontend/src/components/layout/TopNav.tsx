@@ -89,7 +89,7 @@ export function TopNav() {
     <header className="sticky top-0 z-30 w-full border-b border-primary-100 bg-white">
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-6">
-          <h2 className="text-lg font-semibold text-slate-800">SAKO PMS</h2>
+          <h2 className="text-lg font-semibold text-slate-800">SACCOS PMS</h2>
           {shouldShowBranch && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-600">Branch:</span>
