@@ -181,22 +181,20 @@ export function CEODashboard() {
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Region</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead>Actual</TableHead>
-                  <TableHead>%</TableHead>
-                  <TableHead>Rating</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {hqData.topBranches && hqData.topBranches.length > 0 ? (
-                  hqData.topBranches.map((b: any) => (
-                    <TableRow key={b.branch || b.id}>
-                      <TableCell className="font-medium">{b.branch || b.name}</TableCell>
-                      <TableCell>{b.region || b.area || 'N/A'}</TableCell>
-                      <TableCell>{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
+                  <TableRow>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Actual</TableHead>
+                    <TableHead>%</TableHead>
+                    <TableHead>Rating</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {hqData.topBranches && hqData.topBranches.length > 0 ? (
+                    hqData.topBranches.map((b: any) => (
+                      <TableRow key={b.branch || b.id}>
+                        <TableCell className="font-medium">{b.branch || b.name}</TableCell>
+                        <TableCell>{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
                       <TableCell>{b.actual?.toLocaleString() || '0'}</TableCell>
                       <TableCell>
                         <Badge variant={(b.percent ?? 0) >= 80 ? 'success' : 'warning'}>
@@ -207,11 +205,11 @@ export function CEODashboard() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-500 py-8">
-                      No top branches data available
-                    </TableCell>
-                  </TableRow>
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-slate-500 py-8">
+                        No top branches data available
+                      </TableCell>
+                    </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -227,7 +225,6 @@ export function CEODashboard() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Branch</TableHead>
-                  <TableHead>Region</TableHead>
                   <TableHead>Target</TableHead>
                   <TableHead>Actual</TableHead>
                   <TableHead>%</TableHead>
@@ -239,7 +236,6 @@ export function CEODashboard() {
                   hqData.bottomBranches.map((b: any) => (
                     <TableRow key={b.branch || b.id}>
                       <TableCell className="font-medium">{b.branch || b.name}</TableCell>
-                      <TableCell>{b.region || b.area || 'N/A'}</TableCell>
                       <TableCell>{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
                       <TableCell>{b.actual?.toLocaleString() || '0'}</TableCell>
                       <TableCell>
@@ -251,11 +247,11 @@ export function CEODashboard() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-500 py-8">
-                      No bottom branches data available
-                    </TableCell>
-                  </TableRow>
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-slate-500 py-8">
+                        No bottom branches data available
+                      </TableCell>
+                    </TableRow>
                 )}
               </TableBody>
             </Table>

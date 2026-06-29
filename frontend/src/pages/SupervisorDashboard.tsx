@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, FileText, CheckCircle, Clock } from 'lucide-react';
+import { dashboardAPI, tasksAPI } from '@/lib/api';
 
 interface TeamMember {
   id: string;
@@ -24,22 +25,18 @@ export function SupervisorDashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const res = await fetch('/api/dashboard/supervisor', { credentials: 'include' });
-      const data = await res.json();
-      if (data.success && data.data) {
-        setTeamMembers(data.data.teamMembers || []);
-        setStats(data.data.teamStats || { totalMembers: 0, totalMappedAccounts: 0, averageKpiAchievement: 0 });
+      const [dashboardRes, tasksRes] = await Promise.all([
+        dashboardAPI.getSupervisor(),
+        tasksAPI.getAll({ approvalStatus: 'Pending', limit: 10 }),
+      ]);
+      if (dashboardRes.success && dashboardRes.data) {
+        setTeamMembers(dashboardRes.data.teamMembers || []);
+        setStats(dashboardRes.data.teamStats || { totalMembers: 0, totalMappedAccounts: 0, averageKpiAchievement: 0 });
+      }
+      if (tasksRes.success && Array.isArray(tasksRes.data)) {
+        setPendingApprovals(tasksRes.data.length);
       }
     } catch (_) {}
-
-    try {
-      const tasksRes = await fetch('/api/tasks?approvalStatus=Pending', { credentials: 'include' });
-      const tasksData = await tasksRes.json();
-      if (tasksData.success && tasksData.data) {
-        setPendingApprovals(tasksData.data.length);
-      }
-    } catch (_) {}
-
     setLoading(false);
   };
 

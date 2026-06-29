@@ -24,15 +24,10 @@ export function BehavioralInput() {
     try {
       const response = await usersAPI.getAll();
       if (response.success) {
-        // Filter to show only staff under this manager
-        setEmployees(response.data?.filter((u: any) => u.role === 'staff') || []);
+        setEmployees(response.data?.filter((u: any) => u.supervisorId === user?._id && u.role !== 'admin') || []);
       }
     } catch (error) {
-      // Use default data
-      setEmployees([
-        { _id: '1', name: 'John Doe', employeeId: 'STAFF001' },
-        { _id: '2', name: 'Jane Smith', employeeId: 'STAFF002' },
-      ]);
+      setEmployees([]);
     }
   };
 

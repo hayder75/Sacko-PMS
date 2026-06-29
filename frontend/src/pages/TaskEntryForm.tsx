@@ -12,15 +12,19 @@ import { tasksAPI, mappingsAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
 const taskTypes = [
+  'Account Productivity Improvement',
   'Deposit Mobilization',
-  'Loan Follow-up',
-  'New Customer',
-  'Digital Activation',
-  'Member Registration',
-  'Shareholder Recruitment',
+  'New Member Registration',
+  'New Account Opening',
+  'Share Capital',
+  'Mobile Banking Activation',
+  'Merchant POS Activation',
+  'Biller Recruitment',
+  'Transaction Processing',
+  'SMS Alert Configuration',
+  'Complaint Resolution',
 ];
 
-// Real products from CBS system
 const productTypes: Record<string, string[]> = {
   'Deposit Mobilization': [
     'Felagot Saving',
@@ -30,22 +34,24 @@ const productTypes: Record<string, string[]> = {
     'Taxi Saving',
     'Fixed Time 1Y',
   ],
-  'Digital Channel Growth': [
+  'New Account Opening': [
     'Digital Saving',
   ],
-  'Loan & NPL': [
-    'Sixty Days L Sa',
-    'Thirty Days L S',
-    'Revol Loan Savi',
-  ],
-  'Customer Base': [
-    'Non Member',
-  ],
-  'Shareholder Recruitment': [
+  'Share Capital': [
     'Share Account',
   ],
-  // Note: Member Registration and New Customer don't have specific products
-  // They are tracked by task type only
+  'Mobile Banking Activation': [
+    'Digital Saving',
+  ],
+  'Merchant POS Activation': [
+    'Merchant Account',
+  ],
+  'Biller Recruitment': [
+    'Biller Service',
+  ],
+  'Transaction Processing': [
+    'Transaction Fee',
+  ],
 };
 
 export function TaskEntryForm() {

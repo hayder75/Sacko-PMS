@@ -10,12 +10,15 @@ import { AlertTriangle, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { productMappingAPI, cbsAPI } from '@/lib/api';
 
 const kpiCategories = [
+  'Account Productivity',
   'Deposit Mobilization',
-  'Digital Channel Growth',
-  'Loan & NPL',
-  'Customer Base',
-  'Member Registration',
-  'Shareholder Recruitment',
+  'New Member Registration',
+  'New Account Opening',
+  'Share Capital Growth',
+  'Mobile Banking Users',
+  'Merchant POS Growth',
+  'Billers Recruitment',
+  'Internal Operations',
 ];
 
 export function ProductMapping() {

@@ -143,6 +143,41 @@ export function BranchManagerDashboard() {
         </CardContent>
       </Card>
 
+      {/* Supervisors Overview */}
+      {data.supervisors && data.supervisors.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Supervisors</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Team Size</TableHead>
+                  <TableHead>Mapped Accounts</TableHead>
+                  <TableHead>Avg KPI Achievement</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.supervisors.map((sup: any) => (
+                  <TableRow key={sup.id || sup.name}>
+                    <TableCell className="font-medium">{sup.name}</TableCell>
+                    <TableCell>{sup.teamSize || 0}</TableCell>
+                    <TableCell>{sup.mappedAccounts || 0}</TableCell>
+                    <TableCell>
+                      <Badge variant={(sup.avgAchievement || 0) >= 80 ? 'success' : (sup.avgAchievement || 0) >= 60 ? 'warning' : 'destructive'}>
+                        {sup.avgAchievement || 0}%
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Team Performance Table */}
       <Card>
         <CardHeader>

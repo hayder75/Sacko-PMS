@@ -7,12 +7,15 @@ import { plansAPI, staffPlansAPI } from '@/lib/api';
 import { Target, Users, TrendingUp, Building2 } from 'lucide-react';
 
 const KPI_COLORS: Record<string, string> = {
+  'Account Productivity': '#10b981',
   'Deposit Mobilization': '#3b82f6',
-  'Digital Channel Growth': '#10b981',
-  'Member Registration': '#f59e0b',
-  'Shareholder Recruitment': '#8b5cf6',
-  'Loan & NPL': '#ef4444',
-  'Customer Base': '#06b6d4',
+  'New Member Registration': '#8b5cf6',
+  'New Account Opening': '#06b6d4',
+  'Share Capital Growth': '#f59e0b',
+  'Mobile Banking Users': '#6366f1',
+  'Merchant POS Growth': '#ef4444',
+  'Billers Recruitment': '#f97316',
+  'Internal Operations': '#6b7280',
 };
 
 const periodOptions = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];

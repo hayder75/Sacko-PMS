@@ -11,12 +11,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { plansAPI, staffPlansAPI } from '@/lib/api';
 
 const kpiCategories = [
+  'Account Productivity',
   'Deposit Mobilization',
-  'Digital Channel Growth',
-  'Member Registration',
-  'Shareholder Recruitment',
-  'Loan & NPL',
-  'Customer Base',
+  'New Member Registration',
+  'New Account Opening',
+  'Share Capital Growth',
+  'Mobile Banking Users',
+  'Merchant POS Growth',
+  'Billers Recruitment',
+  'Internal Operations',
 ];
 
 const periods = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];

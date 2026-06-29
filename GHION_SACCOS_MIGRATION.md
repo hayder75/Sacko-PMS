@@ -112,23 +112,26 @@ Rebrand and restructure the PMS system from SAKO's org model to Ghion SACCOS's o
 
 ## Phase 5: Frontend — Dashboards & Pages
 
-### Status: ⏳ Not Started
+### Status: ✅ Complete
 
 #### Tasks
-- [ ] Update `BranchManagerDashboard.tsx`: supervisors view, 9 KPIs, account productivity
-- [ ] Update `AreaManagerDashboard.tsx`: remove region refs, new KPIs
-- [ ] Update `StaffDashboard.tsx`: 9 KPIs, account productivity section, productive badge
-- [ ] Update `CEODashboard.tsx`: new KPIs, branch comparison, digital channel breakdown
-- [ ] Update `MappedAccounts.tsx`: add Productivity Status column
-- [ ] Update `TaskEntryForm.tsx`: 11 new task types
-- [ ] Update `Tasks.tsx`: simplified approval flow display
-- [ ] Update `PlanCascade.tsx`: 9 KPIs, new cascading matrix
-- [ ] Update `PlansOverview.tsx`: new KPI names
-- [ ] Update `BehavioralEvaluation.tsx`: supervisor→staff flow
-- [ ] Update `BehavioralInput.tsx`: supervisor role
-- [ ] Update `BulkMappingUpload.tsx`: keep as-is
-- [ ] Update `CBSValidation.tsx`: keep as-is
-- [ ] Update `ProductMapping.tsx`: new KPI categories
+- [x] Update `BranchManagerDashboard.tsx`: supervisors view, 9 KPIs, pending approvals
+- [x] Update `AreaManagerDashboard.tsx`: no region refs, mapping coverage, branch status
+- [x] Update `StaffDashboard.tsx`: KPI progress, productive badge column on accounts
+- [x] Update `CEODashboard.tsx`: removed Region columns, branch heatmap, top/bottom branches
+- [x] Update `MappedAccounts.tsx`: added Productivity Status column, updated KPI enums to 9 Ghion categories
+- [x] Update `TaskEntryForm.tsx`: 11 new task types matching Ghion schema
+- [x] Update `Tasks.tsx`: approval chain timeline display (supervisor → BM flow)
+- [x] Update `PlanCascade.tsx`: 9 Ghion KPI categories
+- [x] Update `PlansOverview.tsx`: 9 KPI names & colors
+- [x] Update `BehavioralEvaluation.tsx`: supervisor→staff evaluation flow
+- [x] Update `BehavioralInput.tsx`: filter by supervisorId
+- [x] Update `BulkMappingUpload.tsx`: kept as-is
+- [x] Update `CBSValidation.tsx`: kept as-is
+- [x] Update `ProductMapping.tsx`: 9 new KPI categories
+- [x] `api.ts`: added getSupervisor, removed getRegional
+- [x] Deleted orphaned HQDashboard.tsx
+- [x] Fixed AreaPerformance.tsx getRegional reference
 
 ---
 
@@ -166,4 +169,5 @@ Rebrand and restructure the PMS system from SAKO's org model to Ghion SACCOS's o
 - Phase 2 (Auth): Updated rbac.js, roleNormalizer.js, frontend roleMapper.ts
 - Phase 3 (Backend Routes/Controllers): Removed old routes/controllers, updated server.js, rewrote planCascade.js with client's cascading matrix, cleaned region refs from all controllers. Backend running and responding on port 5001.
 - Phase 4 (Frontend Core): Updated App.tsx routing, Login.tsx with new positions, Sidebar/TopNav branding, created SupervisorDashboard, renamed HQ→CEO dashboard, removed 6 old page files, fixed TS types
-- Next: Phase 5 — Frontend Dashboards & Pages (BranchManager, AreaManager, Staff, CEO dashboards, TaskEntryForm, etc.)
+- Phase 5 (Frontend Dashboards): Updated all dashboards (CEO/Area/Branch/Supervisor/Staff) with new KPIs, supervisor view, productive badge. Updated TaskEntryForm with 11 task types. Updated PlanCascade/PlansOverview/ProductMapping with 9 Ghion KPIs. Fixed BehavioralInput supervisor filter. Deleted orphaned HQDashboard.tsx. Removed getRegional, added getSupervisor to API layer.
+- Next: Phase 6 — Seed Data (create seedGhionSaccos.js with full org, 9 KPIs, cascaded plans, 30-50 accounts, sample tasks/evals)

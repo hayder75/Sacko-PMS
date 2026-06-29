@@ -464,16 +464,15 @@ export const dashboardAPI = {
   getHQ: async () => {
     return apiRequest('/dashboard/hq');
   },
-  getRegional: async () => {
-    return apiRequest('/dashboard/regional');
-  },
   getArea: async () => {
     return apiRequest('/dashboard/area');
   },
   getBranch: async () => {
     return apiRequest('/dashboard/branch');
   },
-  
+  getSupervisor: async () => {
+    return apiRequest('/dashboard/supervisor');
+  },
   getStaff: async () => {
     return apiRequest('/dashboard/staff');
   },

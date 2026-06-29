@@ -161,13 +161,14 @@ export function StaffDashboard() {
                   <th className="text-right px-4 py-3 font-medium text-slate-600">Current Balance</th>
                   <th className="text-right px-4 py-3 font-medium text-slate-600">Difference</th>
                   <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
+                  <th className="text-center px-4 py-3 font-medium text-slate-600">Productivity</th>
                   <th className="text-center px-4 py-3 font-medium text-slate-600">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {accounts.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-slate-400">No accounts mapped to you yet</td>
+                    <td colSpan={9} className="text-center py-8 text-slate-400">No accounts mapped to you yet</td>
                   </tr>
                 ) : (
                   accounts.map((acct: any) => (
@@ -197,6 +198,11 @@ export function StaffDashboard() {
                       <td className="px-4 py-3 text-center">
                         <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">
                           {acct.activeStatus ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={acct.isProductive ? 'success' : 'outline'} className="text-xs">
+                          {acct.isProductive ? 'Productive' : 'Non-Productive'}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-center">

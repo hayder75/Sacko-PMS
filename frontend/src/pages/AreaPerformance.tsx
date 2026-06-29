@@ -15,7 +15,7 @@ export function AreaPerformance() {
 
   const loadData = async () => {
     try {
-      const response = await dashboardAPI.getRegional();
+      const response = await dashboardAPI.getArea();
       if (response.success) {
         setData(response.data);
       }

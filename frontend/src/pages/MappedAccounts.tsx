@@ -3,24 +3,30 @@ import { useUser } from '@/contexts/UserContext';
 import { mappedAccountsAPI } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Phone, TrendingUp, TrendingDown, Banknote, Target, Users, PiggyBank } from 'lucide-react';
+import { Phone, TrendingUp, TrendingDown, Banknote, Target, Users, PiggyBank, FileText } from 'lucide-react';
 
 const KPI_COLORS: Record<string, string> = {
-  Deposit_Mobilization: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-  Digital_Channel_Growth: 'bg-blue-50 border-blue-200 text-blue-700',
-  Member_Registration: 'bg-purple-50 border-purple-200 text-purple-700',
-  Shareholder_Recruitment: 'bg-amber-50 border-amber-200 text-amber-700',
-  Loan_NPL: 'bg-rose-50 border-rose-200 text-rose-700',
-  Customer_Base: 'bg-cyan-50 border-cyan-200 text-cyan-700',
+  Account_Productivity: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+  Deposit_Mobilization: 'bg-blue-50 border-blue-200 text-blue-700',
+  New_Member_Registration: 'bg-purple-50 border-purple-200 text-purple-700',
+  New_Account_Opening: 'bg-cyan-50 border-cyan-200 text-cyan-700',
+  Share_Capital_Growth: 'bg-amber-50 border-amber-200 text-amber-700',
+  Mobile_Banking_Users: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+  Merchant_POS_Growth: 'bg-rose-50 border-rose-200 text-rose-700',
+  Billers_Recruitment: 'bg-orange-50 border-orange-200 text-orange-700',
+  Internal_Operations: 'bg-slate-50 border-slate-200 text-slate-700',
 };
 
 const KPI_ICONS: Record<string, any> = {
+  Account_Productivity: TrendingUp,
   Deposit_Mobilization: PiggyBank,
-  Digital_Channel_Growth: TrendingUp,
-  Member_Registration: Users,
-  Shareholder_Recruitment: Users,
-  Loan_NPL: Banknote,
-  Customer_Base: Target,
+  New_Member_Registration: Users,
+  New_Account_Opening: Target,
+  Share_Capital_Growth: TrendingUp,
+  Mobile_Banking_Users: Users,
+  Merchant_POS_Growth: TrendingUp,
+  Billers_Recruitment: Users,
+  Internal_Operations: FileText,
 };
 
 export function MappedAccounts() {
@@ -191,12 +197,13 @@ export function MappedAccounts() {
                   <th className="text-right px-4 py-3 font-medium text-slate-600">Current Balance</th>
                   <th className="text-right px-4 py-3 font-medium text-slate-600">Difference</th>
                   <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
+                  <th className="text-center px-4 py-3 font-medium text-slate-600">Productivity</th>
                 </tr>
               </thead>
               <tbody>
                 {accounts.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-slate-400">No accounts mapped to you yet</td>
+                    <td colSpan={8} className="text-center py-8 text-slate-400">No accounts mapped to you yet</td>
                   </tr>
                 ) : (
                   accounts.map((acct: any) => (
@@ -228,6 +235,11 @@ export function MappedAccounts() {
                       <td className="px-4 py-3 text-center">
                         <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">
                           {acct.activeStatus ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={acct.isProductive ? 'success' : 'outline'} className="text-xs">
+                          {acct.isProductive ? 'Productive' : 'Non-Productive'}
                         </Badge>
                       </td>
                     </tr>
