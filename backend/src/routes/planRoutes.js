@@ -4,7 +4,6 @@ import {
   getPlan,
   createPlan,
   updatePlan,
-  deletePlan,
   uploadPlan,
 } from '../controllers/planController.js';
 import { protect } from '../middleware/auth.js';
@@ -16,7 +15,6 @@ router.get('/', protect, getPlans);
 router.get('/:id', protect, getPlan);
 router.post('/', protect, isAdmin, createPlan);
 router.put('/:id', protect, isAdmin, updatePlan);
-router.delete('/:id', protect, isAdmin, deletePlan);
 router.post('/upload', protect, isAdmin, uploadPlan);
 
 export default router;

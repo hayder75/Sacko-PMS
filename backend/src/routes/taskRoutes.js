@@ -3,8 +3,6 @@ import {
   getTasks,
   getTask,
   createTask,
-  updateTask,
-  deleteTask,
   approveTask,
 } from '../controllers/taskController.js';
 import { protect } from '../middleware/auth.js';
@@ -15,8 +13,6 @@ const router = express.Router();
 router.get('/', protect, getTasks);
 router.get('/:id', protect, getTask);
 router.post('/', protect, isStaff, createTask);
-router.put('/:id', protect, updateTask);
-router.delete('/:id', protect, deleteTask);
 router.put('/:id/approve', protect, isSupervisor, approveTask);
 
 export default router;

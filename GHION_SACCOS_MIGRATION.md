@@ -73,7 +73,7 @@ Rebrand and restructure the PMS system from SAKO's org model to Ghion SACCOS's o
 
 ## Phase 3: Backend Routes & Controllers
 
-### Status: ⏳ Not Started
+### Status: ✅ Complete
 
 #### Tasks
 - [ ] Remove all `/api/regions/*` routes
@@ -161,8 +161,7 @@ Rebrand and restructure the PMS system from SAKO's org model to Ghion SACCOS's o
 ### 2026-06-29
 - Created branch `Ghion-Saccos` from `main`
 - Created this migration plan document
-- Started Phase 1: Rewrote Prisma schema — updated all enums (UserRole, Position, KpiCategory, TaskType, PerformanceRating), removed models (Region, Team, SubTeam, EvaluationApproval, PlanShareConfig), updated User model (removed regionId/sub_team, added supervisorId), added isProductive to AccountMapping, removed regionId from Area/Branch
-- Generated migration SQL with data migration steps (old→new enum value mapping, table drops)
-- Ran migration on server via `prisma migrate deploy`
-- Phase 2: Updated rbac.js (removed old role checkers, added isSupervisor, updated hierarchies), updated roleNormalizer.js (new position→role mapping), updated frontend roleMapper.ts (new role types)
-- Next: Phase 3 — Backend Routes & Controllers
+- Phase 1 (Schema): Rewrote Prisma schema — all enums updated (UserRole, Position, KpiCategory, TaskType, PerformanceRating), removed Region/Team/SubTeam/EvaluationApproval/PlanShareConfig models, added supervisorId to User, isProductive to AccountMapping. Migration SQL with data mapping. Ran on server.
+- Phase 2 (Auth): Updated rbac.js, roleNormalizer.js, frontend roleMapper.ts
+- Phase 3 (Backend Routes/Controllers): Removed old routes/controllers, updated server.js, rewrote planCascade.js with client's cascading matrix, cleaned region refs from all controllers. Backend running and responding on port 5001.
+- Next: Phase 4 — Frontend Core Structure (App.tsx, Login, Sidebar, SupervisorDashboard)

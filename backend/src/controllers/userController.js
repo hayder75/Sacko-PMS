@@ -4,6 +4,35 @@ import { logAudit } from '../utils/auditLogger.js';
 import { normalizeRole } from '../utils/roleNormalizer.js';
 import { hashPassword, POSITION_TO_ENUM, POSITION_MAP } from '../utils/prismaHelpers.js';
 
+// @desc    Get public list of active users for login dropdown
+// @route   GET /api/users/public-list
+// @access  Public
+export const getPublicUsersList = asyncHandler(async (req, res) => {
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      position: true,
+      employeeId: true,
+      branchId: true,
+      branch_code: true,
+    },
+    orderBy: { name: 'asc' },
+  });
+
+  const mapped = users.map(u => ({
+    ...u,
+    _id: u.id,
+    location: u.branch_code || '',
+    position: POSITION_MAP[u.position] || u.position,
+  }));
+
+  res.status(200).json({ success: true, count: mapped.length, data: mapped });
+});
+
 // @desc    Get all users
 // @route   GET /api/users
 // @access  Private

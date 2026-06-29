@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  getPublicUsersList,
   getUsers,
   getUser,
   createUser,
@@ -14,7 +15,7 @@ import { isAdmin, isAreaManager, isBranchManager, isSupervisor } from '../middle
 const router = express.Router();
 
 router.get('/hierarchy', protect, getHierarchy);
-router.get('/public-list', getUsers);
+router.get('/public-list', getPublicUsersList);
 router.get('/', protect, getUsers);
 router.get('/:id', protect, getUser);
 router.post('/', protect, isAdmin, createUser);
