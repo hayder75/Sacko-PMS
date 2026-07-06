@@ -27,7 +27,7 @@ const roleNotifications: Record<string, any[]> = {
   ],
   areaManager: [
     { id: 1, icon: TrendingUp, title: 'Wolayta Zone Performance', description: 'Wolayta Sodo: 92% | Overall area: 85%', time: '1 hour ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { id: 2, icon: AlertCircle, title: 'Branch Alert', description: 'Atote branch mapping coverage dropped to 45%', time: '3 hours ago', color: 'text-amber-600', bg: 'bg-amber-50' },
+    { id: 2, icon: AlertCircle, title: 'Branch Alert', description: 'Wolayta Sodo branch mapping coverage dropped to 45%', time: '3 hours ago', color: 'text-amber-600', bg: 'bg-amber-50' },
     { id: 3, icon: Clock, title: 'Pending Approvals', description: '3 staff evaluations awaiting your review', time: '6 hours ago', color: 'text-blue-600', bg: 'bg-blue-50' },
     { id: 4, icon: UserPlus, title: 'Staff Movement', description: '2 staff transferred between branches this month', time: '2 days ago', color: 'text-purple-600', bg: 'bg-purple-50' },
   ],

@@ -30,7 +30,7 @@ export function PlanCascade() {
   const [staffPlans, setStaffPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [staffPlansLoading, setStaffPlansLoading] = useState(false);
-  const [staffPlansFilter, setStaffPlansFilter] = useState({ branch_code: 'ATOTE', period: '2025-H2' });
+  const [staffPlansFilter, setStaffPlansFilter] = useState({ branch_code: 'WOLAYTA_SODO', period: '2025-H2' });
   const [formData, setFormData] = useState({
     branch_code: '',
     kpi_category: '',
@@ -169,7 +169,7 @@ export function PlanCascade() {
                       id="branch_code"
                       value={formData.branch_code}
                       onChange={(e) => setFormData({ ...formData, branch_code: e.target.value })}
-                      placeholder="e.g., ATOTE"
+                      placeholder="e.g., WOLAYTA_SODO"
                       required
                       disabled={loading}
                     />
@@ -304,7 +304,7 @@ export function PlanCascade() {
                     id="filter_branch"
                     value={staffPlansFilter.branch_code}
                     onChange={(e) => setStaffPlansFilter({ ...staffPlansFilter, branch_code: e.target.value })}
-                    placeholder="e.g., ATOTE"
+                    placeholder="e.g., WOLAYTA_SODO"
                   />
                 </div>
                 <div className="space-y-2">

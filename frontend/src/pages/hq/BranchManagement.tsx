@@ -187,7 +187,7 @@ export function BranchManagement() {
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Atote Branch"
+                    placeholder="e.g., Wolayta Sodo"
                     required
                   />
                 </div>
@@ -197,7 +197,7 @@ export function BranchManagement() {
                     id="code"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    placeholder="e.g., ATOTE"
+                    placeholder="e.g., WOLAYTA_SODO"
                     required
                   />
                 </div>

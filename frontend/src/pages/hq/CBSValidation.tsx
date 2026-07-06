@@ -77,7 +77,7 @@ export function CBSValidation() {
                 id="branch_code"
                 value={branch_code}
                 onChange={(e) => setBranchCode(e.target.value)}
-                placeholder="e.g., ATOTE"
+                placeholder="e.g., WOLAYTA_SODO"
                 required
                 disabled={loading || !!user?.branch_code}
               />

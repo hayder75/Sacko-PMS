@@ -191,7 +191,7 @@ export function UserManagement() {
                     id="branch_code"
                     value={formData.branch_code}
                     onChange={(e) => setFormData({ ...formData, branch_code: e.target.value })}
-                    placeholder="e.g., ATOTE"
+                    placeholder="e.g., WOLAYTA_SODO"
                     required
                     disabled={loading || formData.role === 'admin'}
                   />
