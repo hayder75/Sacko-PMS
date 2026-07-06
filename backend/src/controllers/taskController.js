@@ -220,6 +220,7 @@ export const getTasks = asyncHandler(async (req, res) => {
   if (approvalStatus) where.approvalStatus = APPROVAL_STATUS_TO_ENUM[approvalStatus] || approvalStatus;
 
   if (req.query.pendingApprovalByMe === 'true') {
+    where.approvalStatus = 'Pending';
     where.approvalChain = {
       some: {
         approverId: req.user.id,
