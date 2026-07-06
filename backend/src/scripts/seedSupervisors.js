@@ -48,25 +48,30 @@ async function main() {
     const superviseeIds = supervisees.map(s => s.id);
 
     const existingSupAccounts = await prisma.accountMapping.count({ where: { mappedToId: sup.id, status: 'Active' } });
-    if (existingSupAccounts === 0 && superviseeIds.length > 0) {
-      const staffAccounts = await prisma.accountMapping.findMany({
-        where: { mappedToId: { in: superviseeIds }, status: 'Active' },
-        take: 5,
-      });
-      for (const acc of staffAccounts) {
-        const exists = await prisma.accountMapping.findFirst({
-          where: { accountNumber: acc.accountNumber, mappedToId: sup.id },
-        });
+    if (existingSupAccounts === 0) {
+      const prefix = sup.position?.includes('Operation') ? 'OPS' : 'CR';
+      const customers = [
+        { name: 'Abebech Alemu', product: 'Savings' },
+        { name: 'Biruk Desta', product: 'Current' },
+        { name: 'Chaltu Girma', product: 'Savings' },
+        { name: 'Dawit Eshetu', product: 'Fixed Deposit' },
+        { name: 'Eyerusalem Fikre', product: 'Loan' },
+      ];
+      for (let i = 0; i < customers.length; i++) {
+        const accNum = `GH${prefix}${String(i + 1).padStart(3, '0')}`;
+        const exists = await prisma.accountMapping.findUnique({ where: { accountNumber: accNum } });
         if (!exists) {
           await prisma.accountMapping.create({
             data: {
-              accountNumber: acc.accountNumber,
-              customerName: acc.customerName,
-              product: acc.product,
-              accountType: acc.accountType,
+              accountNumber: accNum,
+              customerName: customers[i].name,
+              product: customers[i].product,
+              accountType: customers[i].product === 'Loan' ? 'Loan' :
+                          customers[i].product === 'Fixed Deposit' ? 'Fixed Deposit' :
+                          customers[i].product === 'Current' ? 'Current' : 'Savings',
               mappedToId: sup.id,
               branchId: branch.id,
-              mappedById: acc.mappedById,
+              mappedById: sup.id,
               status: 'Active',
               balance: 0,
               june_balance: 0,
