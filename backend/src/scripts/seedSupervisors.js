@@ -67,7 +67,7 @@ async function main() {
               customerName: customers[i].name,
               product: customers[i].product,
               accountType: customers[i].product === 'Loan' ? 'Loan' :
-                          customers[i].product === 'Fixed Deposit' ? 'Fixed Deposit' :
+                          customers[i].product === 'Fixed Deposit' ? 'Fixed_Deposit' :
                           customers[i].product === 'Current' ? 'Current' : 'Savings',
               mappedToId: sup.id,
               branchId: branch.id,
