@@ -79,46 +79,46 @@ async function main() {
 
   // ===== AREA =====
   const area = await prisma.area.create({
-    data: { name: 'Hawassa Area', code: 'HAWASSA_AREA', isActive: true },
+    data: { name: 'Wolayta Zone', code: 'WOLAYTA_AREA', isActive: true },
   });
-  console.log('✅ Area created: Hawassa Area');
+  console.log('✅ Area created: Wolayta Zone');
 
   // ===== BRANCH (Bole only) =====
-  const boleBranch = await prisma.branch.create({
-    data: { name: 'Hawassa Bole Branch', code: 'HAWASSA_BOLE', areaId: area.id, isActive: true },
+  const sodoBranch = await prisma.branch.create({
+    data: { name: 'Wolayta Sodo Branch', code: 'WOLAYTA_SODO', areaId: area.id, isActive: true },
   });
-  console.log('✅ Branch created: Hawassa Bole');
+  console.log('✅ Branch created: Wolayta Sodo');
 
   // ===== USERS =====
   const admin = await prisma.user.create({
-    data: { employeeId: 'ADMIN001', name: 'Biruk Assefa', email: 'biruk.assefa@ghion.et', password: hashed, role: 'admin', position: 'CEO', isActive: true },
+    data: { employeeId: 'ADMIN001', name: 'Temesgen', email: 'biruk.assefa@ghion.et', password: hashed, role: 'admin', position: 'CEO', isActive: true },
   });
 
   const am = await prisma.user.create({
-    data: { employeeId: 'AM-HAW-001', name: 'Abebech G/Hiwot', email: 'abebech.ghiwot@ghion.et', password: hashed, role: 'areaManager', position: 'Area_Manager', areaId: area.id, isActive: true },
+    data: { employeeId: 'AM-WOL-001', name: 'Abebech G/Hiwot', email: 'abebech.ghiwot@ghion.et', password: hashed, role: 'areaManager', position: 'Area_Manager', areaId: area.id, isActive: true },
   });
   await prisma.area.update({ where: { id: area.id }, data: { managerId: am.id } });
 
   const bmBole = await prisma.user.create({
-    data: { employeeId: 'BM-BOL-001', name: 'Meron Kebede', email: 'meron.kebede@ghion.et', password: hashed, role: 'branchManager', position: 'Branch_Manager', branchId: boleBranch.id, branch_code: 'HAWASSA_BOLE', areaId: area.id, isActive: true },
+    data: { employeeId: 'BM-WOL-001', name: 'Meron Kebede', email: 'meron.kebede@ghion.et', password: hashed, role: 'branchManager', position: 'Branch_Manager', branchId: sodoBranch.id, branch_code: 'WOLAYTA_SODO', areaId: area.id, isActive: true },
   });
-  await prisma.branch.update({ where: { id: boleBranch.id }, data: { managerId: bmBole.id } });
+  await prisma.branch.update({ where: { id: sodoBranch.id }, data: { managerId: bmBole.id } });
 
   const supBoleOps = await prisma.user.create({
-    data: { employeeId: 'SUP-BOL-OPS', name: 'Henok Tadesse', email: 'henok.tadesse@ghion.et', password: hashed, role: 'supervisor', position: 'Operation_Supervisor', branchId: boleBranch.id, branch_code: 'HAWASSA_BOLE', areaId: area.id, isActive: true },
+    data: { employeeId: 'SUP-WOL-OPS', name: 'Henok Tadesse', email: 'henok.tadesse@ghion.et', password: hashed, role: 'supervisor', position: 'Operation_Supervisor', branchId: sodoBranch.id, branch_code: 'WOLAYTA_SODO', areaId: area.id, isActive: true },
   });
   const supBoleCR = await prisma.user.create({
-    data: { employeeId: 'SUP-BOL-CR', name: 'Tsion Haile', email: 'tsion.haile@ghion.et', password: hashed, role: 'supervisor', position: 'Customer_Relationship_Supervisor', branchId: boleBranch.id, branch_code: 'HAWASSA_BOLE', areaId: area.id, isActive: true },
+    data: { employeeId: 'SUP-WOL-CR', name: 'Tsion Haile', email: 'tsion.haile@ghion.et', password: hashed, role: 'supervisor', position: 'Customer_Relationship_Supervisor', branchId: sodoBranch.id, branch_code: 'WOLAYTA_SODO', areaId: area.id, isActive: true },
   });
 
   const staffBolCS1 = await prisma.user.create({
-    data: { employeeId: 'STF-BOL-CS1', name: 'Lemlem Wondimu', email: 'lemlem.wondimu@ghion.et', password: hashed, role: 'staff', position: 'Customer_Service_Officer_I', branchId: boleBranch.id, branch_code: 'HAWASSA_BOLE', areaId: area.id, supervisorId: supBoleOps.id, isActive: true },
+    data: { employeeId: 'STF-WOL-CS1', name: 'Lemlem Wondimu', email: 'lemlem.wondimu@ghion.et', password: hashed, role: 'staff', position: 'Customer_Service_Officer_I', branchId: sodoBranch.id, branch_code: 'WOLAYTA_SODO', areaId: area.id, supervisorId: supBoleOps.id, isActive: true },
   });
   const staffBolCS2 = await prisma.user.create({
-    data: { employeeId: 'STF-BOL-CS2', name: 'Yonas Alemu', email: 'yonas.alemu@ghion.et', password: hashed, role: 'staff', position: 'Customer_Service_Officer_II', branchId: boleBranch.id, branch_code: 'HAWASSA_BOLE', areaId: area.id, supervisorId: supBoleOps.id, isActive: true },
+    data: { employeeId: 'STF-WOL-CS2', name: 'Yonas Alemu', email: 'yonas.alemu@ghion.et', password: hashed, role: 'staff', position: 'Customer_Service_Officer_II', branchId: sodoBranch.id, branch_code: 'WOLAYTA_SODO', areaId: area.id, supervisorId: supBoleOps.id, isActive: true },
   });
   const staffBolCR = await prisma.user.create({
-    data: { employeeId: 'STF-BOL-CR1', name: 'Birtukan Mamo', email: 'birtukan.mamo@ghion.et', password: hashed, role: 'staff', position: 'Customer_Relationship_Officer_I', branchId: boleBranch.id, branch_code: 'HAWASSA_BOLE', areaId: area.id, supervisorId: supBoleCR.id, isActive: true },
+    data: { employeeId: 'STF-WOL-CR1', name: 'Birtukan Mamo', email: 'birtukan.mamo@ghion.et', password: hashed, role: 'staff', position: 'Customer_Relationship_Officer_I', branchId: sodoBranch.id, branch_code: 'WOLAYTA_SODO', areaId: area.id, supervisorId: supBoleCR.id, isActive: true },
   });
 
   console.log('✅ 8 users created with Ethiopian names and supervisor assignments');
@@ -139,8 +139,8 @@ async function main() {
   for (const [kpi, target] of Object.entries(kpiTargets)) {
     const plan = await prisma.plan.create({
       data: {
-        branch_code: 'HAWASSA_BOLE',
-        branchId: boleBranch.id,
+        branch_code: 'WOLAYTA_SODO',
+        branchId: sodoBranch.id,
         kpi_category: kpi,
         period: '2025-H2',
         target_value: target,
@@ -149,7 +149,7 @@ async function main() {
         createdById: bmBole.id,
       },
     });
-    console.log(`  Plan: ${kpi} = ${target} for HAWASSA_BOLE`);
+    console.log(`  Plan: ${kpi} = ${target} for WOLAYTA_SODO`);
   }
   console.log('✅ 9 plans created for Bole branch');
 
@@ -216,7 +216,7 @@ async function main() {
         status: 'Active',
         mappedToId: staff.id,
         mappedById: admin.id,
-        branchId: boleBranch.id,
+        branchId: sodoBranch.id,
       },
     });
   }
@@ -230,7 +230,7 @@ async function main() {
         account_id: m.accountNumber,
         accountNumber: m.accountNumber,
         june_balance: m.june_balance,
-        branch_code: 'HAWASSA_BOLE',
+        branch_code: 'WOLAYTA_SODO',
         baseline_period: '2025',
         baseline_date: new Date('2025-06-30'),
         is_active: true,
@@ -399,7 +399,7 @@ async function main() {
 
   console.log(`\n📊 Summary:`);
   console.log(`  Area: 1 (Hawassa)`);
-  console.log(`  Branches: 1 (Hawassa Bole)`);
+  console.log(`  Branches: 1 (Wolayta Sodo)`);
   console.log(`  Users: 8 (1 admin, 1 AM, 1 BM, 2 supervisors, 3 staff)`);
   console.log(`  Plans: 9 (all KPIs)`);
   console.log(`  Products: 12 mapped`);

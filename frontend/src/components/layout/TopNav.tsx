@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 
 const roleNotifications: Record<string, any[]> = {
   admin: [
-    { id: 1, icon: TrendingUp, title: 'Branch Performance Update', description: 'Bole Branch achieved 92% of deposit target this month', time: '10 min ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { id: 1, icon: TrendingUp, title: 'Branch Performance Update', description: 'Wolayta Sodo Branch achieved 92% of deposit target this month', time: '10 min ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { id: 2, icon: AlertCircle, title: 'CBS Validation Alert', description: '2 branches have discrepancies requiring review in the last 24h', time: '1 hour ago', color: 'text-amber-600', bg: 'bg-amber-50' },
     { id: 3, icon: CheckCircle2, title: 'Plan Cascade Complete', description: 'H2-2025 plans have been cascaded to all 11 branches', time: '3 hours ago', color: 'text-blue-600', bg: 'bg-blue-50' },
     { id: 4, icon: UserPlus, title: 'New Staff Onboarded', description: '3 new MSOs have been added to the system this week', time: '1 day ago', color: 'text-purple-600', bg: 'bg-purple-50' },
@@ -26,7 +26,7 @@ const roleNotifications: Record<string, any[]> = {
     { id: 4, icon: AlertCircle, title: 'Behavioral Due', description: 'Monthly behavioral evaluations due in 3 days', time: '1 day ago', color: 'text-purple-600', bg: 'bg-purple-50' },
   ],
   areaManager: [
-    { id: 1, icon: TrendingUp, title: 'Hawassa Area Performance', description: 'Hawassa Bole: 92% | Overall area: 85%', time: '1 hour ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { id: 1, icon: TrendingUp, title: 'Wolayta Zone Performance', description: 'Wolayta Sodo: 92% | Overall area: 85%', time: '1 hour ago', color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { id: 2, icon: AlertCircle, title: 'Branch Alert', description: 'Atote branch mapping coverage dropped to 45%', time: '3 hours ago', color: 'text-amber-600', bg: 'bg-amber-50' },
     { id: 3, icon: Clock, title: 'Pending Approvals', description: '3 staff evaluations awaiting your review', time: '6 hours ago', color: 'text-blue-600', bg: 'bg-blue-50' },
     { id: 4, icon: UserPlus, title: 'Staff Movement', description: '2 staff transferred between branches this month', time: '2 days ago', color: 'text-purple-600', bg: 'bg-purple-50' },
