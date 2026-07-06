@@ -219,7 +219,9 @@ export const getTasks = asyncHandler(async (req, res) => {
   if (submittedBy) where.submittedById = submittedBy;
   if (approvalStatus) where.approvalStatus = APPROVAL_STATUS_TO_ENUM[approvalStatus] || approvalStatus;
 
+  let isPendingApprovalByMe = false;
   if (req.query.pendingApprovalByMe === 'true') {
+    isPendingApprovalByMe = true;
     where.approvalStatus = 'Pending';
     where.approvalChain = {
       some: {
@@ -251,7 +253,7 @@ export const getTasks = asyncHandler(async (req, res) => {
     };
   }
 
-  const tasks = await prisma.dailyTask.findMany({
+  let tasks = await prisma.dailyTask.findMany({
     where,
     include: {
       submittedBy: { select: { id: true, name: true, employeeId: true, role: true, position: true } },
@@ -261,6 +263,17 @@ export const getTasks = asyncHandler(async (req, res) => {
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  if (isPendingApprovalByMe) {
+    tasks = tasks.filter(t => {
+      const chainOrdered = [...t.approvalChain].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      const myIndex = chainOrdered.findIndex(a => a.approverId === req.user.id && a.status === 'Pending');
+      if (myIndex === -1) return false;
+      return chainOrdered.slice(0, myIndex).every(a => a.status === 'Approved');
+    });
+  }
 
   res.status(200).json({
     success: true,
