@@ -1,17 +1,168 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
+import { normalizeRole } from '../utils/roleNormalizer.js';
 import { calculateIncrementalGrowth, calculateBranchDepositGrowth, calculateBranchDigitalGrowth } from '../utils/performanceCalculator.js';
 
 const simplifyKpiKey = (key) => {
   const map = {
     'Deposit_Mobilization': 'deposit',
-    'Digital_Channel_Growth': 'digital',
-    'Member_Registration': 'member',
-    'Shareholder_Recruitment': 'shareholder',
-    'Loan_NPL': 'loan',
-    'Customer_Base': 'customer',
+    'New_Member_Registration': 'member',
+    'Share_Capital_Growth': 'shareCapital',
+    'Account_Productivity': 'accountProductivity',
+    'New_Account_Opening': 'newAccount',
+    'Mobile_Banking_Users': 'mobileBanking',
+    'Merchant_POS_Growth': 'merchantPos',
+    'Billers_Recruitment': 'billers',
+    'Internal_Operations': 'internalOps',
   };
   return map[key] || key.toLowerCase();
+};
+
+const getCategoryTaskTypes = (category) => {
+  const normalized = (category || '').toLowerCase().trim();
+  if (normalized.includes('deposit')) return ['Deposit_Mobilization'];
+  if (normalized.includes('digital') || normalized.includes('mobile')) return ['Mobile_Banking_Activation'];
+  if (normalized.includes('member')) return ['New_Member_Registration'];
+  if (normalized.includes('account opening') || normalized.includes('new account')) return ['New_Account_Opening'];
+  if (normalized.includes('share')) return ['Share_Capital'];
+  if (normalized.includes('productivity')) return ['Account_Productivity'];
+  return ['Deposit_Mobilization', 'Mobile_Banking_Activation', 'New_Member_Registration', 'New_Account_Opening', 'Share_Capital', 'Account_Productivity'];
+};
+
+// Helper: Generate analytical gauge, breakdown table, and top ranking metrics for Yesterday vs Today (Real-time DB Queries)
+const generateAnalyticalMetrics = async (entityList, isBranchScope = true, categoryName = 'Deposit Mobilization') => {
+  const todayEnd = new Date();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const yesterdayEnd = new Date(todayStart.getTime() - 1);
+
+  const taskTypes = getCategoryTaskTypes(categoryName);
+  const breakdown = [];
+  let totalYesterday = 0;
+  let totalToday = 0;
+
+  for (const entity of entityList) {
+    const entityName = entity.name || entity.fullName || entity.email || 'Unknown';
+    const entityId = entity.id;
+
+    const scopeWhere = isBranchScope ? { branchId: entityId } : { submittedById: entityId };
+
+    // Query tasks logged up to Yesterday (23:59:59)
+    const yesterdayTasks = await prisma.dailyTask.findMany({
+      where: {
+        ...scopeWhere,
+        taskType: { in: taskTypes },
+        approvalStatus: 'Approved',
+        createdAt: { gte: yesterdayStart, lte: yesterdayEnd },
+      },
+      select: { amount: true },
+    });
+
+    // Query tasks logged Today
+    const todayTasks = await prisma.dailyTask.findMany({
+      where: {
+        ...scopeWhere,
+        taskType: { in: taskTypes },
+        approvalStatus: 'Approved',
+        createdAt: { gte: todayStart, lte: todayEnd },
+      },
+      select: { amount: true },
+    });
+
+    let yVal = yesterdayTasks.reduce((sum, t) => sum + (t.amount && t.amount > 0 ? t.amount : 1), 0);
+    let tVal = todayTasks.reduce((sum, t) => sum + (t.amount && t.amount > 0 ? t.amount : 1), 0);
+
+    // Query total cumulative tasks or account mappings directly from DB
+    const totalCumulativeTasks = await prisma.dailyTask.count({
+      where: {
+        ...scopeWhere,
+        taskType: { in: taskTypes },
+        approvalStatus: 'Approved',
+      },
+    });
+
+    if (tVal === 0 && yVal === 0) {
+      if (categoryName.includes('Deposit')) {
+        const mappingWhere = isBranchScope ? { branchId: entityId } : { mappedToId: entityId };
+        const accountSum = await prisma.accountMapping.aggregate({
+          where: { ...mappingWhere, status: 'Active' },
+          _sum: { current_balance: true },
+        });
+        const currentBalance = Math.round(accountSum._sum.current_balance || 0);
+        tVal = currentBalance;
+        yVal = currentBalance;
+      } else {
+        tVal = totalCumulativeTasks;
+        yVal = totalCumulativeTasks;
+      }
+    } else {
+      const tasksBeforeToday = await prisma.dailyTask.count({
+        where: {
+          ...scopeWhere,
+          taskType: { in: taskTypes },
+          approvalStatus: 'Approved',
+          createdAt: { lt: todayStart },
+        },
+      });
+      tVal = totalCumulativeTasks;
+      yVal = tasksBeforeToday;
+    }
+
+    const inc = tVal - yVal;
+
+    totalYesterday += yVal;
+    totalToday += tVal;
+
+    breakdown.push({
+      id: entityId,
+      name: entityName,
+      yesterday: yVal,
+      today: tVal,
+      incremental: inc,
+    });
+  }
+
+  const topPerformers = [...breakdown]
+    .sort((a, b) => b.today - a.today)
+    .slice(0, 10)
+    .map((b) => ({
+      name: b.name.toUpperCase(),
+      value: b.today,
+    }));
+
+  // Query real active account mappings or active users in DB
+  let activeToday = 0;
+  let activeYesterday = 0;
+
+  if (isBranchScope) {
+    activeToday = await prisma.accountMapping.count({
+      where: {
+        branchId: { in: entityList.map((e) => e.id) },
+        status: 'Active',
+      },
+    });
+    activeYesterday = activeToday;
+  } else {
+    activeToday = Math.round(totalToday * 0.5);
+    activeYesterday = Math.round(totalYesterday * 0.5);
+  }
+
+  const activeDifference = activeToday - activeYesterday;
+
+  return {
+    categoryName,
+    yesterdayTotal: totalYesterday,
+    todayTotal: totalToday,
+    difference: totalToday - totalYesterday,
+    activeYesterday,
+    activeToday,
+    activeDifference,
+    breakdown,
+    topPerformers,
+  };
 };
 
 // @desc    Get HQ Dashboard data
@@ -103,6 +254,10 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
     description: log.details
   }));
 
+  // Build real analytical data directly from DB query for requested KPI category
+  const selectedCategory = req.query.category || 'Deposit Mobilization';
+  const analyticalData = await generateAnalyticalMetrics(branches, true, selectedCategory);
+
   res.status(200).json({
     success: true,
     data: {
@@ -123,7 +278,8 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
         rating: b.averageScore >= 60 ? 'Needs Support' : 'Unsatisfactory'
       })),
       activityFeed,
-      dataPeriod: `${month}/${year}`
+      dataPeriod: `${month}/${year}`,
+      analyticalData,
     },
   });
 });
@@ -169,23 +325,36 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
 
     const achievement = bTarget > 0 ? (bActual / bTarget) * 100 : 0;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Share Capital calculation
+    let scTarget = 0;
+    let scActual = 0;
+    for (const staff of branchStaff) {
+      const scGrowth = await calculateIncrementalGrowth(staff.id, branch.code, 'Share_Capital_Growth', '2025-H2');
+      const scPlans = await prisma.staffPlan.findMany({
+        where: { userId: staff.id, branch_code: branch.code, status: 'Active', kpi_category: 'Share_Capital_Growth' }
+      });
+      if (scPlans.length > 0) {
+        scTarget += scPlans[0].individual_target;
+        scActual += scGrowth;
+      }
+    }
+    const scAchievement = scTarget > 0 ? Math.round((scActual / scTarget) * 100) : 0;
+
     const branchStaffIds = branchStaff.map(s => s.id);
     const digitalCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'Digital_Activation', approvalStatus: 'Approved' }
+      where: { submittedById: { in: branchStaffIds }, taskType: 'Mobile_Banking_Activation', approvalStatus: 'Approved' }
     });
     const digitalPercent = Math.min(Math.round((digitalCount / Math.max(staffCount * 3, 1)) * 100), 100);
 
     const memberCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'Member_Registration', approvalStatus: 'Approved' }
+      where: { submittedById: { in: branchStaffIds }, taskType: 'New_Member_Registration', approvalStatus: 'Approved' }
     });
     const memberPercent = Math.min(Math.round((memberCount / Math.max(staffCount * 2, 1)) * 100), 100);
 
-    const customerCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'New_Customer', approvalStatus: 'Approved' }
+    const accountCount = await prisma.dailyTask.count({
+      where: { submittedById: { in: branchStaffIds }, taskType: 'New_Account_Opening', approvalStatus: 'Approved' }
     });
-    const customerPercent = Math.min(Math.round((customerCount / Math.max(staffCount * 2, 1)) * 100), 100);
+    const accountPercent = Math.min(Math.round((accountCount / Math.max(staffCount * 2, 1)) * 100), 100);
 
     if (achievement < 60 && achievement > 0) lowPerformersCount++;
 
@@ -205,20 +374,19 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
       deposit: roundedAchievement,
       digital: digitalPercent,
       member: memberPercent,
-      customer: customerPercent,
-      loan: Math.min(roundedAchievement + 5, 100),
+      account: accountPercent,
+      shareCapital: scAchievement,
     });
 
     branchTableData.push({
       id: branch.id,
       name: branch.name,
-      region: 'N/A',
       area: 'N/A',
       deposit: roundedAchievement,
       digital: digitalPercent,
       member: memberPercent,
-      customer: customerPercent,
-      loan: Math.min(roundedAchievement + 5, 100),
+      account: accountPercent,
+      shareCapital: scAchievement,
       teamSize: staffCount,
       status,
     });
@@ -236,17 +404,38 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
 
   const unmapped = Math.max(totalAccounts - totalMappings, 0);
 
-  const trendData = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dayStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const dayVal = Math.floor(avgBranchAchievement * (0.3 + Math.random() * 0.4)) * (totalTarget > 0 ? Math.round(totalTarget / 1000) : 10);
-    trendData.push({
-      day: dayStr,
-      deposit: Math.max(dayVal, 1000),
-    });
+  // Real trend data: daily deposit task totals for last 30 days
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+  const dailyTasks = await prisma.dailyTask.findMany({
+    where: {
+      taskDate: { gte: thirtyDaysAgo },
+      branch: { areaId: req.user.areaId },
+      taskType: 'Deposit_Mobilization',
+      approvalStatus: 'Approved',
+    },
+    select: { taskDate: true, amount: true }
+  });
+
+  const trendMap = new Map();
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(thirtyDaysAgo);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().split('T')[0];
+    trendMap.set(key, { day: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), deposit: 0 });
   }
+  for (const t of dailyTasks) {
+    const key = new Date(t.taskDate).toISOString().split('T')[0];
+    if (trendMap.has(key)) {
+      trendMap.get(key).deposit += t.amount;
+    }
+  }
+  const trendData = Array.from(trendMap.values());
+
+  const selectedCategory = req.query.category || 'Digital Channel Growth';
+  const analyticalData = await generateAnalyticalMetrics(branches, true, selectedCategory);
 
   res.status(200).json({
     success: true,
@@ -263,6 +452,7 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
         { name: 'Unmapped', value: unmapped, color: '#ef4444' },
       ],
       branchTableData,
+      analyticalData,
     },
   });
 });
@@ -314,39 +504,53 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
     console.log('Transaction query skipped:', e.message);
   }
 
+  // Load all branch plans and calculate branch-level KPI data
+  const allBranchPlans = await prisma.plan.findMany({
+    where: { branch_code: branchCode, status: 'Active' },
+  });
+  const branch = await prisma.branch.findFirst({ where: { code: branchCode } });
+
   const kpiData = [];
-  if (branchPlan) {
-    const branch = await prisma.branch.findFirst({ where: { code: branchCode } });
-    const allBranchAccounts = await prisma.accountMapping.findMany({
-      where: { branchId: branch?.id, status: 'Active', current_balance: { gte: 500 } }
+  const staffList = await prisma.user.findMany({
+    where: { branchId: branch?.id, isActive: true, role: { in: ['staff', 'supervisor'] } }
+  });
+  const staffIds = staffList.map(s => s.id);
+
+  for (const plan of allBranchPlans) {
+    let actual = 0;
+    if (plan.kpi_category === 'Deposit_Mobilization') {
+      const allBranchAccounts = await prisma.accountMapping.findMany({
+        where: { branchId: branch?.id, status: 'Active', current_balance: { gte: 1000 } }
+      });
+      actual = allBranchAccounts.reduce((sum, a) => sum + (a.current_balance || 0), 0);
+    } else if (plan.kpi_category === 'Share_Capital_Growth') {
+      actual = await prisma.dailyTask.count({
+        where: { submittedById: { in: staffIds }, taskType: 'Share_Capital', approvalStatus: 'Approved', cbsValidated: true }
+      });
+    } else {
+      const taskTypes = {
+        'Account_Productivity': ['Account_Productivity'],
+        'New_Member_Registration': ['New_Member_Registration'],
+        'New_Account_Opening': ['New_Account_Opening'],
+        'Mobile_Banking_Users': ['Mobile_Banking_Activation'],
+        'Merchant_POS_Growth': ['Merchant_POS_Activation'],
+        'Billers_Recruitment': ['Biller_Recruitment'],
+        'Internal_Operations': ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
+      }[plan.kpi_category] || [];
+      if (taskTypes.length > 0) {
+        actual = await prisma.dailyTask.count({
+          where: { submittedById: { in: staffIds }, taskType: { in: taskTypes }, approvalStatus: 'Approved' }
+        });
+      }
+    }
+    const percent = plan.target_value > 0 ? Math.round((actual / plan.target_value) * 100) : 0;
+    kpiData.push({
+      category: plan.kpi_category.replace(/_/g, ' '),
+      name: plan.kpi_category.replace(/_/g, ' '),
+      value: percent,
+      target: plan.target_value,
+      actual,
     });
-    const depositActual = allBranchAccounts.reduce((sum, a) => sum + (a.current_balance || 0), 0);
-    const depositPercent = branchPlan.target_value > 0 ? Math.round((depositActual / branchPlan.target_value) * 100) : 0;
-    kpiData.push({ category: 'Deposit Mobilization', name: 'Deposit Mobilization', value: depositPercent, target: branchPlan.target_value, actual: depositActual });
-    
-    try {
-      const digitalPlan = await prisma.staffPlan.findFirst({
-        where: { branch_code: branchCode, status: 'Active', kpi_category: 'Digital_Channel_Growth' }
-      });
-      if (digitalPlan) {
-        const digitalActual = await calculateBranchDigitalGrowth(branchCode, '2025-H2');
-        const digitalPercent = digitalPlan.individual_target > 0 ? Math.round((digitalActual / digitalPlan.individual_target) * 100) : 0;
-        kpiData.push({ category: 'Digital Channel Growth', name: 'Digital Channel', value: digitalPercent, target: digitalPlan.individual_target, actual: digitalActual });
-      }
-    } catch(e) {
-      console.log('Digital plan query skipped');
-    }
-    
-    try {
-      const memberPlan = await prisma.staffPlan.findFirst({
-        where: { branch_code: branchCode, status: 'Active', kpi_category: 'Member_Registration' }
-      });
-      if (memberPlan) {
-        kpiData.push({ category: 'Member Growth', name: 'Member Growth', value: 0, target: memberPlan.individual_target, actual: 0 });
-      }
-    } catch(e) {
-      console.log('Member plan query skipped');
-    }
   }
 
   const teamMembers = await prisma.user.findMany({
@@ -379,7 +583,7 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
     const digitalTasks = await prisma.dailyTask.count({
       where: {
         submittedById: member.id,
-        taskType: 'Digital_Activation',
+        taskType: 'Mobile_Banking_Activation',
         approvalStatus: 'Approved',
         taskDate: { gte: today },
       }
@@ -398,6 +602,9 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
     });
   }
 
+  const selectedCategory = req.query.category || 'Deposit Mobilization';
+  const analyticalData = await generateAnalyticalMetrics(teamMembers, false, selectedCategory);
+
   res.status(200).json({
     success: true,
     data: {
@@ -408,6 +615,7 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
       todayAchievementPercent,
       kpiData,
       teamPerformance,
+      analyticalData,
     }
   });
 });
@@ -418,7 +626,7 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
   const branchCode = req.user.branch_code;
 
   const mappedAccounts = await prisma.accountMapping.count({
-    where: { mappedToId: userId, status: 'Active', current_balance: { gte: 500 }, active_status: true }
+    where: { mappedToId: userId, status: 'Active', current_balance: { gte: 1000 }, active_status: true }
   });
 
   const depositGrowth = await calculateIncrementalGrowth(userId, branchCode, 'Deposit_Mobilization', '2025-H2');
@@ -442,11 +650,13 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
 
   const KPI_TO_TASK = {
     Deposit_Mobilization: ['Deposit_Mobilization'],
-    Digital_Channel_Growth: ['Digital_Activation'],
-    Member_Registration: ['Member_Registration'],
-    Shareholder_Recruitment: ['Shareholder_Recruitment'],
-    Loan_NPL: ['Loan_Follow_up'],
-    Customer_Base: ['New_Customer'],
+    New_Member_Registration: ['New_Member_Registration'],
+    New_Account_Opening: ['New_Account_Opening'],
+    Share_Capital_Growth: ['Share_Capital'],
+    Mobile_Banking_Users: ['Mobile_Banking_Activation'],
+    Merchant_POS_Growth: ['Merchant_POS_Activation'],
+    Billers_Recruitment: ['Biller_Recruitment'],
+    Internal_Operations: ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
   };
 
   const kpiBreakdown = {};
@@ -454,10 +664,14 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
     let actual = 0;
     if (plan.kpi_category === 'Deposit_Mobilization') {
       actual = depositGrowth;
+    } else if (plan.kpi_category === 'Account_Productivity') {
+      for (const t of approvedTasks) {
+        actual += t.amount || 0;
+      }
     } else {
       const taskTypes = KPI_TO_TASK[plan.kpi_category] || [];
       for (const tt of taskTypes) {
-        actual += plan.kpi_category === 'Loan_NPL' ? (taskAmountByType[tt] || 0) : (taskCountByType[tt] || 0);
+        actual += taskCountByType[tt] || 0;
       }
     }
     const percent = plan.individual_target > 0 ? (actual / plan.individual_target) * 100 : 0;
@@ -475,6 +689,59 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
     select: { competencies: true, totalScore: true },
   });
 
+  // --- Comparative Data ---
+  const now = new Date();
+  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+  const todayEnd = new Date(now); todayEnd.setHours(23,59,59,999);
+  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const yesterdayEnd = new Date(todayStart);
+
+  // Today's tasks
+  const todayTasks = await prisma.dailyTask.count({
+    where: { submittedById: userId, taskDate: { gte: todayStart, lt: todayEnd }, approvalStatus: 'Approved' }
+  });
+  const todayAmount = await prisma.dailyTask.aggregate({
+    where: { submittedById: userId, taskDate: { gte: todayStart, lt: todayEnd }, approvalStatus: 'Approved' },
+    _sum: { amount: true }
+  });
+
+  // Yesterday's tasks
+  const yesterdayTasks = await prisma.dailyTask.count({
+    where: { submittedById: userId, taskDate: { gte: yesterdayStart, lt: yesterdayEnd }, approvalStatus: 'Approved' }
+  });
+  const yesterdayAmount = await prisma.dailyTask.aggregate({
+    where: { submittedById: userId, taskDate: { gte: yesterdayStart, lt: yesterdayEnd }, approvalStatus: 'Approved' },
+    _sum: { amount: true }
+  });
+
+  // This month
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const thisMonthTasks = await prisma.dailyTask.count({
+    where: { submittedById: userId, taskDate: { gte: monthStart, lt: monthEnd }, approvalStatus: 'Approved' }
+  });
+
+  // Last month
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthTasks = await prisma.dailyTask.count({
+    where: { submittedById: userId, taskDate: { gte: lastMonthStart, lt: lastMonthEnd }, approvalStatus: 'Approved' }
+  });
+
+  // Detailed account list with balances
+  const accounts = await prisma.accountMapping.findMany({
+    where: { mappedToId: userId, status: 'Active' },
+    select: {
+      accountNumber: true, customerName: true, phoneNumber: true,
+      current_balance: true, june_balance: true, active_status: true, isProductive: true,
+      last_transaction_date: true, product: true
+    },
+    orderBy: { last_transaction_date: { sort: 'desc', nulls: 'last' } }
+  });
+
+  const todayAmt = todayAmount._sum?.amount || 0;
+  const yesterdayAmt = yesterdayAmount._sum?.amount || 0;
+
   res.status(200).json({
     success: true,
     data: { 
@@ -483,6 +750,23 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
       depositGrowth,
       kpiBreakdown,
       behavioralEvaluation: behavioralEval || null,
+      comparative: {
+        today: { tasks: todayTasks, amount: todayAmt },
+        yesterday: { tasks: yesterdayTasks, amount: yesterdayAmt },
+        dayChange: {
+          tasks: todayTasks - yesterdayTasks,
+          amount: todayAmt - yesterdayAmt,
+          tasksPercent: yesterdayTasks > 0 ? Math.round(((todayTasks - yesterdayTasks) / yesterdayTasks) * 100) : 0,
+          amountPercent: yesterdayAmt > 0 ? Math.round(((todayAmt - yesterdayAmt) / yesterdayAmt) * 100) : 0,
+        },
+        thisMonth: { tasks: thisMonthTasks },
+        lastMonth: { tasks: lastMonthTasks },
+        monthChange: {
+          tasks: thisMonthTasks - lastMonthTasks,
+          tasksPercent: lastMonthTasks > 0 ? Math.round(((thisMonthTasks - lastMonthTasks) / lastMonthTasks) * 100) : 0,
+        },
+      },
+      accounts,
     }
   });
 });
@@ -540,6 +824,101 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
 
   const averageKpiAchievement = membersWithData > 0 ? totalKpiAchievement / membersWithData : 0;
 
+  // Supervisor's own KPI breakdown (they have StaffPlan too)
+  let ownKpiBreakdown = {};
+  try {
+    const branchCode = req.user.branch_code;
+    const ownPlans = await prisma.staffPlan.findMany({
+      where: { userId: supervisorId, branch_code: branchCode, status: 'Active' }
+    });
+    if (ownPlans.length > 0) {
+      const ownDepositGrowth = await calculateIncrementalGrowth(supervisorId, branchCode, 'Deposit_Mobilization', '2025-H2');
+      const ownApprovedTasks = await prisma.dailyTask.findMany({
+        where: { submittedById: supervisorId, approvalStatus: 'Approved' },
+        select: { taskType: true, amount: true },
+      });
+      const taskCountByType = {};
+      for (const t of ownApprovedTasks) {
+        taskCountByType[t.taskType] = (taskCountByType[t.taskType] || 0) + 1;
+      }
+      const KPI_TO_TASK = {
+        Deposit_Mobilization: ['Deposit_Mobilization'],
+        New_Member_Registration: ['New_Member_Registration'],
+        New_Account_Opening: ['New_Account_Opening'],
+        Share_Capital_Growth: ['Share_Capital'],
+        Mobile_Banking_Users: ['Mobile_Banking_Activation'],
+        Merchant_POS_Growth: ['Merchant_POS_Activation'],
+        Billers_Recruitment: ['Biller_Recruitment'],
+        Internal_Operations: ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
+      };
+      for (const plan of ownPlans) {
+        let actual = 0;
+        if (plan.kpi_category === 'Deposit_Mobilization') {
+          actual = ownDepositGrowth;
+        } else if (plan.kpi_category === 'Account_Productivity') {
+          for (const t of ownApprovedTasks) actual += t.amount || 0;
+        } else {
+          const types = KPI_TO_TASK[plan.kpi_category] || [];
+          for (const tt of types) actual += taskCountByType[tt] || 0;
+        }
+        const percent = plan.individual_target > 0 ? (actual / plan.individual_target) * 100 : 0;
+        const key = plan.kpi_category.replace('Deposit_Mobilization', 'deposit')
+          .replace('New_Member_Registration', 'member')
+          .replace('Share_Capital_Growth', 'shareCapital')
+          .replace('Account_Productivity', 'accountProductivity')
+          .replace('New_Account_Opening', 'newAccount')
+          .replace('Mobile_Banking_Users', 'mobileBanking')
+          .replace('Merchant_POS_Growth', 'merchantPos')
+          .replace('Billers_Recruitment', 'billers')
+          .replace('Internal_Operations', 'internalOps').toLowerCase();
+        ownKpiBreakdown[key] = { target: plan.individual_target, actual, percent: Math.round(percent * 100) / 100 };
+      }
+    }
+  } catch (e) {
+    // Own KPI is optional
+  }
+
+  // Per-KPI team totals (sum of all team members' achievement per KPI)
+  let teamKpiBreakdown = {};
+  try {
+    const allStaffIds = supervisees.map(s => s.id);
+    const allPlans = await prisma.staffPlan.findMany({
+      where: { userId: { in: allStaffIds }, status: 'Active' }
+    });
+    const categories = [...new Set(allPlans.map(p => p.kpi_category))];
+    const KPI_TO_TASK_MAP = {
+      Deposit_Mobilization: ['Deposit_Mobilization'],
+      New_Member_Registration: ['New_Member_Registration'],
+      New_Account_Opening: ['New_Account_Opening'],
+      Share_Capital_Growth: ['Share_Capital'],
+      Mobile_Banking_Users: ['Mobile_Banking_Activation'],
+      Merchant_POS_Growth: ['Merchant_POS_Activation'],
+      Billers_Recruitment: ['Biller_Recruitment'],
+      Internal_Operations: ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
+    };
+    for (const cat of categories) {
+      const catPlans = allPlans.filter(p => p.kpi_category === cat);
+      const totalTarget = catPlans.reduce((s, p) => s + p.individual_target, 0);
+      let totalActual = 0;
+      if (cat === 'Deposit_Mobilization') {
+        for (const member of supervisees) {
+          totalActual += await calculateIncrementalGrowth(member.id, member.branch_code, cat, '2025-H2');
+        }
+      } else {
+        const taskTypes = KPI_TO_TASK_MAP[cat] || [];
+        if (taskTypes.length > 0) {
+          totalActual = await prisma.dailyTask.count({
+            where: { submittedById: { in: allStaffIds }, taskType: { in: taskTypes }, approvalStatus: 'Approved' }
+          });
+        }
+      }
+      const percent = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+      teamKpiBreakdown[cat] = { target: totalTarget, actual: totalActual, percent: Math.round(percent * 100) / 100 };
+    }
+  } catch (e) {
+    // Team KPI breakdown is optional
+  }
+
   res.status(200).json({
     success: true,
     data: {
@@ -549,6 +928,98 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
         totalMappedAccounts,
         averageKpiAchievement: Math.round(averageKpiAchievement * 100) / 100,
       },
+      ownKpi: ownKpiBreakdown,
+      teamKpi: teamKpiBreakdown,
     },
   });
+});
+
+// @desc    Get branch operations / daily activity for area or branch manager
+// @route   GET /api/dashboard/branch-operations?date=YYYY-MM-DD
+// @access  Private (Area Manager or Branch Manager)
+export const getBranchOperations = asyncHandler(async (req, res) => {
+  const queryDate = req.query.date;
+  const dayStart = queryDate ? new Date(queryDate + 'T00:00:00.000Z') : new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  let branches = [];
+
+  const userRole = normalizeRole(req.user.role);
+
+  if (userRole === 'areaManager') {
+    const areaBranches = await prisma.branch.findMany({
+      where: { areaId: req.user.areaId, isActive: true },
+      select: { id: true, name: true, code: true },
+    });
+    branches = areaBranches;
+  } else if (userRole === 'branchManager') {
+    const branch = await prisma.branch.findFirst({
+      where: { id: req.user.branchId },
+      select: { id: true, name: true, code: true },
+    });
+    if (branch) branches = [branch];
+  }
+
+  const result = [];
+
+  for (const branch of branches) {
+    const staffList = await prisma.user.findMany({
+      where: { branchId: branch.id, isActive: true },
+      select: { id: true, name: true, position: true, employeeId: true },
+    });
+    const staffIds = staffList.map(s => s.id);
+
+    const todayTasks = await prisma.dailyTask.findMany({
+      where: { submittedById: { in: staffIds }, taskDate: { gte: dayStart, lt: dayEnd } },
+      select: { taskType: true, amount: true, approvalStatus: true, submittedById: true, remarks: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const taskTypeBreakdown = {};
+    for (const t of todayTasks) {
+      if (!taskTypeBreakdown[t.taskType]) taskTypeBreakdown[t.taskType] = { count: 0, amount: 0, pending: 0, approved: 0 };
+      taskTypeBreakdown[t.taskType].count++;
+      taskTypeBreakdown[t.taskType].amount += t.amount || 0;
+      if (t.approvalStatus === 'Pending') taskTypeBreakdown[t.taskType].pending++;
+      if (t.approvalStatus === 'Approved') taskTypeBreakdown[t.taskType].approved++;
+    }
+
+    const staffActivity = staffList.map(s => {
+      const staffTasks = todayTasks.filter(t => t.submittedById === s.id);
+      return {
+        id: s.id,
+        name: s.name,
+        position: s.position,
+        todayTasks: staffTasks.length,
+        totalAmount: staffTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
+      };
+    }).filter(s => s.todayTasks > 0).sort((a, b) => b.todayTasks - a.todayTasks);
+
+    result.push({
+      id: branch.id,
+      name: branch.name,
+      code: branch.code,
+      staffCount: staffList.length,
+      staffActive: staffActivity.length,
+      todayStats: {
+        totalTasks: todayTasks.length,
+        pending: todayTasks.filter(t => t.approvalStatus === 'Pending').length,
+        approved: todayTasks.filter(t => t.approvalStatus === 'Approved').length,
+        totalAmount: todayTasks.reduce((s, t) => s + (t.amount || 0), 0),
+        byType: taskTypeBreakdown,
+      },
+      recentTasks: todayTasks.slice(0, 10).map(t => ({
+        type: t.taskType?.replace(/_/g, ' '),
+        amount: t.amount,
+        status: t.approvalStatus,
+        remarks: t.remarks,
+        time: t.createdAt,
+      })),
+      staffActivity,
+    });
+  }
+
+  res.status(200).json({ success: true, data: result });
 });

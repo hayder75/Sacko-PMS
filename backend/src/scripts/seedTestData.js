@@ -134,7 +134,7 @@ const seedTestData = async () => {
 
     // Calculate MSO incremental growth
     const msoMappings = await prisma.accountMapping.findMany({
-      where: { mappedToId: mso.id, status: 'Active', current_balance: { gte: 500 } }
+      where: { mappedToId: mso.id, status: 'Active', current_balance: { gte: 1000 } }
     });
 
     let msoGrowth = 0;

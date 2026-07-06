@@ -151,10 +151,54 @@ export const bulkCreateMappings = asyncHandler(async (req, res) => {
 // @route   GET /api/product-mappings/unmapped
 // @access  Private (Admin)
 export const getUnmappedProducts = asyncHandler(async (req, res) => {
+  // Find product names from AccountMapping that aren't mapped in ProductKpiMapping
+  const mappedProducts = await prisma.productKpiMapping.findMany({
+    where: { status: 'active' },
+    select: { cbs_product_name: true }
+  });
+  const mappedNames = new Set(mappedProducts.map(p => p.cbs_product_name.trim().toLowerCase()));
+
+  const accountsWithProduct = await prisma.accountMapping.findMany({
+    where: { product: { not: null }, product: { not: '' } },
+    select: { product: true },
+    distinct: ['product'],
+  });
+
+  const unmapped = accountsWithProduct
+    .map(a => a.product.trim())
+    .filter((name, i, arr) => arr.indexOf(name) === i)
+    .filter(name => !mappedNames.has(name.toLowerCase()))
+    .map(productName => ({ productName }));
+
+  // Also include unmapped products found in recent CBS validations
+  const recentValidations = await prisma.cBSValidation.findMany({
+    where: { unmappedProducts: { not: null } },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+    select: { unmappedProducts: true }
+  });
+
+  const cbsUnmappedNames = new Set();
+  for (const v of recentValidations) {
+    if (Array.isArray(v.unmappedProducts)) {
+      for (const p of v.unmappedProducts) {
+        if (p.productName && !mappedNames.has(p.productName.trim().toLowerCase())) {
+          cbsUnmappedNames.add(p.productName.trim());
+        }
+      }
+    }
+  }
+
+  const allUnmapped = [
+    ...unmapped,
+    ...Array.from(cbsUnmappedNames)
+      .filter(n => !unmapped.some(u => u.productName.toLowerCase() === n.toLowerCase()))
+      .map(productName => ({ productName }))
+  ];
+
   res.status(200).json({
     success: true,
-    data: [],
-    message: 'Unmapped products will be shown here after CBS uploads',
+    data: allUnmapped,
   });
 });
 

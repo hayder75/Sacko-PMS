@@ -20,27 +20,8 @@ export function BehavioralEvaluation() {
         setEvaluations(response.data || []);
       }
     } catch (error) {
-      // Use default data
-      setEvaluations([
-        {
-          _id: '1',
-          employeeName: 'John Doe',
-          period: '2024-Q1',
-          overallScore: 85,
-          status: 'Pending',
-          submittedBy: 'branchManager',
-          submittedAt: '2024-01-15',
-        },
-        {
-          _id: '2',
-          employeeName: 'Jane Smith',
-          period: '2024-Q1',
-          overallScore: 92,
-          status: 'Approved',
-          submittedBy: 'branchManager',
-          submittedAt: '2024-01-14',
-        },
-      ]);
+      console.error('Error loading evaluations:', error);
+      setEvaluations([]);
     }
   };
 
@@ -136,7 +117,9 @@ export function BehavioralEvaluation() {
                     <TableCell className="font-medium">{evaluation.employeeName}</TableCell>
                     <TableCell>{evaluation.period}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{evaluation.overallScore || 0}/100</Badge>
+                      <Badge variant={(evaluation.overallScore || 0) >= 80 ? 'success' : (evaluation.overallScore || 0) >= 60 ? 'warning' : 'destructive'}>
+                        {evaluation.overallScore || 0}/100
+                      </Badge>
                     </TableCell>
                     <TableCell>{evaluation.submittedBy}</TableCell>
                     <TableCell>{new Date(evaluation.submittedAt).toLocaleDateString()}</TableCell>

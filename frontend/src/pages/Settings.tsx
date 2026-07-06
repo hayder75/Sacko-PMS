@@ -195,8 +195,7 @@ export function Settings() {
                 <SelectItem value="admin">admin</SelectItem>
                 <SelectItem value="areaManager">areaManager</SelectItem>
                 <SelectItem value="branchManager">branchManager</SelectItem>
-                <SelectItem value="lineManager">lineManager</SelectItem>
-                <SelectItem value="subTeamLeader">subTeamLeader</SelectItem>
+                <SelectItem value="supervisor">supervisor</SelectItem>
                 <SelectItem value="staff">staff</SelectItem>
               </SelectContent>
             </Select>

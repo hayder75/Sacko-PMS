@@ -10,7 +10,8 @@ import { KPI_CATEGORY_TO_ENUM } from '../utils/prismaHelpers.js';
 // @route   POST /api/plans
 // @access  Private (Admin)
 export const createPlan = asyncHandler(async (req, res) => {
-  const { branch_code, kpi_category, period, target_value, target_type } = req.body;
+  const { branch_code, kpi_category, period, target_value, target_type: rawTargetType } = req.body;
+  const target_type = rawTargetType === 'Numeric' ? 'incremental' : (rawTargetType || 'incremental');
 
   // Validate required fields
   if (!branch_code || !kpi_category || !period || !target_value) {
@@ -132,11 +133,14 @@ export const uploadPlan = asyncHandler(async (req, res) => {
 
     const validKpiCategories = [
       'Deposit Mobilization',
-      'Digital Channel Growth',
       'New Member Registration',
+      'New Account Opening',
       'Share Capital Growth',
       'Account Productivity',
-      'New Account Opening',
+      'Mobile Banking Users',
+      'Merchant POS Growth',
+      'Billers Recruitment',
+      'Internal Operations',
     ];
 
     const validPeriods = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];

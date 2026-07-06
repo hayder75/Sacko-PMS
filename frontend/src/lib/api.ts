@@ -217,6 +217,20 @@ export const tasksAPI = {
       body: JSON.stringify({ status, comments }),
     });
   },
+
+  requestEdit: async (id: string, editData: any) => {
+    return apiRequest(`/tasks/${id}/request-edit`, {
+      method: 'PUT',
+      body: JSON.stringify(editData),
+    });
+  },
+
+  reviewEdit: async (id: string, action: 'approve' | 'reject') => {
+    return apiRequest(`/tasks/${id}/review-edit`, {
+      method: 'PUT',
+      body: JSON.stringify({ action }),
+    });
+  },
 };
 
 // Mappings API
@@ -461,17 +475,28 @@ export const productMappingAPI = {
 
 // Dashboard API
 export const dashboardAPI = {
-  getHQ: async () => {
-    return apiRequest('/dashboard/hq');
+  getHQ: async (category?: string) => {
+    const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+    return apiRequest(`/dashboard/hq${qs}`);
   },
-  getArea: async () => {
-    return apiRequest('/dashboard/area');
+  getArea: async (category?: string) => {
+    const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+    return apiRequest(`/dashboard/area${qs}`);
   },
-  getBranch: async () => {
-    return apiRequest('/dashboard/branch');
+  getBranch: async (category?: string) => {
+    const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+    return apiRequest(`/dashboard/branch${qs}`);
   },
   getSupervisor: async () => {
     return apiRequest('/dashboard/supervisor');
+  },
+  getBranchOperations: async (date?: string) => {
+    const qs = date ? `?date=${date}` : '';
+    return apiRequest(`/dashboard/branch-operations${qs}`);
+  },
+  getMyBranchOperations: async (date?: string) => {
+    const qs = date ? `?date=${date}` : '';
+    return apiRequest(`/dashboard/branch-operations/me${qs}`);
   },
   getStaff: async () => {
     return apiRequest('/dashboard/staff');
@@ -660,8 +685,23 @@ export const mappedAccountsAPI = {
     const qs = userId ? `?userId=${userId}` : '';
     return apiRequest(`/mapped-accounts/dashboard${qs}`);
   },
+  getBranchAccounts: async () => {
+    return apiRequest('/mapped-accounts/branch');
+  },
   getAccountDetail: async (accountNumber: string) => {
     return apiRequest(`/mapped-accounts/account/${encodeURIComponent(accountNumber)}`);
+  },
+  update: async (accountNumber: string, data: any) => {
+    return apiRequest(`/mapped-accounts/account/${encodeURIComponent(accountNumber)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+export const configAPI = {
+  getConfig: async () => {
+    return apiRequest('/config');
   },
 };
 

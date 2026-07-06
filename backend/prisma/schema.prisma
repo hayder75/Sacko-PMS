@@ -180,6 +180,9 @@ enum AuditAction {
   Password_Reset               @map("Password Reset")
   Login
   Logout
+  Edit_Requested              @map("Edit Requested")
+  Edit_Approved               @map("Edit Approved")
+  Edit_Rejected               @map("Edit Rejected")
 }
 
 enum AuditEntityType {
@@ -365,6 +368,7 @@ model AccountMapping {
   status                AccountStatus @default(Active)
   notes                 String?
   phoneNumber           String?
+  product               String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -401,6 +405,8 @@ model DailyTask {
   taskDate            DateTime       @default(now())
   performanceImpacted Boolean        @default(false)
   performanceImpactedAt DateTime?
+  requestedEditData   Json?
+  requestedEditAt     DateTime?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -438,7 +444,7 @@ model PerformanceScore {
   user                   User                   @relation(fields: [userId], references: [id])
   branchId               String
   branch                 Branch                 @relation(fields: [branchId], references: [id])
-  period                 PerformancePeriod
+  period                 String
   year                   Int
   quarter                Int?
   month                  Int?
@@ -626,4 +632,16 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+model KpiFrameworkConfig {
+  id        String   @id @default(uuid()) @map("_id")
+  kpiId     String   @unique
+  name      String
+  weight    Int      @default(0)
+  minBalance Float   @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("kpi_framework_config")
 }

@@ -66,11 +66,12 @@ const getNavItems = (role: string): NavItem[] => {
   if (role === 'branchManager') {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/branch' },
+      { title: 'MONITORING', icon: Eye, path: '/branch-monitoring' },
+      { title: 'APPROVALS', icon: CheckCircle2, path: '/approvals' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
       { title: 'BULK MAPPING UPLOAD', icon: Upload, path: '/bulk-mapping-upload' },
       { title: 'CBS VALIDATION', icon: CheckCircle2, path: '/cbs-validation' },
       { title: 'BEHAVIORAL EVALUATION', icon: ClipboardList, path: '/behavioral-evaluation' },
-      { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
       { title: 'REPORTS', icon: FileText, path: '/reports' },
     ];
   }
@@ -78,6 +79,7 @@ const getNavItems = (role: string): NavItem[] => {
   if (role === 'supervisor') {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/supervisor' },
+      { title: 'APPROVALS', icon: CheckCircle2, path: '/approvals' },
       { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
       { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },

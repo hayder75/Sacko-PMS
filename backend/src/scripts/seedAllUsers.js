@@ -11,44 +11,6 @@ const seedAllUsers = async () => {
     await prisma.$connect();
     console.log('✅ Connected to PostgreSQL\n');
 
-    // Create region
-    let region = await prisma.region.findUnique({
-      where: { code: 'SOUTH' },
-    });
-    if (!region) {
-      region = await prisma.region.create({
-        data: { name: 'South Region', code: 'SOUTH' },
-      });
-      console.log('✅ Created South Region');
-    }
-
-    // Create area
-    let area = await prisma.area.findUnique({
-      where: { code: 'HAWASSA_AREA' },
-    });
-    if (!area) {
-      area = await prisma.area.create({
-        data: { name: 'Hawassa Area', code: 'HAWASSA_AREA', regionId: region.id },
-      });
-      console.log('✅ Created Hawassa Area');
-    }
-
-    // Create branch
-    let branch = await prisma.branch.findUnique({
-      where: { code: 'HAWASSA_MAIN' },
-    });
-    if (!branch) {
-      branch = await prisma.branch.create({
-        data: {
-          name: 'Hawassa Main Branch',
-          code: 'HAWASSA_MAIN',
-          regionId: region.id,
-          areaId: area.id,
-        },
-      });
-      console.log('✅ Created Hawassa Main Branch');
-    }
-
     // Delete all existing users
     await prisma.user.deleteMany({});
     console.log('✅ Cleared existing users\n');
@@ -63,7 +25,6 @@ const seedAllUsers = async () => {
       { employeeId: 'STAFF001', name: 'Staff Member Test', email: 'staff@sako.com', password: 'staff123', role: 'staff', position: 'Member_Service_Officer_I', isActive: true },
     ];
 
-    // Hash passwords and create users
     for (const userData of usersData) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(userData.password, salt);
@@ -76,8 +37,6 @@ const seedAllUsers = async () => {
           password: hashedPassword,
           role: userData.role,
           position: userData.position,
-          branchId: branch.id,
-          branch_code: branch.code,
           isActive: userData.isActive,
         },
       });

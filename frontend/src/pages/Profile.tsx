@@ -26,11 +26,9 @@ export function Profile() {
   const roleBadgeColor = (r: string) => {
     const colors: Record<string, string> = {
       admin: 'bg-purple-100 text-purple-800',
-      regionalDirector: 'bg-blue-100 text-blue-800',
       areaManager: 'bg-indigo-100 text-indigo-800',
       branchManager: 'bg-green-100 text-green-800',
-      lineManager: 'bg-teal-100 text-teal-800',
-      subTeamLeader: 'bg-orange-100 text-orange-800',
+      supervisor: 'bg-amber-100 text-amber-800',
       staff: 'bg-slate-100 text-slate-800',
     };
     return colors[r] || 'bg-slate-100 text-slate-800';
@@ -117,18 +115,10 @@ export function Profile() {
               <p className="text-slate-800 font-medium">{user?.position || '-'}</p>
             </div>
           </div>
-          {user?.region && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-slate-500 text-sm">Region</Label>
-                <p className="text-slate-800 font-medium">{user.region.name}</p>
-              </div>
-              {user?.area && (
-                <div>
-                  <Label className="text-slate-500 text-sm">Area</Label>
-                  <p className="text-slate-800 font-medium">{user.area.name}</p>
-                </div>
-              )}
+          {user?.area && (
+            <div>
+              <Label className="text-slate-500 text-sm">Area</Label>
+              <p className="text-slate-800 font-medium">{user.area.name}</p>
             </div>
           )}
         </CardContent>

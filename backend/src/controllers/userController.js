@@ -37,7 +37,7 @@ export const getPublicUsersList = asyncHandler(async (req, res) => {
 // @route   GET /api/users
 // @access  Private
 export const getUsers = asyncHandler(async (req, res) => {
-  const { role, branchId, branch_code, isActive } = req.query;
+  const { role, branchId, branch_code, isActive, supervisorId } = req.query;
 
   const where = {};
 
@@ -69,6 +69,7 @@ export const getUsers = asyncHandler(async (req, res) => {
   if (branchId) where.branchId = branchId;
   if (branch_code) where.branch_code = branch_code;
   if (isActive !== undefined) where.isActive = isActive === 'true';
+  if (supervisorId) where.supervisorId = supervisorId;
 
   const users = await prisma.user.findMany({
     where,

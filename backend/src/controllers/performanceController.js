@@ -1,6 +1,6 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { calculateKPIScore, calculateRating } from '../utils/performanceCalculator.js';
+import { calculateKPIScore, calculateBranchKPIScore, calculateRating } from '../utils/performanceCalculator.js';
 
 // @desc    Calculate performance score
 // @route   POST /api/performance/calculate
@@ -17,30 +17,35 @@ export const calculatePerformance = asyncHandler(async (req, res) => {
     });
   }
 
-  // Calculate KPI score
-  const kpiResult = await calculateKPIScore(
-    targetUserId,
-    branch_code,
-    period
-  );
+  // Determine user role for KPI calculation (BM = branch-level)
+  const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+  const isBranchManager = targetUser?.role === 'branchManager';
 
-  // Get behavioral score (15% weight)
-  const behavioralEval = await prisma.behavioralEvaluation.findFirst({
-    where: {
-      evaluatedUserId: targetUserId,
-      period,
-      approvalStatus: 'Approved',
-    },
-  });
+  let kpiResult;
+  if (isBranchManager) {
+    kpiResult = await calculateBranchKPIScore(branch_code, period);
+  } else {
+    kpiResult = await calculateKPIScore(targetUserId, branch_code, period);
+  }
+
+  // Get behavioral score (15% weight) — only if period is a valid EvaluationPeriod
+  const VALID_EVAL_PERIODS = ['Monthly', 'Quarterly', 'Annual'];
+  let behavioralEval = null;
+  if (VALID_EVAL_PERIODS.includes(period)) {
+    behavioralEval = await prisma.behavioralEvaluation.findFirst({
+      where: {
+        evaluatedUserId: targetUserId,
+        period,
+        approvalStatus: 'Approved',
+      },
+    });
+  }
 
   const behavioralScore = behavioralEval?.totalScore || 0;
 
   // Calculate final score
   const finalScore = kpiResult.kpiTotalScore + behavioralScore;
   const ratingEnum = calculateRating(finalScore);
-
-  // Find user and branch
-  const user = await prisma.user.findUnique({ where: { id: targetUserId } });
 
   const now = new Date();
   const year = now.getFullYear();
@@ -75,7 +80,7 @@ export const calculatePerformance = asyncHandler(async (req, res) => {
     performanceScore = await prisma.performanceScore.create({
       data: {
         userId: targetUserId,
-        branchId: user?.branchId,
+        branchId: targetUser?.branchId,
         period,
         year,
         month,
@@ -105,23 +110,33 @@ export const safeCalculatePerformance = asyncHandler(async (req, res) => {
     });
   }
 
-  // Calculate KPI score
-  const kpiResult = await calculateKPIScore(targetUserId, branch_code, period);
+  // Determine user role for KPI calculation (BM = branch-level)
+  const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+  const isBranchManager = targetUser?.role === 'branchManager';
 
-  // Get behavioral score (15% weight)
-  const behavioralEval = await prisma.behavioralEvaluation.findFirst({
-    where: {
-      evaluatedUserId: targetUserId,
-      period,
-      approvalStatus: 'Approved',
-    },
-  });
+  let kpiResult;
+  if (isBranchManager) {
+    kpiResult = await calculateBranchKPIScore(branch_code, period);
+  } else {
+    kpiResult = await calculateKPIScore(targetUserId, branch_code, period);
+  }
+
+  // Get behavioral score (15% weight) — only if period is a valid EvaluationPeriod
+  const VALID_EVAL_PERIODS = ['Monthly', 'Quarterly', 'Annual'];
+  let behavioralEval = null;
+  if (VALID_EVAL_PERIODS.includes(period)) {
+    behavioralEval = await prisma.behavioralEvaluation.findFirst({
+      where: {
+        evaluatedUserId: targetUserId,
+        period,
+        approvalStatus: 'Approved',
+      },
+    });
+  }
 
   const behavioralScore = behavioralEval?.totalScore || 0;
   const finalScore = kpiResult.kpiTotalScore + behavioralScore;
   const ratingEnum = calculateRating(finalScore);
-
-  const user = await prisma.user.findUnique({ where: { id: targetUserId } });
 
   const existingScore = await prisma.performanceScore.findFirst({
     where: {
@@ -148,7 +163,7 @@ export const safeCalculatePerformance = asyncHandler(async (req, res) => {
     performanceScore = await prisma.performanceScore.create({
       data: {
         userId: targetUserId,
-        branchId: user.branchId,
+        branchId: targetUser.branchId,
         period,
         year: new Date().getFullYear(),
         kpiScores: kpiResult.kpiScores,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,38 +6,76 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Edit2, X, Check } from 'lucide-react';
 
-const defaultKpiCategories = [
-  { id: 'Deposit_Mobilization', name: 'Deposit Mobilization', weight: 25, description: 'Total deposit collection vs target', minBalance: 500 },
-  { id: 'Digital_Channel_Growth', name: 'Digital Channel Growth', weight: 20, description: 'Digital account activations and usage', minBalance: 0 },
-  { id: 'Loan_NPL', name: 'Loan & NPL', weight: 20, description: 'Loan disbursement and NPL management', minBalance: 0 },
-  { id: 'Customer_Base', name: 'Customer Base', weight: 15, description: 'New customer acquisition', minBalance: 0 },
-  { id: 'Member_Registration', name: 'Member Registration', weight: 10, description: 'New member registrations', minBalance: 0 },
-  { id: 'Shareholder_Recruitment', name: 'Shareholder Recruitment', weight: 10, description: 'Shareholder recruitment', minBalance: 0 },
+const DEFAULT_KPI_DATA = [
+  { id: 'Account_Productivity', kpiId: 'Account_Productivity', name: 'Account Productivity', weight: 30, minBalance: 1000 },
+  { id: 'Deposit_Mobilization', kpiId: 'Deposit_Mobilization', name: 'Deposit Mobilization', weight: 24, minBalance: 1000 },
+  { id: 'Internal_Operations', kpiId: 'Internal_Operations', name: 'Internal Operations', weight: 12, minBalance: 0 },
+  { id: 'Share_Capital_Growth', kpiId: 'Share_Capital_Growth', name: 'Share Capital Growth', weight: 9, minBalance: 0 },
+  { id: 'New_Member_Registration', kpiId: 'New_Member_Registration', name: 'New Member Registration', weight: 6, minBalance: 0 },
+  { id: 'New_Account_Opening', kpiId: 'New_Account_Opening', name: 'New Account Opening', weight: 6, minBalance: 0 },
+  { id: 'Mobile_Banking_Users', kpiId: 'Mobile_Banking_Users', name: 'Mobile Banking Users', weight: 5, minBalance: 0 },
+  { id: 'Billers_Recruitment', kpiId: 'Billers_Recruitment', name: 'Billers Recruitment', weight: 5, minBalance: 0 },
+  { id: 'Merchant_POS_Growth', kpiId: 'Merchant_POS_Growth', name: 'Merchant POS Growth', weight: 3, minBalance: 0 },
 ];
 
 const thresholds = [
-  { label: 'Outstanding', min: 90, max: 100, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { label: 'Very Good', min: 80, max: 89, color: 'text-blue-600', bg: 'bg-blue-50' },
-  { label: 'Good', min: 60, max: 79, color: 'text-amber-600', bg: 'bg-amber-50' },
-  { label: 'Needs Support', min: 0, max: 59, color: 'text-red-600', bg: 'bg-red-50' },
+  { label: 'Outstanding', min: 120, max: 100, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { label: 'Exceeds Expectations', min: 100, max: 119, color: 'text-blue-600', bg: 'bg-blue-50' },
+  { label: 'Meets Expectations', min: 90, max: 99, color: 'text-amber-600', bg: 'bg-amber-50' },
+  { label: 'Needs Improvement', min: 80, max: 89, color: 'text-orange-600', bg: 'bg-orange-50' },
+  { label: 'Unsatisfactory', min: 0, max: 79, color: 'text-red-600', bg: 'bg-red-50' },
 ];
 
 export function KPIFramework() {
-  const [kpiCategories, setKpiCategories] = useState(defaultKpiCategories);
+  const [kpiCategories, setKpiCategories] = useState(DEFAULT_KPI_DATA);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editWeights, setEditWeights] = useState<Record<string, number>>({});
 
-  const totalWeight = kpiCategories.reduce((sum, kpi) => sum + kpi.weight, 0);
+  useEffect(() => {
+    loadConfig();
+  }, []);
 
-  const startEdit = (id: string, currentWeight: number) => {
-    setEditingId(id);
-    setEditWeights({ ...editWeights, [id]: currentWeight });
+  const loadConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/kpi-config', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setKpiCategories(data.data.map((c: any) => ({
+          id: c.id || c.kpiId,
+          kpiId: c.kpiId,
+          name: c.name,
+          weight: c.weight,
+          minBalance: c.minBalance,
+        })));
+      }
+    } catch (_) {}
   };
 
-  const saveEdit = (id: string) => {
+  const startEdit = (id: string, weight: number) => {
+    setEditingId(id);
+    setEditWeights((prev) => ({ ...prev, [id]: weight }));
+  };
+
+  const saveWeight = async (id: string, weight: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`/api/kpi-config/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ weight }),
+      });
+      setEditingId(null);
+      loadConfig();
+    } catch (_) {}
+  };
+
+  const saveEdit = async (id: string) => {
     const newWeight = editWeights[id];
     if (newWeight && newWeight > 0 && newWeight <= 100) {
-      setKpiCategories(prev => prev.map(k => k.id === id ? { ...k, weight: newWeight } : k));
+      await saveWeight(id, newWeight);
     }
     setEditingId(null);
   };
@@ -45,6 +83,8 @@ export function KPIFramework() {
   const cancelEdit = () => {
     setEditingId(null);
   };
+
+  const totalWeight = kpiCategories.reduce((sum, kpi) => sum + kpi.weight, 0);
 
   return (
     <div className="space-y-6">
@@ -75,7 +115,6 @@ export function KPIFramework() {
                 <TableHead>KPI Category</TableHead>
                 <TableHead>Weight (%)</TableHead>
                 <TableHead>Min Balance (ETB)</TableHead>
-                <TableHead>Description</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -88,7 +127,7 @@ export function KPIFramework() {
                       <Input
                         type="number"
                         className="w-20 h-8"
-                        value={editWeights[kpi.id] || kpi.weight}
+                        value={editWeights[kpi.id] ?? kpi.weight}
                         onChange={(e) => setEditWeights({ ...editWeights, [kpi.id]: parseInt(e.target.value) || 0 })}
                         min={0}
                         max={100}
@@ -97,8 +136,7 @@ export function KPIFramework() {
                       <Badge variant="outline">{kpi.weight}%</Badge>
                     )}
                   </TableCell>
-                  <TableCell>{kpi.minBalance.toLocaleString()}</TableCell>
-                  <TableCell className="text-sm text-slate-600">{kpi.description}</TableCell>
+                  <TableCell>{(kpi.minBalance ?? 0).toLocaleString()}</TableCell>
                   <TableCell>
                     {editingId === kpi.id ? (
                       <div className="flex gap-1">
@@ -127,32 +165,19 @@ export function KPIFramework() {
         </CardContent>
       </Card>
 
+      {/* Threshold Reference Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Scoring Thresholds</CardTitle>
+          <CardTitle>Performance Rating Thresholds</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {thresholds.map((t) => (
-              <div key={t.label} className={`p-4 rounded-lg border ${t.bg}`}>
-                <p className={`font-semibold ${t.color}`}>{t.label}</p>
-                <p className="text-2xl font-bold text-slate-800">{t.min}% - {t.max}%</p>
+              <div key={t.label} className={`p-3 rounded-lg border ${t.bg}`}>
+                <span className={`text-xs font-bold ${t.color}`}>{t.label}</span>
+                <p className="text-lg font-bold text-slate-800 mt-1">&ge; {t.min}%</p>
               </div>
             ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Formula</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm text-slate-600">
-            <p><strong>KPI Score (85% of final):</strong> Sum of (Category Achievement% × Category Weight) × 0.85</p>
-            <p><strong>Behavioral Score (15% of final):</strong> Average of competency scores normalized to 15</p>
-            <p><strong>Final Score:</strong> KPI Score + Behavioral Score</p>
-            <p className="text-xs text-slate-500 mt-2">Note: Weight changes affect all future performance calculations.</p>
           </div>
         </CardContent>
       </Card>

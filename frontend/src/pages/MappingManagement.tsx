@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Eye, UserPlus, RefreshCw } from 'lucide-react';
-import { mappingsAPI, branchesAPI } from '@/lib/api';
+import { Search, Eye, UserPlus, RefreshCw, Users } from 'lucide-react';
+import { mappingsAPI, branchesAPI, usersAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
 export function MappingManagement() {
@@ -17,10 +17,15 @@ export function MappingManagement() {
   const [loading, setLoading] = useState(true);
   const [branches, setBranches] = useState<any[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+  const [supervisedStaff, setSupervisedStaff] = useState<any[]>([]);
+  const [staffFilter, setStaffFilter] = useState<string>('all');
 
   useEffect(() => {
     if (user?.role === 'admin') {
       loadBranches();
+    }
+    if (user?.role === 'supervisor') {
+      loadSupervisedStaff();
     }
   }, []);
 
@@ -35,9 +40,20 @@ export function MappingManagement() {
     }
   };
 
+  const loadSupervisedStaff = async () => {
+    try {
+      const res = await usersAPI.getAll({ supervisorId: user?.id });
+      if (res.success) {
+        setSupervisedStaff(res.data || []);
+      }
+    } catch (e) {
+      console.error('Failed to load supervised staff:', e);
+    }
+  };
+
   useEffect(() => {
     loadMappings();
-  }, [statusFilter]);
+  }, [statusFilter, staffFilter]);
 
   const loadMappings = async () => {
     try {
@@ -45,6 +61,9 @@ export function MappingManagement() {
       const params: any = {};
       if (statusFilter !== 'all') {
         params.status = statusFilter;
+      }
+      if (staffFilter !== 'all') {
+        params.mappedTo = staffFilter;
       }
       const response = await mappingsAPI.getAll(params);
       if (response.success) {
@@ -114,6 +133,20 @@ export function MappingManagement() {
                 <SelectItem value="Inactive">Unmapped</SelectItem>
               </SelectContent>
             </Select>
+            {user?.role === 'supervisor' && (
+              <Select value={staffFilter} onValueChange={setStaffFilter}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Filter by staff..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Team Members</SelectItem>
+                  {user?.id && <SelectItem value={user.id}>{user.name} (Me)</SelectItem>}
+                  {supervisedStaff.map((s: any) => (
+                    <SelectItem key={s._id || s.id} value={s._id || s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {user?.role === 'admin' && (
               <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
                 <SelectTrigger className="w-[220px]">

@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { Star } from 'lucide-react';
 import { dashboardAPI } from '@/lib/api';
 
 const timeRanges = ['Day', 'Week', 'Month', 'Quarter', 'Year'];
+
+const scoreColor = (s: number) => s >= 80 ? 'text-emerald-600' : s >= 60 ? 'text-amber-600' : 'text-red-600';
+const badgeVariant = (s: number) => s >= 80 ? 'success' as const : s >= 60 ? 'warning' as const : 'destructive' as const;
 
 export function KPIDashboard() {
   const [timeRange, setTimeRange] = useState('Month');
@@ -51,16 +54,6 @@ export function KPIDashboard() {
                  finalScore >= 60 ? 'Needs Support' : 'Unsatisfactory';
   const stars = getRatingStars(finalScore);
   
-  // Generate daily data from KPIs
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dailyTarget = depositKPI.target ? Math.round(depositKPI.target / weekDays.length) : 0;
-  const ratios = weekDays.map(() => 0.6 + Math.random() * 0.8);
-  const ratioSum = ratios.reduce((s, r) => s + r, 0);
-  const dailyData = depositKPI.target ? weekDays.map((day, i) => ({
-    date: day,
-    target: dailyTarget,
-    actual: Math.round((depositKPI.actual || 0) * ratios[i] / ratioSum),
-  })) : [];
   
   // Generate KPI contribution from breakdown
   const kpiContribution = Object.entries(kpiBreakdown).map(([key, value]: [string, any]) => ({
@@ -77,13 +70,7 @@ export function KPIDashboard() {
         competency: c.competencyName || c.competency || 'N/A',
         score: Math.round((c.score / (c.maxScore || 5)) * 100),
       }))
-    : [
-        { competency: 'Teamwork', score: 0 },
-        { competency: 'Communication', score: 0 },
-        { competency: 'Leadership', score: 0 },
-        { competency: 'Innovation', score: 0 },
-        { competency: 'Customer Focus', score: 0 },
-      ];
+    : [];
 
   return (
     <div className="space-y-6">
@@ -115,7 +102,7 @@ export function KPIDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-2">Final Score</p>
-              <p className="text-4xl font-bold text-slate-800">{Math.round(finalScore)}%</p>
+              <p className={`text-4xl font-bold ${scoreColor(finalScore)}`}>{Math.round(finalScore)}%</p>
               <div className="flex items-center justify-center gap-1 mt-2">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
@@ -130,15 +117,15 @@ export function KPIDashboard() {
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-2">KPI Score (85%)</p>
-              <p className="text-4xl font-bold text-slate-800">{Math.round(kpiScore)}%</p>
+              <p className={`text-4xl font-bold ${scoreColor(kpiScore)}`}>{Math.round(kpiScore)}%</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-2">Behavioral Score (15%)</p>
-              <p className="text-4xl font-bold text-slate-800">{Math.round(behavioralScore)}%</p>
+              <p className={`text-4xl font-bold ${scoreColor(behavioralScore)}`}>{Math.round(behavioralScore)}%</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600 mb-2">Overall Rating</p>
-              <Badge variant="success" className="text-lg px-4 py-2">
+              <Badge variant={badgeVariant(finalScore)} className="text-lg px-4 py-2">
                 {rating}
               </Badge>
             </div>
@@ -148,31 +135,17 @@ export function KPIDashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Daily Achievement vs Target */}
+        {/* Achievement vs Target */}
         <Card>
           <CardHeader>
-            <CardTitle>Daily Achievement vs Target</CardTitle>
+            <CardTitle>Achievement vs Target</CardTitle>
           </CardHeader>
           <CardContent>
-            {dailyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="target" stroke="#e2e8f0" strokeWidth={2} name="Target" />
-                  <Line type="monotone" dataKey="actual" stroke="#3b82f6" strokeWidth={2} name="Actual" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-slate-600">Deposit Target: {depositKPI.target?.toLocaleString() || 0} ETB</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-2">{depositKPI.actual?.toLocaleString() || 0} ETB</p>
-                <p className="text-sm text-slate-500 mt-1">Achieved ({depositKPI.percent?.toFixed(1) || 0}%)</p>
-              </div>
-            )}
+            <div className="text-center py-8">
+              <p className="text-slate-600">Deposit Target: {depositKPI.target?.toLocaleString() || 0} ETB</p>
+              <p className="text-2xl font-bold text-emerald-600 mt-2">{depositKPI.actual?.toLocaleString() || 0} ETB</p>
+              <p className={`text-sm mt-1 font-medium ${scoreColor(depositKPI.percent || 0)}`}>Achieved ({depositKPI.percent?.toFixed(1) || 0}%)</p>
+            </div>
           </CardContent>
         </Card>
 

@@ -3,23 +3,31 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const TASK_TO_KPI = {
   Deposit_Mobilization: 'Deposit_Mobilization',
-  Loan_Follow_up: 'Loan_NPL',
-  New_Customer: 'Customer_Base',
-  Digital_Activation: 'Digital_Channel_Growth',
-  Member_Registration: 'Member_Registration',
-  Shareholder_Recruitment: 'Shareholder_Recruitment',
+  New_Member_Registration: 'New_Member_Registration',
+  New_Account_Opening: 'New_Account_Opening',
+  Share_Capital: 'Share_Capital_Growth',
+  Mobile_Banking_Activation: 'Mobile_Banking_Users',
+  Merchant_POS_Activation: 'Merchant_POS_Growth',
+  Biller_Recruitment: 'Billers_Recruitment',
+  Transaction_Processing: 'Internal_Operations',
+  SMS_Alert_Config: 'Internal_Operations',
+  Complaint_Resolution: 'Internal_Operations',
+  Account_Productivity: 'Account_Productivity',
 };
 
 const KPI_LABELS = {
   Deposit_Mobilization: 'Deposit Mobilization',
-  Digital_Channel_Growth: 'Digital Channel Growth',
-  Member_Registration: 'Member Registration',
-  Shareholder_Recruitment: 'Shareholder Recruitment',
-  Loan_NPL: 'Loan & NPL',
-  Customer_Base: 'Customer Base',
+  New_Member_Registration: 'New Member Registration',
+  New_Account_Opening: 'New Account Opening',
+  Share_Capital_Growth: 'Share Capital Growth',
+  Account_Productivity: 'Account Productivity',
+  Mobile_Banking_Users: 'Mobile Banking Users',
+  Merchant_POS_Growth: 'Merchant POS Growth',
+  Billers_Recruitment: 'Billers Recruitment',
+  Internal_Operations: 'Internal Operations',
 };
 
-const KPI_ORDER = ['Deposit_Mobilization', 'Digital_Channel_Growth', 'Member_Registration', 'Shareholder_Recruitment', 'Loan_NPL', 'Customer_Base'];
+const KPI_ORDER = ['Deposit_Mobilization', 'New_Member_Registration', 'New_Account_Opening', 'Share_Capital_Growth', 'Account_Productivity', 'Mobile_Banking_Users', 'Merchant_POS_Growth', 'Billers_Recruitment', 'Internal_Operations'];
 
 // @desc    Get mapped accounts dashboard for a user
 // @route   GET /api/mapped-accounts/dashboard
@@ -102,7 +110,6 @@ export const getMappedAccountsDashboard = asyncHandler(async (req, res) => {
 
   // 6. Summary stats
   const totalDeposits = taskTotals['Deposit_Mobilization'] || 0;
-  const totalLoans = taskTotals['Loan_NPL'] || 0;
 
   res.status(200).json({
     success: true,
@@ -112,13 +119,48 @@ export const getMappedAccountsDashboard = asyncHandler(async (req, res) => {
         totalAccounts: mappedAccounts.length,
         activeAccounts: mappedAccounts.filter(a => a.activeStatus).length,
         totalDeposits,
-        totalLoans,
         totalDifference: mappedAccounts.reduce((s, a) => s + (a.difference || 0), 0),
       },
       accounts: mappedAccounts,
       planProgress,
     },
   });
+});
+
+// @desc    Get all mapped accounts for a branch (for branch manager)
+// @route   GET /api/mapped-accounts/branch
+// @access  Private (Branch Manager)
+export const getBranchMappedAccounts = asyncHandler(async (req, res) => {
+  const branchId = req.user.branchId;
+
+  const accounts = await prisma.accountMapping.findMany({
+    where: { branchId, status: { not: 'Inactive' } },
+    include: {
+      mappedTo: { select: { id: true, name: true, employeeId: true, position: true } },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+
+  const mapped = accounts.map(a => ({
+    id: a.id,
+    accountNumber: a.accountNumber,
+    customerName: a.customerName,
+    phoneNumber: a.phoneNumber,
+    currentBalance: a.current_balance,
+    juneBalance: a.june_balance,
+    difference: (a.current_balance || 0) - (a.june_balance || 0),
+    activeStatus: a.active_status,
+    isProductive: a.isProductive,
+    product: a.product,
+    mappedTo: {
+      id: a.mappedTo.id,
+      name: a.mappedTo.name,
+      employeeId: a.mappedTo.employeeId,
+      position: a.mappedTo.position,
+    },
+  }));
+
+  res.status(200).json({ success: true, data: mapped });
 });
 
 // @desc    Get mapped accounts for a specific account number

@@ -15,6 +15,20 @@ export const getMappings = asyncHandler(async (req, res) => {
 
   if (req.user.role === 'staff') {
     where.mappedToId = req.user.id;
+  } else if (req.user.role === 'supervisor') {
+    const supervisedStaff = await prisma.user.findMany({
+      where: { supervisorId: req.user.id, isActive: true },
+      select: { id: true },
+    });
+    const staffIds = supervisedStaff.map(s => s.id);
+    if (staffIds.length > 0) {
+      where.OR = [
+        { mappedToId: { in: staffIds } },
+        { mappedToId: req.user.id },
+      ];
+    } else {
+      where.mappedToId = req.user.id;
+    }
   } else if (branchId) {
     where.branchId = branchId;
   } else if (req.user.branchId) {

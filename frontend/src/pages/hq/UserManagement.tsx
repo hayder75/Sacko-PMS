@@ -21,7 +21,6 @@ export function UserManagement() {
     role: '',
     position: '',
     branch_code: '',
-    sub_team: '',
   });
 
   useEffect(() => {
@@ -56,7 +55,6 @@ export function UserManagement() {
         role: '',
         position: '',
         branch_code: '',
-        sub_team: '',
       });
       loadUsers();
     } catch (error: any) {
@@ -140,11 +138,10 @@ export function UserManagement() {
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="regionalDirector">Regional Director</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="areaManager">Area Manager</SelectItem>
                       <SelectItem value="branchManager">Branch Manager</SelectItem>
-                      <SelectItem value="lineManager">Line Manager (MSM)</SelectItem>
-                      <SelectItem value="subTeamLeader">Sub-Team Leader</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
                       <SelectItem value="staff">Staff</SelectItem>
                     </SelectContent>
                   </Select>
@@ -161,43 +158,28 @@ export function UserManagement() {
                       <SelectValue placeholder={formData.role ? "Select position" : "Select role first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {formData.role === 'regionalDirector' && (
-                        <SelectItem value="Regional Director">Regional Director</SelectItem>
+                      {formData.role === 'admin' && (
+                        <SelectItem value="CEO">CEO</SelectItem>
                       )}
                       {formData.role === 'areaManager' && (
                         <SelectItem value="Area Manager">Area Manager</SelectItem>
                       )}
                       {formData.role === 'branchManager' && (
-                        <>
-                          <SelectItem value="Branch Manager">Branch Manager</SelectItem>
-                          <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
-                          <SelectItem value="Accountant">Accountant</SelectItem>
-                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
-                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
-                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
-                        </>
+                        <SelectItem value="Branch Manager">Branch Manager</SelectItem>
                       )}
-                      {formData.role === 'lineManager' && (
+                      {formData.role === 'supervisor' && (
                         <>
-                          <SelectItem value="Member Service Manager (MSM)">Member Service Manager (MSM)</SelectItem>
-                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
-                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
-                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
-                        </>
-                      )}
-                      {formData.role === 'subTeamLeader' && (
-                        <>
-                          <SelectItem value="Accountant">Accountant</SelectItem>
-                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
-                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
-                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
+                          <SelectItem value="Operation Supervisor">Operation Supervisor</SelectItem>
+                          <SelectItem value="Customer Relationship Supervisor">Customer Relationship Supervisor</SelectItem>
                         </>
                       )}
                       {formData.role === 'staff' && (
                         <>
-                          <SelectItem value="Member Service Officer I">Member Service Officer I</SelectItem>
-                          <SelectItem value="Member Service Officer II">Member Service Officer II</SelectItem>
-                          <SelectItem value="Member Service Officer III">Member Service Officer III</SelectItem>
+                          <SelectItem value="Customer Service Officer I">Customer Service Officer I</SelectItem>
+                          <SelectItem value="Customer Service Officer II">Customer Service Officer II</SelectItem>
+                          <SelectItem value="Customer Relationship Officer I">Customer Relationship Officer I</SelectItem>
+                          <SelectItem value="Sales & Marketing Officer I">Sales & Marketing Officer I</SelectItem>
+                          <SelectItem value="Internal Auditor">Internal Auditor</SelectItem>
                         </>
                       )}
                     </SelectContent>
@@ -212,16 +194,6 @@ export function UserManagement() {
                     placeholder="e.g., ATOTE"
                     required
                     disabled={loading || formData.role === 'admin'}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sub_team">Sub-Team</Label>
-                  <Input
-                    id="sub_team"
-                    value={formData.sub_team}
-                    onChange={(e) => setFormData({ ...formData, sub_team: e.target.value })}
-                    placeholder="e.g., ATOTE-SUBTEAM5"
-                    disabled={loading}
                   />
                 </div>
               </div>

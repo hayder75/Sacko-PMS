@@ -38,7 +38,7 @@ const HABESHA_CUSTOMERS = [
   { name: 'Hanna Woldemariam', phone: '+251910223345' },
 ];
 
-const BRANCH_CODE = 'HAWASSA_MAIN';
+const BRANCH_CODE = 'HAWASSA_BOLE';
 
 async function clearDemoData(branchId) {
   await prisma.evaluationApproval.deleteMany({ where: { evaluation: { branchId } } });
@@ -295,7 +295,7 @@ async function main() {
   console.log(`   Staff: ${allStaff.map(s => s.name).join(', ')}`);
   console.log(`   Customers: ${HABESHA_CUSTOMERS.length} mapped accounts`);
   console.log(`\n🔑 Login: use <email> / 1234`);
-  console.log(`   (emails are name@hawassa_main.et)`);
+  console.log(`   (emails are name@hawassa_bole.et)`);
 }
 
 main()

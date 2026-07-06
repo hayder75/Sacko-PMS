@@ -8,7 +8,7 @@ import { hashPassword, comparePassword, POSITION_TO_ENUM } from '../utils/prisma
 // @route   POST /api/auth/register
 // @access  Private (HQ Admin only)
 export const register = asyncHandler(async (req, res) => {
-  const { employeeId, name, email, password, role, branchId, position, branch_code, areaId, sub_team } = req.body;
+  const { employeeId, name, email, password, role, branchId, position, branch_code, areaId } = req.body;
 
   // Hash password before saving
   const hashedPassword = await hashPassword(password);
@@ -26,7 +26,6 @@ export const register = asyncHandler(async (req, res) => {
       branchId: branchId || null,
       branch_code: branch_code || null,
       areaId: areaId || null,
-      sub_team: sub_team || null,
       position: positionEnum,
     },
   });

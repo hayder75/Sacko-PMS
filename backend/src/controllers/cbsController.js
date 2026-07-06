@@ -18,26 +18,33 @@ const updateAccountBalances = async (cbsData, branchId, validationDate) => {
     const accountNumber = String(record.accountNumber || record['Account Number'] || record.account_id || '').trim();
     const currentBalance = parseFloat(record.balance || record.Balance || record.current_balance || 0);
     const transactionDate = record.transactionDate || record['Transaction Date'] || validationDate;
+    const productName = String(record.product || record.Product || record.productName || record['Product Name'] || '').trim();
 
     if (!accountNumber) continue;
 
+    const updateData = {
+      current_balance: currentBalance,
+      last_transaction_date: new Date(transactionDate),
+      active_status: new Date(transactionDate) >= fifteenDaysAgo,
+    };
+    if (productName) updateData.product = productName;
+
+    const createData = {
+      accountNumber,
+      customerName: String(record.customerName || record['Customer Name'] || `CBS Account ${accountNumber}`).trim(),
+      current_balance: currentBalance,
+      last_transaction_date: new Date(transactionDate),
+      active_status: new Date(transactionDate) >= fifteenDaysAgo,
+      branchId,
+      accountType: 'Savings',
+      status: 'Active',
+    };
+    if (productName) createData.product = productName;
+
     const accountMapping = await prisma.accountMapping.upsert({
       where: { accountNumber },
-      create: {
-        accountNumber,
-        customerName: String(record.customerName || record['Customer Name'] || `CBS Account ${accountNumber}`).trim(),
-        current_balance: currentBalance,
-        last_transaction_date: new Date(transactionDate),
-        active_status: new Date(transactionDate) >= fifteenDaysAgo,
-        branchId,
-        accountType: 'Savings',
-        status: 'Active',
-      },
-      update: {
-        current_balance: currentBalance,
-        last_transaction_date: new Date(transactionDate),
-        active_status: new Date(transactionDate) >= fifteenDaysAgo,
-      }
+      create: createData,
+      update: updateData,
     });
 
     // Handle June balance if not set
@@ -115,7 +122,8 @@ const detectUnmappedProducts = async (cbsData) => {
   return unmappedProducts;
 };
 
-// Helper: Auto-map new accounts ≥ 500 ETB to task creators
+// Helper: Auto-map new accounts ≥ 1,000 ETB to task creators
+
 const autoMapNewAccounts = async (cbsData, branchId, validationDate) => {
   const date = new Date(validationDate);
   const startDate = new Date(date);
@@ -137,7 +145,7 @@ const autoMapNewAccounts = async (cbsData, branchId, validationDate) => {
     const accountNumber = String(record.accountNumber || record['Account Number'] || record.account_id || '').trim();
     const currentBalance = parseFloat(record.balance || record.Balance || record.current_balance || 0);
 
-    if (!accountNumber || currentBalance < 500) continue;
+    if (!accountNumber || currentBalance < 1000) continue;
 
     // Check if account already exists and is mapped
     const existingMapping = await prisma.accountMapping.findUnique({ where: { accountNumber } });

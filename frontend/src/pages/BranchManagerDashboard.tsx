@@ -2,26 +2,37 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ChevronDown, Home } from 'lucide-react';
 import { dashboardAPI, tasksAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
+import { RegionalGaugeCard } from '@/components/dashboard/RegionalGaugeCard';
+import { BranchIncrementalTable } from '@/components/dashboard/BranchIncrementalTable';
+import { TopBranchesBarChart } from '@/components/dashboard/TopBranchesBarChart';
+
+const KPI_OPTIONS = [
+  'Deposit Mobilization',
+  'Digital Channel Growth',
+  'New Member Registration',
+  'Share Capital Growth',
+  'Account Productivity',
+];
 
 export function BranchManagerDashboard() {
   const { user } = useUser();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedKPI, setSelectedKPI] = useState('Deposit Mobilization');
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    loadDashboardData(selectedKPI);
+  }, [selectedKPI]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (kpiCategory?: string) => {
     try {
       setLoading(true);
       const [dashboardRes, tasksRes] = await Promise.all([
-        dashboardAPI.getBranch(),
+        dashboardAPI.getBranch(kpiCategory || selectedKPI),
         tasksAPI.getAll({ approvalStatus: 'Pending', limit: 10 }),
       ]);
 
@@ -41,217 +52,169 @@ export function BranchManagerDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-slate-600">Loading dashboard...</div>
+        <div className="text-slate-500 font-medium">Loading Branch Manager Dashboard...</div>
       </div>
     );
   }
 
-  const data = dashboardData || {
-    totalStaff: 0,
-    mappedAccounts: 0,
-    dailyDepositTarget: 0,
-    todayAchievement: 0,
-    kpiData: [],
-    teamPerformance: [],
+  const data = dashboardData || {};
+  const analytical = data.analyticalData || {
+    yesterdayTotal: 0, todayTotal: 0, difference: 0,
+    activeYesterday: 0, activeToday: 0, activeDifference: 0,
+    breakdown: [], topPerformers: [],
   };
 
   const dashboardTitle = 'Branch Manager Dashboard';
-  const dashboardSubtitle = `${user?.branchId?.name || user?.branch_code || 'Branch'} Overview`;
+  const dashboardSubtitle = `${user?.branchId?.name || user?.branch_code || 'Branch'} Overview & Staff Analytical Breakdown`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <div className="flex items-center justify-between bg-white px-4 py-2.5 border border-slate-200 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+          <Home className="w-3.5 h-3.5 text-slate-400" />
+          <span>Home / Branch Management / {user?.branch_code || 'Branch'}</span>
+        </div>
+        <div className="text-xs text-slate-400">
+          Updated: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
+      </div>
+
       <div>
-        <h1 className="text-3xl font-bold text-slate-800">{dashboardTitle}</h1>
-        <p className="text-slate-600 mt-1">{dashboardSubtitle}</p>
+        <h1 className="text-2xl font-bold text-slate-800">{dashboardTitle}</h1>
+        <p className="text-sm text-slate-500 mt-0.5">{dashboardSubtitle}</p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Staff</CardTitle>
+      <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <ChevronDown className="w-4 h-4 text-slate-400" />
+          <h2 className="text-base font-semibold text-slate-800">{selectedKPI}</h2>
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {KPI_OPTIONS.map((kpi) => (
+            <button
+              key={kpi}
+              onClick={() => setSelectedKPI(kpi)}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                selectedKPI === kpi
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {kpi}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="lg:col-span-4">
+          <RegionalGaugeCard
+            label={`Total Branch ${selectedKPI} Progress`}
+            yesterday={analytical.yesterdayTotal}
+            today={analytical.todayTotal}
+            difference={analytical.difference}
+            activeLabel={`Active Branch Staff Achievement`}
+            activeYesterday={analytical.activeYesterday}
+            activeToday={analytical.activeToday}
+            activeDifference={analytical.activeDifference}
+          />
+        </div>
+        <div className="lg:col-span-4 h-full">
+          <BranchIncrementalTable
+            title={`Total ${selectedKPI} of Staff Members in Branch`}
+            nameHeader="Staff_Name"
+            rows={analytical.breakdown}
+          />
+        </div>
+        <div className="lg:col-span-4 h-full">
+          <TopBranchesBarChart
+            title={`Top Staff Members by ${selectedKPI}`}
+            data={analytical.topPerformers}
+            barColor="#f97316"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Staff</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{data.totalStaff || 0}</div>
+            <div className="text-2xl font-bold text-slate-800">{data.totalStaff || 0}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">Mapped Accounts</CardTitle>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-slate-500 uppercase tracking-wider">Mapped Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{(data.mappedAccounts || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-slate-800">{(data.mappedAccounts || 0).toLocaleString()}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">Daily Deposit Target</CardTitle>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-slate-500 uppercase tracking-wider">Daily Deposit Target</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{(data.dailyDepositTarget || 0).toLocaleString()}</div>
-            <p className="text-xs text-slate-500 mt-1">Birr</p>
+            <div className="text-2xl font-bold text-slate-800">{(data.dailyDepositTarget || 0).toLocaleString()}</div>
+            <p className="text-[11px] text-slate-400 mt-0.5">Birr</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">Today's Achievement</CardTitle>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-slate-500 uppercase tracking-wider">Today's Achievement</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{(data.todayAchievement || 0).toLocaleString()}</div>
-            <p className="text-xs text-slate-500 mt-1">Birr ({data.todayAchievementPercent || data.achievementPercent || 0}%)</p>
+            <div className="text-2xl font-bold text-slate-800">{(data.todayAchievement || 0).toLocaleString()}</div>
+            <p className="text-[11px] text-slate-400 mt-0.5">Birr ({data.todayAchievementPercent || data.achievementPercent || 0}%)</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* KPI Visuals */}
-      <Card>
-        <CardHeader>
-          <CardTitle>KPI Performance</CardTitle>
+      <Card className="border border-slate-200 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-semibold text-slate-800">Pending Approvals</CardTitle>
+          {pendingTasks.length > 0 && (
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">{pendingTasks.length} Pending</Badge>
+          )}
         </CardHeader>
         <CardContent>
-          {data.kpiData && data.kpiData.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.kpiData.map((kpi: any) => (
-                <div key={kpi.name || kpi.category} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700">{kpi.name || kpi.category}</span>
-                    <span className="text-sm font-bold text-slate-800">{kpi.value || kpi.percent || 0}%</span>
-                  </div>
-                  <Progress value={kpi.value || kpi.percent || 0} className="h-3" />
-                  <div className="flex items-center gap-2 mt-2">
-                    <div
-                      className="h-16 w-16 rounded-full flex items-center justify-center text-lg font-bold"
-                      style={{
-                        background: `conic-gradient(from 0deg, #3b82f6 0% ${kpi.value || kpi.percent || 0}%, #e2e8f0 ${kpi.value || kpi.percent || 0}% 100%)`,
-                      }}
-                    >
-                      <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center">
-                        {kpi.value || kpi.percent || 0}%
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-500">Target: 100%</p>
-                      <p className="text-xs text-slate-500">Status: {(kpi.value || kpi.percent || 0) >= 80 ? 'On Track' : 'Needs Attention'}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-slate-500 py-8">No KPI data available</div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Supervisors Overview */}
-      {data.supervisors && data.supervisors.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Supervisors</CardTitle>
-          </CardHeader>
-          <CardContent>
+          {pendingTasks.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Team Size</TableHead>
-                  <TableHead>Mapped Accounts</TableHead>
-                  <TableHead>Avg KPI Achievement</TableHead>
+                  <TableHead className="text-xs">Staff Member</TableHead>
+                  <TableHead className="text-xs">Task Type</TableHead>
+                  <TableHead className="text-xs">Account No.</TableHead>
+                  <TableHead className="text-xs">Amount</TableHead>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.supervisors.map((sup: any) => (
-                  <TableRow key={sup.id || sup.name}>
-                    <TableCell className="font-medium">{sup.name}</TableCell>
-                    <TableCell>{sup.teamSize || 0}</TableCell>
-                    <TableCell>{sup.mappedAccounts || 0}</TableCell>
+                {pendingTasks.map((task: any) => (
+                  <TableRow key={task.id}>
+                    <TableCell className="font-medium text-xs text-slate-700">{task.submittedBy?.name || 'Staff'}</TableCell>
+                    <TableCell className="text-xs text-slate-500">{task.taskType?.replace(/_/g, ' ')}</TableCell>
+                    <TableCell className="text-xs font-mono text-slate-500">{task.accountNumber || 'N/A'}</TableCell>
+                    <TableCell className="text-xs text-slate-700">{task.amount ? `${task.amount.toLocaleString()} ETB` : '-'}</TableCell>
+                    <TableCell className="text-xs text-slate-500">{new Date(task.taskDate).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Badge variant={(sup.avgAchievement || 0) >= 80 ? 'success' : (sup.avgAchievement || 0) >= 60 ? 'warning' : 'destructive'}>
-                        {sup.avgAchievement || 0}%
+                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[11px]">
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                        Pending
                       </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Team Performance Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Staff Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Mapped Accounts</TableHead>
-                <TableHead>Deposit %</TableHead>
-                <TableHead>Digital %</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.teamPerformance && data.teamPerformance.length > 0 ? (
-                data.teamPerformance.map((member: any) => (
-                  <TableRow key={member._id || member.id || member.name}>
-                    <TableCell className="font-medium">{member.name}</TableCell>
-                    <TableCell>{member.role || member.position || 'N/A'}</TableCell>
-                    <TableCell>{member.mappedAccounts || 0}</TableCell>
-                    <TableCell>
-                      <Badge variant={member.overall >= 80 ? 'success' : member.overall >= 60 ? 'warning' : member.overall > 0 ? 'destructive' : 'outline'}>
-                        {member.target ? Math.round((member.actual / member.target) * 100) : 0}%
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {member.digitalTasks > 0 ? (
-                        <Badge variant="success">{member.digitalTasks} tasks</Badge>
-                      ) : (
-                        <span className="text-slate-400 text-sm">0</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{member.status === 'good' ? '✅' : member.status === 'warning' ? '⚠️' : '❌'}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
-                    No team performance data available
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Pending Approvals */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Approvals</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {pendingTasks.length > 0 ? (
-            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-md">
-              <AlertCircle className="h-5 w-5 text-amber-600" />
-              <div>
-                <p className="text-sm font-medium text-amber-900">
-                  {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} awaiting your approval
-                </p>
-                <p className="text-xs text-amber-700 mt-1">Review and approve pending submissions</p>
-              </div>
-            </div>
           ) : (
-            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-md">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-green-900">No pending approvals</p>
-                <p className="text-xs text-green-700 mt-1">All tasks have been processed</p>
-              </div>
+            <div className="flex flex-col items-center justify-center py-6 text-slate-400">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
+              <p className="font-medium text-slate-600 text-sm">No pending approvals</p>
+              <p className="text-xs">All submitted tasks have been processed.</p>
             </div>
           )}
         </CardContent>
@@ -259,4 +222,3 @@ export function BranchManagerDashboard() {
     </div>
   );
 }
-

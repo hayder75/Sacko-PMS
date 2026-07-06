@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
+import { ConfigProvider } from './contexts/ConfigContext';
 import { mapBackendRoleToFrontend } from './lib/roleMapper';
 import { MainLayout } from './components/layout/MainLayout';
 import { Login } from './pages/Login';
@@ -34,6 +35,8 @@ import { BehavioralEvaluation } from './pages/BehavioralEvaluation';
 import { BehavioralInput } from './pages/BehavioralInput';
 import { BulkMappingUpload } from './pages/BulkMappingUpload';
 import { MappedAccounts } from './pages/MappedAccounts';
+import { SupervisorApprovals } from './pages/SupervisorApprovals';
+
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
   const { isAuthenticated, isLoading, role } = useUser();
@@ -89,7 +92,7 @@ function AppRoutes() {
       <Route path="/dashboard/supervisor" element={<ProtectedRoute allowedRoles={['supervisor']}><SupervisorDashboard /></ProtectedRoute>} />
       <Route path="/dashboard/staff" element={<ProtectedRoute allowedRoles={['staff']}><StaffDashboard /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute allowedRoles={['staff', 'supervisor']}><Tasks /></ProtectedRoute>} />
-      <Route path="/tasks/new" element={<ProtectedRoute allowedRoles={['staff']}><TaskEntryForm /></ProtectedRoute>} />
+      <Route path="/tasks/new" element={<ProtectedRoute allowedRoles={['staff', 'supervisor']}><TaskEntryForm /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/mapping" element={<ProtectedRoute allowedRoles={['admin', 'branchManager', 'supervisor']}><MappingManagement /></ProtectedRoute>} />
       <Route path="/bulk-mapping-upload" element={<ProtectedRoute allowedRoles={['branchManager']}><BulkMappingUpload /></ProtectedRoute>} />
@@ -109,12 +112,14 @@ function AppRoutes() {
       <Route path="/competency-framework" element={<ProtectedRoute allowedRoles={['admin']}><CompetencyFramework /></ProtectedRoute>} />
       <Route path="/routes" element={<ProtectedRoute allowedRoles={['admin', 'areaManager', 'branchManager', 'supervisor', 'staff']}><RoutesGuide /></ProtectedRoute>} />
       <Route path="/area-performance" element={<ProtectedRoute allowedRoles={['areaManager']}><AreaPerformance /></ProtectedRoute>} />
-      <Route path="/branch-monitoring" element={<ProtectedRoute allowedRoles={['areaManager']}><BranchMonitoring /></ProtectedRoute>} />
+      <Route path="/branch-monitoring" element={<ProtectedRoute allowedRoles={['areaManager', 'branchManager']}><BranchMonitoring /></ProtectedRoute>} />
       <Route path="/behavioral-evaluation" element={<ProtectedRoute allowedRoles={['admin', 'areaManager', 'branchManager', 'supervisor']}><BehavioralEvaluation /></ProtectedRoute>} />
       <Route path="/behavioral-input" element={<ProtectedRoute allowedRoles={['supervisor']}><BehavioralInput /></ProtectedRoute>} />
+      <Route path="/approvals" element={<ProtectedRoute allowedRoles={['supervisor', 'branchManager']}><SupervisorApprovals /></ProtectedRoute>} />
       <Route path="/june-balance-import" element={<ProtectedRoute allowedRoles={['admin']}><JuneBalanceImport /></ProtectedRoute>} />
       <Route path="/product-mapping" element={<ProtectedRoute allowedRoles={['admin']}><ProductMapping /></ProtectedRoute>} />
       <Route path="/mapped-accounts" element={<ProtectedRoute allowedRoles={['branchManager', 'supervisor', 'staff']}><MappedAccounts /></ProtectedRoute>} />
+
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
@@ -123,12 +128,14 @@ function AppRoutes() {
 function App() {
   return (
     <UserProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/*" element={<MainLayout><AppRoutes /></MainLayout>} />
-        </Routes>
-      </BrowserRouter>
+      <ConfigProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/*" element={<MainLayout><AppRoutes /></MainLayout>} />
+          </Routes>
+        </BrowserRouter>
+      </ConfigProvider>
     </UserProvider>
   );
 }

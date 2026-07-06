@@ -69,7 +69,8 @@ export const cascadePlanToStaff = async (branchPlan) => {
 
     const grouped = {};
     for (const s of allStaff) {
-      const group = POSITION_GROUP[s.position];
+      const normalizedPosition = s.position.replace(/_/g, ' ');
+      const group = POSITION_GROUP[normalizedPosition];
       if (!group) continue;
       if (!grouped[group]) grouped[group] = [];
       grouped[group].push(s);

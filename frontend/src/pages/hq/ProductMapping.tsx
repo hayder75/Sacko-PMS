@@ -192,7 +192,7 @@ export function ProductMapping() {
                   <div>
                     <p className="font-semibold text-slate-800">{product.productName}</p>
                     <p className="text-xs text-slate-600">
-                      {product.accountCount} accounts • {product.totalBalance.toLocaleString()} ETB
+                      {product.accountCount ?? 0} accounts • {(product.totalBalance ?? 0).toLocaleString()} ETB
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

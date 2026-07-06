@@ -49,7 +49,7 @@ export function Login() {
     return acc;
   }, {});
 
-  const roleOrder = ['CEO', 'Area_Manager', 'Branch_Manager', 'Operation_Supervisor', 'Customer_Relationship_Supervisor', 'Customer_Service_Officer_I', 'Customer_Service_Officer_II', 'Sales_Marketing_Officer_I', 'Customer_Relationship_Officer_I', 'Internal_Auditor'];
+  const roleOrder = ['CEO', 'Area Manager', 'Branch Manager', 'Operation Supervisor', 'Customer Relationship Supervisor', 'Customer Service Officer I', 'Customer Service Officer II', 'Sales & Marketing Officer I', 'Customer Relationship Officer I', 'Internal Auditor'];
 
   const selectUser = (user: any) => {
     setSelectedUser(user);

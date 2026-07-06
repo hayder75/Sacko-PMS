@@ -3,11 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { dashboardAPI } from '@/lib/api';
+import { useUser } from '@/contexts/UserContext';
+import { Home, Building2, Users, Target } from 'lucide-react';
 
 export function AreaPerformance() {
+  const { user } = useUser();
   const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -15,124 +19,163 @@ export function AreaPerformance() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const response = await dashboardAPI.getArea();
       if (response.success) {
         setData(response.data);
       }
     } catch (error) {
       console.error('Error loading area performance:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const areas = data?.areas || [];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-slate-500">Loading area performance...</div>
+      </div>
+    );
+  }
 
-  const chartData = areas.map((area: any) => ({
-    name: area.name,
-    achievement: area.achievement || 0,
+  const branches = data?.branches || [];
+  const avgAchievement = data?.avgBranchAchievement || 0;
+  const staffCount = data?.staffCount || 0;
+  const branchCount = data?.branchCount || 0;
+
+  const chartData = branches.map((b: any) => ({
+    name: b.name,
+    achievement: b.achievement || 0,
   }));
 
+  const getStatus = (achievement: number) => {
+    if (achievement >= 80) return { label: 'Good', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    if (achievement >= 60) return { label: 'On Track', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+    if (achievement > 0) return { label: 'Needs Attention', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+    return { label: 'No Data', color: 'bg-slate-100 text-slate-500 border-slate-200' };
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <div className="flex items-center justify-between bg-white px-4 py-2.5 border border-slate-200 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+          <Home className="w-3.5 h-3.5 text-slate-400" />
+          <span>Home / Area Performance / {user?.branchId?.name || user?.area?.name || user?.areaId?.name || 'My Area'}</span>
+        </div>
+        <div className="text-xs text-slate-400">
+          {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
+      </div>
+
       <div>
-        <h1 className="text-3xl font-bold text-slate-800">Area Performance</h1>
-        <p className="text-slate-600 mt-2">Regional overview of all areas under your management</p>
+        <h1 className="text-2xl font-bold text-slate-800">Area Performance</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          {branches.length > 0
+            ? `${branches.length} branches under ${user?.branchId?.name || user?.area?.name || user?.areaId?.name || 'your area'}`
+            : 'No branches assigned to your area'}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-600">Total Areas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{areas.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-600">Total Branches</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {areas.length > 0 ? areas.reduce((sum: number, area: any) => sum + (area.branches || 0), 0) : 0}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-50">
+              <Building2 className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Branches</p>
+              <p className="text-2xl font-bold text-slate-800">{branchCount}</p>
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-600">Average Achievement</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {areas.length > 0 ? Math.round(areas.reduce((sum: number, area: any) => sum + (area.achievement || 0), 0) / areas.length) : 0}%
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-indigo-50">
+              <Users className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Staff</p>
+              <p className="text-2xl font-bold text-slate-800">{staffCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-50">
+              <Target className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Average Achievement</p>
+              <p className="text-2xl font-bold text-slate-800">{avgAchievement}%</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Area Performance Chart</CardTitle>
+      <Card className="border border-slate-200 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold text-slate-800">Branch Performance Comparison</CardTitle>
         </CardHeader>
         <CardContent>
           {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="achievement" fill="#3b82f6" />
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                <Tooltip
+                  formatter={(val: number) => [`${val}%`, 'Achievement']}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                />
+                <Bar dataKey="achievement" fill="#f97316" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center text-slate-500 py-16">No area performance data available</div>
+            <div className="text-center py-10 text-slate-400 text-sm">No branch performance data available</div>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Area Details</CardTitle>
+      <Card className="border border-slate-200 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold text-slate-800">Branch Details</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Area Name</TableHead>
-                <TableHead>Branches</TableHead>
-                <TableHead>Achievement</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="text-xs">Branch Name</TableHead>
+                <TableHead className="text-xs">Staff</TableHead>
+                <TableHead className="text-xs">Achievement</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {areas.length > 0 ? (
-                areas.map((area: any, index: number) => {
-                  const achievement = area.achievement || 0;
-                  const statusColor = achievement >= 80 ? 'bg-green-100 text-green-800' : achievement >= 60 ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800';
-                  const statusLabel = achievement >= 80 ? 'Good' : achievement >= 60 ? 'Average' : 'Needs Improvement';
+              {branches.length > 0 ? (
+                branches.map((branch: any, index: number) => {
+                  const ach = branch.achievement || 0;
+                  const status = getStatus(ach);
                   return (
-                    <TableRow key={area.id || index}>
-                      <TableCell className="font-medium">{area.name}</TableCell>
-                      <TableCell>{area.branches || 0}</TableCell>
+                    <TableRow key={branch.id || index}>
+                      <TableCell className="font-medium text-sm text-slate-700">{branch.name}</TableCell>
+                      <TableCell className="text-sm text-slate-500">{branch.staff || 0}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Progress value={achievement} className="w-24" />
-                          <span className="text-sm font-medium">{achievement}%</span>
+                          <Progress value={ach} className="w-20 h-1.5" />
+                          <span className="text-sm font-semibold text-slate-700">{ach}%</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusColor}>{statusLabel}</Badge>
+                        <Badge variant="outline" className={`${status.color} text-xs`}>{status.label}</Badge>
                       </TableCell>
                     </TableRow>
                   );
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-slate-500 py-8">
-                    No area data available
+                  <TableCell colSpan={4} className="text-center text-slate-400 py-8 text-sm">
+                    No branches assigned to your area
                   </TableCell>
                 </TableRow>
               )}

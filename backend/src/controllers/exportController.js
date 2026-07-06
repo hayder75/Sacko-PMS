@@ -49,7 +49,7 @@ export const exportBranchReport = asyncHandler(async (req, res) => {
 
   const branch = await prisma.branch.findUnique({
     where: { id: branchId },
-    include: { region: { select: { name: true } }, area: { select: { name: true } } },
+    include: { area: { select: { name: true } } },
   });
 
   if (!branch) {
@@ -92,7 +92,7 @@ export const exportBranchReport = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     data: {
-      branch: { name: branch.name, code: branch.code, region: branch.region?.name, area: branch.area?.name },
+      branch: { name: branch.name, code: branch.code, area: branch.area?.name },
       staffCount: staff.length,
       staffScores,
     },

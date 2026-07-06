@@ -4,7 +4,7 @@ import { KPI_CATEGORY_TO_ENUM, TASK_TYPE_TO_ENUM } from './prismaHelpers.js';
 /**
  * Calculate incremental growth for a user in a given period
  * Growth = current_balance - june_balance
- * Only accounts with current_balance ≥ 500 ETB count
+ * Only accounts with current_balance ≥ 1,000 ETB count
  */
 export const calculateIncrementalGrowth = async (userId, branch_code, kpi_category, period) => {
   try {
@@ -13,7 +13,7 @@ export const calculateIncrementalGrowth = async (userId, branch_code, kpi_catego
       where: {
         mappedToId: userId,
         status: 'Active',
-        current_balance: { gte: 500 }, // Only active accounts ≥ 500 ETB
+        current_balance: { gte: 1000 }, // Only active accounts ≥ 1,000 ETB
       },
     });
 
@@ -79,13 +79,12 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
 
       if (kpi_category === 'Deposit_Mobilization') {
         actualGrowth = await calculateIncrementalGrowth(userId, branch_code, kpi_category, period);
-      } else if (kpi_category === 'Digital_Channel_Growth') {
+      } else if (kpi_category === 'Mobile_Banking_Users') {
         actualGrowth = await prisma.dailyTask.count({
           where: {
             submittedById: userId,
-            taskType: 'Digital_Activation',
+            taskType: 'Mobile_Banking_Activation',
             approvalStatus: 'Approved',
-            cbsValidated: true,
           }
         });
       } else if (kpi_category === 'New_Member_Registration') {
@@ -94,7 +93,6 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
             submittedById: userId,
             taskType: 'New_Member_Registration',
             approvalStatus: 'Approved',
-            cbsValidated: true,
           }
         });
       } else if (kpi_category === 'New_Account_Opening') {
@@ -103,20 +101,16 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
             submittedById: userId,
             taskType: 'New_Account_Opening',
             approvalStatus: 'Approved',
-            cbsValidated: true,
           }
         });
       } else if (kpi_category === 'Account_Productivity') {
-        const tasks = await prisma.dailyTask.findMany({
+        actualGrowth = await prisma.dailyTask.count({
           where: {
             submittedById: userId,
-            taskType: 'Loan_Follow_up',
+            taskType: 'Account_Productivity',
             approvalStatus: 'Approved',
-            cbsValidated: true,
           },
-          select: { amount: true }
         });
-        actualGrowth = tasks.reduce((sum, task) => sum + (task.amount || 0), 0);
       } else if (kpi_category === 'Share_Capital_Growth') {
         actualGrowth = await prisma.dailyTask.count({
           where: {
@@ -126,20 +120,50 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
             cbsValidated: true,
           }
         });
+      } else if (kpi_category === 'Merchant_POS_Growth') {
+        actualGrowth = await prisma.dailyTask.count({
+          where: {
+            submittedById: userId,
+            taskType: 'Merchant_POS_Activation',
+            approvalStatus: 'Approved',
+          }
+        });
+      } else if (kpi_category === 'Billers_Recruitment') {
+        actualGrowth = await prisma.dailyTask.count({
+          where: {
+            submittedById: userId,
+            taskType: 'Biller_Recruitment',
+            approvalStatus: 'Approved',
+          }
+        });
+      } else if (kpi_category === 'Internal_Operations') {
+        actualGrowth = await prisma.dailyTask.count({
+          where: {
+            submittedById: userId,
+            taskType: { in: ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'] },
+            approvalStatus: 'Approved',
+          }
+        });
       }
 
       // Calculate percentage and score
       const percent = individual_target > 0 ? (actualGrowth / individual_target) * 100 : 0;
 
-      // KPI weight (85% total, distributed by category)
-      const weights = {
-        'Deposit_Mobilization': 25,
-        'Digital_Channel_Growth': 20,
-        'Account_Productivity': 20,
-        'New_Account_Opening': 15,
-        'New_Member_Registration': 10,
-        'Share_Capital_Growth': 10,
-      };
+      // KPI weight (sums to 100, then scaled to 85% of final score)
+      const config = await prisma.kpiFrameworkConfig.findMany();
+      const weights = {};
+      for (const c of config) {
+        weights[c.kpiId] = c.weight;
+      }
+      // Fallback if no config exists yet
+      if (Object.keys(weights).length === 0) {
+        const defaultWeights = {
+          'Account_Productivity': 30, 'Deposit_Mobilization': 24, 'Internal_Operations': 12,
+          'Share_Capital_Growth': 9, 'New_Member_Registration': 6, 'New_Account_Opening': 6,
+          'Mobile_Banking_Users': 5, 'Billers_Recruitment': 5, 'Merchant_POS_Growth': 3,
+        };
+        Object.assign(weights, defaultWeights);
+      }
 
       const weight = weights[kpi_category] || 0;
       const categoryScore = (percent / 100) * weight;
@@ -164,6 +188,113 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
     };
   } catch (error) {
     throw new Error(`KPI calculation error: ${error.message}`);
+  }
+};
+
+/**
+ * Calculate KPI score for a Branch Manager based on aggregated branch performance
+ * BM achievement = sum of all staff's achievement vs branch plan target
+ */
+export const calculateBranchKPIScore = async (branch_code, period) => {
+  try {
+    const branch = await prisma.branch.findFirst({ where: { code: branch_code } });
+    if (!branch) throw new Error(`Branch not found: ${branch_code}`);
+
+    // Get all branch plans for this period
+    const branchPlans = await prisma.plan.findMany({
+      where: { branch_code, period, status: 'Active' },
+    });
+
+    if (!branchPlans || branchPlans.length === 0) {
+      throw new Error('No branch plans found for this period');
+    }
+
+    // Get all staff in branch (excluding BM themselves)
+    const staff = await prisma.user.findMany({
+      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'supervisor'] } },
+    });
+    const staffIds = staff.map(s => s.id);
+
+    const kpiScores = {};
+    let totalScorePoints = 0;
+
+    const config = await prisma.kpiFrameworkConfig.findMany();
+    const weights = {};
+    for (const c of config) {
+      weights[c.kpiId] = c.weight;
+    }
+    if (Object.keys(weights).length === 0) {
+      Object.assign(weights, {
+        'Account_Productivity': 30, 'Deposit_Mobilization': 24, 'Internal_Operations': 12,
+        'Share_Capital_Growth': 9, 'New_Member_Registration': 6, 'New_Account_Opening': 6,
+        'Mobile_Banking_Users': 5, 'Billers_Recruitment': 5, 'Merchant_POS_Growth': 3,
+      });
+    }
+
+    const KPI_TASK_TYPES = {
+      'Account_Productivity': ['Account_Productivity'],
+      'New_Member_Registration': ['New_Member_Registration'],
+      'New_Account_Opening': ['New_Account_Opening'],
+      'Share_Capital_Growth': ['Share_Capital'],
+      'Mobile_Banking_Users': ['Mobile_Banking_Activation'],
+      'Merchant_POS_Growth': ['Merchant_POS_Activation'],
+      'Billers_Recruitment': ['Biller_Recruitment'],
+      'Internal_Operations': ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
+    };
+
+    for (const plan of branchPlans) {
+      const { kpi_category, target_value } = plan;
+      let actualGrowth = 0;
+
+      if (kpi_category === 'Deposit_Mobilization') {
+        actualGrowth = await calculateBranchDepositGrowth(branch_code, period);
+      } else {
+        const taskTypes = KPI_TASK_TYPES[kpi_category] || [];
+        if (taskTypes.length > 0) {
+          if (kpi_category === 'Share_Capital_Growth') {
+            actualGrowth = await prisma.dailyTask.count({
+              where: {
+                submittedById: { in: staffIds },
+                taskType: { in: taskTypes },
+                approvalStatus: 'Approved',
+                cbsValidated: true,
+              }
+            });
+          } else {
+            actualGrowth = await prisma.dailyTask.count({
+              where: {
+                submittedById: { in: staffIds },
+                taskType: { in: taskTypes },
+                approvalStatus: 'Approved',
+              }
+            });
+          }
+        }
+      }
+
+      const percent = target_value > 0 ? (actualGrowth / target_value) * 100 : 0;
+      const weight = weights[kpi_category] || 0;
+      const categoryScore = (percent / 100) * weight;
+
+      kpiScores[kpi_category] = {
+        target: target_value,
+        actual: actualGrowth,
+        percent: Math.round(percent * 100) / 100,
+        weight: weight,
+        score: Math.round(categoryScore * 100) / 100,
+      };
+
+      totalScorePoints += categoryScore;
+    }
+
+    const kpiTotalScore = (totalScorePoints / 100) * 85;
+
+    return {
+      kpiScores,
+      kpiTotalScore: Math.round(kpiTotalScore * 100) / 100,
+    };
+  } catch (error) {
+    throw new Error(`Branch KPI calculation error: ${error.message}`);
   }
 };
 
@@ -201,7 +332,7 @@ export const calculateBranchDepositGrowth = async (branch_code, period) => {
       where: {
         branchId: branch.id,
         status: 'Active',
-        current_balance: { gte: 500 },
+        current_balance: { gte: 1000 },
         OR: [
           { accountNumber: { in: accountIds } },
           { accountNumber: { in: accountNumbers } }
@@ -237,7 +368,7 @@ export const calculateBranchDigitalGrowth = async (branch_code, period) => {
       where: {
         branch_code,
         status: 'Active',
-        kpi_category: 'Digital_Channel_Growth'
+        kpi_category: 'Mobile_Banking_Users'
       }
     });
 

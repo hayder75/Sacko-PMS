@@ -4,6 +4,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { dashboardAPI } from '@/lib/api';
+import { RegionalGaugeCard } from '@/components/dashboard/RegionalGaugeCard';
+import { BranchIncrementalTable } from '@/components/dashboard/BranchIncrementalTable';
+import { TopBranchesBarChart } from '@/components/dashboard/TopBranchesBarChart';
+import { ChevronDown, Home } from 'lucide-react';
 
 const getHeatColor = (value: number) => {
   if (value >= 100) return '#059669';
@@ -12,23 +16,32 @@ const getHeatColor = (value: number) => {
   return '#dc2626';
 };
 
+const KPI_OPTIONS = [
+  'Deposit Mobilization',
+  'Digital Channel Growth',
+  'New Member Registration',
+  'Share Capital Growth',
+  'Account Productivity',
+];
+
 export function CEODashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedKPI, setSelectedKPI] = useState('Deposit Mobilization');
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    loadDashboardData(selectedKPI);
+  }, [selectedKPI]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (kpiCategory?: string) => {
     try {
       setLoading(true);
-      const response = await dashboardAPI.getHQ();
+      const response = await dashboardAPI.getHQ(kpiCategory || selectedKPI);
       if (response.success) {
         setDashboardData(response.data);
       }
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      console.error('Error loading CEO dashboard:', error);
     } finally {
       setLoading(false);
     }
@@ -37,96 +50,146 @@ export function CEODashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-slate-600">Loading dashboard...</div>
+        <div className="text-slate-500 font-medium">Loading CEO Dashboard...</div>
       </div>
     );
   }
 
-  const hqData = dashboardData || {
-    totalBranches: 0,
-    totalStaff: 0,
-    avgPlanAchievement: 0,
-    cbsValidationRate: 0,
-    branchKPIHeatmap: [],
-    performanceDistribution: [],
-    topBranches: [],
-    bottomBranches: [],
-    activityFeed: [],
+  const hqData = dashboardData || {};
+  const analytical = hqData.analyticalData || {
+    yesterdayTotal: 0, todayTotal: 0, difference: 0,
+    activeYesterday: 0, activeToday: 0, activeDifference: 0,
+    breakdown: [], topPerformers: [],
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-800">Ghion SACCOS CEO Dashboard</h1>
-        <p className="text-slate-600 mt-1">Overview of all branches and performance metrics</p>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between bg-white px-4 py-2.5 border border-slate-200 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+          <Home className="w-3.5 h-3.5 text-slate-400" />
+          <span>Home / National SACCOS Performance / CEO HQ View</span>
+        </div>
+        <div className="text-xs text-slate-400">
+          Updated: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Branches</CardTitle>
+      <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <ChevronDown className="w-4 h-4 text-slate-400" />
+          <h2 className="text-base font-semibold text-slate-800">{selectedKPI}</h2>
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {KPI_OPTIONS.map((kpi) => (
+            <button
+              key={kpi}
+              onClick={() => setSelectedKPI(kpi)}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                selectedKPI === kpi
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {kpi}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="lg:col-span-4">
+          <RegionalGaugeCard
+            label={`Total ${selectedKPI} Subscribers as a Region`}
+            yesterday={analytical.yesterdayTotal}
+            today={analytical.todayTotal}
+            difference={analytical.difference}
+            activeLabel={`Active ${selectedKPI} Subscribers as a Region`}
+            activeYesterday={analytical.activeYesterday}
+            activeToday={analytical.activeToday}
+            activeDifference={analytical.activeDifference}
+          />
+        </div>
+        <div className="lg:col-span-4 h-full">
+          <BranchIncrementalTable
+            title={`Total ${selectedKPI} of Branches under HQ`}
+            nameHeader="BranchName"
+            rows={analytical.breakdown}
+          />
+        </div>
+        <div className="lg:col-span-4 h-full">
+          <TopBranchesBarChart
+            title={`Top 10 Branches by Total ${selectedKPI}`}
+            data={analytical.topPerformers}
+            barColor="#f97316"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Active Branches</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{hqData.totalBranches}</div>
+            <div className="text-2xl font-bold text-slate-800">{hqData.totalBranches || 0}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Staff</CardTitle>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Staff Members</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{hqData.totalStaff?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold text-slate-800">{hqData.totalStaff?.toLocaleString() || 0}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">Avg. Plan Achievement</CardTitle>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-slate-500 uppercase tracking-wider">Avg. Plan Achievement</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{hqData.avgPlanAchievement != null ? (hqData.avgPlanAchievement * 100).toFixed(0) : 0}%</div>
+            <div className="text-2xl font-bold text-slate-800">
+              {hqData.avgPlanAchievement != null ? `${(hqData.avgPlanAchievement).toFixed(0)}%` : '0%'}
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">CBS Validation Rate</CardTitle>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-slate-500 uppercase tracking-wider">CBS Validation Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">{hqData.cbsValidationRate ?? 0}%</div>
+            <div className="text-2xl font-bold text-slate-800">{hqData.cbsValidationRate ?? 0}%</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Branch KPI Achievement Heatmap */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Branch KPI Achievement Heatmap</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-slate-800">Branch KPI Achievement Heatmap</CardTitle>
           </CardHeader>
           <CardContent>
             {hqData.branchKPIHeatmap && hqData.branchKPIHeatmap.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
+                <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-primary-100">
-                      <th className="text-left p-3 font-semibold text-slate-600">Branch</th>
-                      <th className="text-center p-3 font-semibold text-slate-600">Deposit %</th>
-                      <th className="text-center p-3 font-semibold text-slate-600">Digital %</th>
-                      <th className="text-center p-3 font-semibold text-slate-600">Loan %</th>
-                      <th className="text-center p-3 font-semibold text-slate-600">Customer %</th>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="text-left p-2 font-medium text-slate-500">Branch</th>
+                      <th className="text-center p-2 font-medium text-slate-500">Deposit %</th>
+                      <th className="text-center p-2 font-medium text-slate-500">Digital %</th>
+                      <th className="text-center p-2 font-medium text-slate-500">Loan %</th>
+                      <th className="text-center p-2 font-medium text-slate-500">Customer %</th>
                     </tr>
                   </thead>
                   <tbody>
                     {hqData.branchKPIHeatmap.map((branch: any) => (
-                      <tr key={branch.branchId} className="border-b border-primary-50 hover:bg-primary-50/50 transition-colors">
-                        <td className="p-3 font-medium text-slate-800">{branch.branch}</td>
-                        {['deposit', 'digital', 'loan', 'customer'].map(kpi => {
+                      <tr key={branch.branchId} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="p-2 font-medium text-slate-700">{branch.branch}</td>
+                        {['deposit', 'digital', 'loan', 'customer'].map((kpi) => {
                           const val = branch[kpi] ?? 0;
                           return (
-                            <td key={kpi} className="p-2">
+                            <td key={kpi} className="p-1">
                               <div
-                                className="text-center py-2 px-3 font-bold text-white"
+                                className="text-center py-1 px-2 font-semibold text-white rounded"
                                 style={{ backgroundColor: getHeatColor(val) }}
                               >
                                 {val}%
@@ -140,148 +203,122 @@ export function CEODashboard() {
                 </table>
               </div>
             ) : (
-              <div className="text-center text-slate-500 py-16">No branch KPI data available</div>
+              <div className="text-center text-slate-400 py-8 text-sm">No branch heatmap available</div>
             )}
           </CardContent>
         </Card>
 
-        {/* Performance Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Performance Distribution</CardTitle>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-slate-800">Performance Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             {hqData.performanceDistribution && hqData.performanceDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={hqData.performanceDistribution} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="rating" type="category" width={120} />
-                  <Tooltip />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis dataKey="rating" type="category" width={110} tick={{ fontSize: 11, fill: '#64748b' }} />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]} fill="#2563eb">
                     {hqData.performanceDistribution.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={getHeatColor(entry.count / 10)} />
+                      <Cell key={`cell-${index}`} fill={getHeatColor(entry.count * 20)} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-center text-slate-500 py-16">No performance distribution data available</div>
+              <div className="text-center text-slate-400 py-8 text-sm">No distribution data</div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Top & Bottom Branches */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Top 5 Branches</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-slate-800">Top 5 Branches</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                  <TableRow>
-                    <TableHead>Branch</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Actual</TableHead>
-                    <TableHead>%</TableHead>
-                    <TableHead>Rating</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {hqData.topBranches && hqData.topBranches.length > 0 ? (
-                    hqData.topBranches.map((b: any) => (
-                      <TableRow key={b.branch || b.id}>
-                        <TableCell className="font-medium">{b.branch || b.name}</TableCell>
-                        <TableCell>{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
-                      <TableCell>{b.actual?.toLocaleString() || '0'}</TableCell>
-                      <TableCell>
-                        <Badge variant={(b.percent ?? 0) >= 80 ? 'success' : 'warning'}>
+                <TableRow>
+                  <TableHead className="text-xs">Branch</TableHead>
+                  <TableHead className="text-xs">Target</TableHead>
+                  <TableHead className="text-xs">Actual</TableHead>
+                  <TableHead className="text-xs">%</TableHead>
+                  <TableHead className="text-xs">Rating</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {hqData.topBranches && hqData.topBranches.length > 0 ? (
+                  hqData.topBranches.map((b: any) => (
+                    <TableRow key={b.branch || b.id}>
+                      <TableCell className="font-medium text-xs text-slate-700">{b.branch || b.name}</TableCell>
+                      <TableCell className="text-xs text-slate-500">{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
+                      <TableCell className="text-xs text-slate-700">{b.actual?.toLocaleString() || '0'}</TableCell>
+                      <TableCell className="text-xs">
+                        <Badge className={(b.percent ?? 0) >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
                           {b.percent ?? 0}%
                         </Badge>
                       </TableCell>
-                      <TableCell>{b.rating || 'N/A'}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600">{b.rating || 'N/A'}</TableCell>
                     </TableRow>
                   ))
                 ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                        No top branches data available
-                      </TableCell>
-                    </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-slate-400 py-6 text-xs">
+                      No top branch data available
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Bottom 5 Branches</CardTitle>
+        <Card className="border border-slate-200 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-slate-800">Bottom 5 Branches</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead>Actual</TableHead>
-                  <TableHead>%</TableHead>
-                  <TableHead>Rating</TableHead>
+                  <TableHead className="text-xs">Branch</TableHead>
+                  <TableHead className="text-xs">Target</TableHead>
+                  <TableHead className="text-xs">Actual</TableHead>
+                  <TableHead className="text-xs">%</TableHead>
+                  <TableHead className="text-xs">Rating</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {hqData.bottomBranches && hqData.bottomBranches.length > 0 ? (
                   hqData.bottomBranches.map((b: any) => (
                     <TableRow key={b.branch || b.id}>
-                      <TableCell className="font-medium">{b.branch || b.name}</TableCell>
-                      <TableCell>{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
-                      <TableCell>{b.actual?.toLocaleString() || '0'}</TableCell>
-                      <TableCell>
-                        <Badge variant={(b.percent ?? 0) < 60 ? 'destructive' : 'warning'}>
+                      <TableCell className="font-medium text-xs text-slate-700">{b.branch || b.name}</TableCell>
+                      <TableCell className="text-xs text-slate-500">{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
+                      <TableCell className="text-xs text-slate-700">{b.actual?.toLocaleString() || '0'}</TableCell>
+                      <TableCell className="text-xs">
+                        <Badge className={(b.percent ?? 0) < 60 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'}>
                           {b.percent ?? 0}%
                         </Badge>
                       </TableCell>
-                      <TableCell>{b.rating || 'N/A'}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600">{b.rating || 'N/A'}</TableCell>
                     </TableRow>
                   ))
                 ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                        No bottom branches data available
-                      </TableCell>
-                    </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-slate-400 py-6 text-xs">
+                      No bottom branch data available
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Activity Feed */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity Feed</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {hqData.activityFeed && hqData.activityFeed.length > 0 ? (
-              hqData.activityFeed.map((activity: any) => (
-                <div key={activity.id || activity._id} className="flex items-start gap-3 pb-4 border-b border-slate-200 last:border-0">
-                  <div className="h-2 w-2 rounded-full bg-blue-500 mt-2" />
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-800">{activity.message || activity.description}</p>
-                    <p className="text-xs text-slate-500 mt-1">{activity.time || activity.createdAt || 'N/A'}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-slate-500 py-8">No recent activity</div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

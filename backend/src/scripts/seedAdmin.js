@@ -23,54 +23,6 @@ const seedAdmin = async () => {
       process.exit(0);
     }
 
-    // Create a sample region
-    let region = await prisma.region.findUnique({
-      where: { code: 'SOUTH' },
-    });
-
-    if (!region) {
-      region = await prisma.region.create({
-        data: {
-          name: 'South Region',
-          code: 'SOUTH',
-        },
-      });
-      console.log('✅ Created South Region');
-    }
-
-    // Create a sample area
-    let area = await prisma.area.findUnique({
-      where: { code: 'HAWASSA_AREA' },
-    });
-
-    if (!area) {
-      area = await prisma.area.create({
-        data: {
-          name: 'Hawassa Area',
-          code: 'HAWASSA_AREA',
-          regionId: region.id,
-        },
-      });
-      console.log('✅ Created Hawassa Area');
-    }
-
-    // Create a sample branch
-    let branch = await prisma.branch.findUnique({
-      where: { code: 'HAWASSA_MAIN' },
-    });
-
-    if (!branch) {
-      branch = await prisma.branch.create({
-        data: {
-          name: 'Hawassa Main Branch',
-          code: 'HAWASSA_MAIN',
-          regionId: region.id,
-          areaId: area.id,
-        },
-      });
-      console.log('✅ Created Hawassa Main Branch');
-    }
-
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('admin123', salt);
@@ -84,8 +36,6 @@ const seedAdmin = async () => {
         password: hashedPassword,
         role: 'admin',
         position: 'Branch_Manager',
-        branchId: branch.id,
-        branch_code: branch.code,
         isActive: true,
       },
     });

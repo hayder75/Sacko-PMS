@@ -19,13 +19,11 @@ const defaultCompetencies = [
 ];
 
 const roleWeights = [
-  { role: 'staff', label: 'Staff / MSO', competencies: 'All 8', weight: 15, note: 'All competencies apply at 100%' },
-  { role: 'subTeamLeader', label: 'Accountant', competencies: 'All 8', weight: 15, note: 'Leadership and Communication emphasized' },
-  { role: 'lineManager', label: 'Line Manager (MSM)', competencies: 'All 8', weight: 15, note: 'Leadership, Problem Solving emphasized' },
+  { role: 'staff', label: 'Staff', competencies: 'All 8', weight: 15, note: 'All competencies apply at 100%' },
+  { role: 'supervisor', label: 'Supervisor', competencies: 'All 8', weight: 15, note: 'Leadership and Communication emphasized' },
   { role: 'branchManager', label: 'Branch Manager', competencies: 'All 8', weight: 15, note: 'Leadership, Customer Focus emphasized' },
   { role: 'areaManager', label: 'Area Manager', competencies: 'All 8', weight: 15, note: 'Leadership, Adaptability emphasized' },
-  { role: 'regionalDirector', label: 'Regional Director', competencies: 'All 8', weight: 15, note: 'All competencies at senior level' },
-  { role: 'admin', label: 'Admin / HQ', competencies: 'All 8', weight: 15, note: 'Full competency framework applies' },
+  { role: 'admin', label: 'Admin / CEO', competencies: 'All 8', weight: 15, note: 'Full competency framework applies' },
 ];
 
 export function CompetencyFramework() {

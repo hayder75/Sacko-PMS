@@ -67,7 +67,7 @@ const checkAccountMapping = async (accountNumber, userId, branch_code) => {
     canCountForKPI = false;
   } else if (accountMapping.mappedToId === userId) {
     mappingStatus = 'Mapped to You';
-    if (accountMapping.current_balance >= 500) {
+    if (accountMapping.current_balance >= 1000) {
       canCountForKPI = true;
     }
   } else {
@@ -89,7 +89,7 @@ const checkAccountMapping = async (accountNumber, userId, branch_code) => {
 export const createTask = asyncHandler(async (req, res) => {
   const { taskType, productType, accountNumber, customerName, amount, remarks, evidence, taskDate } = req.body;
 
-  if (req.user.role !== 'staff') {
+  if (req.user.role !== 'staff' && req.user.role !== 'supervisor') {
     return res.status(403).json({
       success: false,
       message: `Your role '${req.user.role}' cannot log tasks`,
@@ -100,15 +100,16 @@ export const createTask = asyncHandler(async (req, res) => {
   let mappingStatus = 'Unmapped';
   let canCountForKPI = false;
 
-  const mappingCheck = await checkAccountMapping(
-    accountNumber,
-    req.user.id,
-    req.user.branch_code
-  );
-
-  accountMappingId = mappingCheck.accountMapping?.id || null;
-  mappingStatus = mappingCheck.mappingStatus;
-  canCountForKPI = mappingCheck.canCountForKPI;
+  if (accountNumber) {
+    const mappingCheck = await checkAccountMapping(
+      accountNumber,
+      req.user.id,
+      req.user.branch_code
+    );
+    accountMappingId = mappingCheck.accountMapping?.id || null;
+    mappingStatus = mappingCheck.mappingStatus;
+    canCountForKPI = mappingCheck.canCountForKPI;
+  }
 
   // If mapping doesn't exist AND we have a customer name, create it as Unmapped
   if (!accountMappingId && customerName) {
@@ -130,23 +131,23 @@ export const createTask = asyncHandler(async (req, res) => {
 
   const approvalChainData = await buildApprovalChain(req.user);
 
+  const taskData = {
+    taskType: TASK_TYPE_TO_ENUM[taskType] || taskType,
+    accountNumber: accountNumber || `TASK-${Date.now()}`,
+    accountId: accountMappingId,
+    amount: amount || 0,
+    submittedById: req.user.id,
+    branchId: req.user.branchId,
+    mappingStatus: MAPPING_STATUS_TO_ENUM[mappingStatus],
+    taskDate: taskDate ? new Date(taskDate) : new Date(),
+    approvalStatus: 'Pending',
+  };
+  if (productType) taskData.productType = productType;
+  if (remarks) taskData.remarks = remarks;
+  if (evidence) taskData.evidence = evidence;
+
   const task = await prisma.$transaction(async (tx) => {
-    const newTask = await tx.dailyTask.create({
-      data: {
-        taskType: TASK_TYPE_TO_ENUM[taskType] || taskType,
-        productType,
-        accountNumber,
-        accountId: accountMappingId,
-        amount: amount || 0,
-        remarks,
-        evidence,
-        submittedById: req.user.id,
-        branchId: req.user.branchId,
-        mappingStatus: MAPPING_STATUS_TO_ENUM[mappingStatus],
-        taskDate: taskDate ? new Date(taskDate) : new Date(),
-        approvalStatus: 'Pending',
-      },
-    });
+    const newTask = await tx.dailyTask.create({ data: taskData });
 
     if (approvalChainData.length > 0) {
       await tx.taskApproval.createMany({
@@ -197,6 +198,17 @@ export const getTasks = asyncHandler(async (req, res) => {
   } else if (req.user.role === 'areaManager') {
     const branches = await prisma.branch.findMany({ where: { areaId: req.user.areaId }, select: { id: true } });
     where.branchId = { in: branches.map(b => b.id) };
+  } else if (req.user.role === 'supervisor') {
+    const supervisedStaff = await prisma.user.findMany({
+      where: { supervisorId: req.user.id, isActive: true },
+      select: { id: true },
+    });
+    const staffIds = supervisedStaff.map(s => s.id);
+    if (staffIds.length > 0) {
+      where.submittedById = { in: staffIds };
+    } else {
+      where.submittedById = req.user.id;
+    }
   } else if (req.user.branch_code) {
     const branch = await prisma.branch.findUnique({ where: { code: req.user.branch_code } });
     if (branch) where.branchId = branch.id;
@@ -216,6 +228,20 @@ export const getTasks = asyncHandler(async (req, res) => {
     };
   }
 
+  if (req.query.hasEditRequest === 'true') {
+    where.requestedEditAt = { not: null };
+    if (req.user.role === 'staff') {
+      where.submittedById = req.user.id;
+    } else {
+      where.approvalChain = {
+        some: {
+          approverId: req.user.id,
+          status: 'Pending'
+        }
+      };
+    }
+  }
+
   if (taskDate) {
     const date = new Date(taskDate);
     where.taskDate = {
@@ -229,7 +255,7 @@ export const getTasks = asyncHandler(async (req, res) => {
     include: {
       submittedBy: { select: { id: true, name: true, employeeId: true, role: true, position: true } },
       branch: { select: { id: true, name: true, code: true } },
-      account: { select: { id: true, accountNumber: true, customerName: true } },
+      account: { select: { id: true, accountNumber: true, customerName: true, product: true } },
       approvalChain: { include: { approver: { select: { id: true, name: true, position: true } } } },
     },
     orderBy: { createdAt: 'desc' },
@@ -310,20 +336,33 @@ export const approveTask = asyncHandler(async (req, res) => {
     });
   }
 
-  const approval = task.approvalChain.find(
+  const chainOrdered = task.approvalChain.sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  const myApproval = chainOrdered.find(
     a => a.approverId === req.user.id && a.status === 'Pending'
   );
 
-  if (!approval) {
+  if (!myApproval) {
     return res.status(403).json({
       success: false,
       message: 'You are not authorized to approve this task',
     });
   }
 
+  const myIndex = chainOrdered.indexOf(myApproval);
+  const previousPending = chainOrdered.slice(0, myIndex).some(a => a.status !== 'Approved');
+  if (previousPending) {
+    return res.status(400).json({
+      success: false,
+      message: 'Earlier approvers in the chain have not approved yet. Please wait for your turn.',
+    });
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.taskApproval.update({
-      where: { id: approval.id },
+      where: { id: myApproval.id },
       data: {
         status: statusEnum,
         approvedAt: new Date(),
@@ -365,4 +404,142 @@ export const approveTask = asyncHandler(async (req, res) => {
     success: true,
     data: { ...finalTask, _id: finalTask.id },
   });
+});
+
+// @desc    Request edit on a task (by submitter)
+// @route   PUT /api/tasks/:id/request-edit
+// @access  Private (Staff/Supervisor - task owner only)
+export const requestTaskEdit = asyncHandler(async (req, res) => {
+  const { taskType, productType, accountNumber, amount, remarks } = req.body;
+
+  const task = await prisma.dailyTask.findUnique({
+    where: { id: req.params.id }
+  });
+
+  if (!task) {
+    return res.status(404).json({ success: false, message: 'Task not found' });
+  }
+
+  if (task.submittedById !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'You can only request edits on your own tasks' });
+  }
+
+  if (task.approvalStatus === 'Approved' || task.approvalStatus === 'Rejected') {
+    return res.status(400).json({
+      success: false,
+      message: `Cannot request edit on a ${task.approvalStatus.toLowerCase()} task`
+    });
+  }
+
+  const editData = {};
+  if (taskType !== undefined) editData.taskType = taskType;
+  if (productType !== undefined) editData.productType = productType;
+  if (accountNumber !== undefined) editData.accountNumber = accountNumber;
+  if (amount !== undefined) editData.amount = amount;
+  if (remarks !== undefined) editData.remarks = remarks;
+
+  if (Object.keys(editData).length === 0) {
+    return res.status(400).json({ success: false, message: 'No changes provided' });
+  }
+
+  await prisma.dailyTask.update({
+    where: { id: task.id },
+    data: {
+      requestedEditData: editData,
+      requestedEditAt: new Date(),
+    }
+  });
+
+  await logAudit(
+    req.user.id,
+    'Edit Requested',
+    'Task',
+    task.id,
+    `Task ${task.taskType}`,
+    `Requested edit: ${JSON.stringify(editData)}`,
+    req
+  );
+
+  res.status(200).json({ success: true, message: 'Edit request submitted for review' });
+});
+
+// @desc    Review (approve/reject) task edit request
+// @route   PUT /api/tasks/:id/review-edit
+// @access  Private (Supervisor/Branch Manager)
+export const reviewTaskEdit = asyncHandler(async (req, res) => {
+  const { action } = req.body; // 'approve' or 'reject'
+
+  const task = await prisma.dailyTask.findUnique({
+    where: { id: req.params.id },
+    include: { approvalChain: true }
+  });
+
+  if (!task) {
+    return res.status(404).json({ success: false, message: 'Task not found' });
+  }
+
+  if (!task.requestedEditData) {
+    return res.status(400).json({ success: false, message: 'No pending edit request on this task' });
+  }
+
+  const isApprover = task.approvalChain?.some(
+    a => a.approverId === req.user.id && a.status === 'Pending'
+  );
+  const isManagerOrAdmin = ['admin', 'branchManager', 'areaManager'].includes(req.user.role);
+
+  if (!isApprover && !isManagerOrAdmin) {
+    return res.status(403).json({ success: false, message: 'Not authorized to review edit requests' });
+  }
+
+  if (action === 'approve') {
+    const editData = task.requestedEditData;
+
+    const updateData = {};
+    if (editData.taskType) updateData.taskType = editData.taskType;
+    if (editData.productType !== undefined) updateData.productType = editData.productType;
+    if (editData.accountNumber) updateData.accountNumber = editData.accountNumber;
+    if (editData.amount !== undefined) updateData.amount = editData.amount;
+    if (editData.remarks !== undefined) updateData.remarks = editData.remarks;
+    updateData.requestedEditData = null;
+    updateData.requestedEditAt = null;
+
+    await prisma.dailyTask.update({
+      where: { id: task.id },
+      data: updateData,
+    });
+
+    await logAudit(
+      req.user.id,
+      'Edit Approved',
+      'Task',
+      task.id,
+      `Task ${task.taskType}`,
+      `Approved edit: ${JSON.stringify(editData)}`,
+      req
+    );
+
+    res.status(200).json({ success: true, message: 'Edit request approved' });
+  } else if (action === 'reject') {
+    await prisma.dailyTask.update({
+      where: { id: task.id },
+      data: {
+        requestedEditData: null,
+        requestedEditAt: null,
+      }
+    });
+
+    await logAudit(
+      req.user.id,
+      'Edit Rejected',
+      'Task',
+      task.id,
+      `Task ${task.taskType}`,
+      'Rejected edit request',
+      req
+    );
+
+    res.status(200).json({ success: true, message: 'Edit request rejected' });
+  } else {
+    res.status(400).json({ success: false, message: 'Action must be "approve" or "reject"' });
+  }
 });

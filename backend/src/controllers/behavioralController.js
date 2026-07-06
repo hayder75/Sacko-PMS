@@ -65,17 +65,6 @@ export const createBehavioralEvaluation = asyncHandler(async (req, res) => {
       }
     });
 
-    if (approvalChainData.length > 0) {
-      await tx.evaluationApproval.createMany({
-        data: approvalChainData.map(a => ({
-          evaluationId: newEval.id,
-          approverId: a.approverId,
-          role: a.role,
-          status: 'Pending'
-        }))
-      });
-    }
-
     return newEval;
   });
 
@@ -121,8 +110,7 @@ export const getBehavioralEvaluations = asyncHandler(async (req, res) => {
     include: {
       evaluatedUser: { select: { id: true, name: true, employeeId: true, role: true } },
       evaluatedBy: { select: { id: true, name: true, role: true } },
-      branch: { select: { id: true, name: true, code: true } },
-      approvalChain: { include: { approver: { select: { id: true, name: true } } } }
+      branch: { select: { id: true, name: true, code: true } }
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -148,7 +136,6 @@ export const approveBehavioralEvaluation = asyncHandler(async (req, res) => {
 
   const evaluation = await prisma.behavioralEvaluation.findUnique({
     where: { id: req.params.id },
-    include: { approvalChain: true }
   });
 
   if (!evaluation) {
@@ -158,45 +145,15 @@ export const approveBehavioralEvaluation = asyncHandler(async (req, res) => {
     });
   }
 
-  // Find the exact approval record for this user
-  const approval = evaluation.approvalChain.find(
-    a => a.approverId === req.user.id && a.status === 'Pending'
-  );
+  let updateData = { approvalStatus: status };
+  if (status === 'Approved') {
+    updateData.isLocked = true;
+    updateData.lockedAt = new Date();
+  }
 
-  // If no specific record, check by role for this branch (simplified)
-  // In a real system, there would be a more complex mapping
-
-  await prisma.$transaction(async (tx) => {
-    if (approval) {
-      await tx.evaluationApproval.update({
-        where: { id: approval.id },
-        data: {
-          status: status,
-          approvedAt: new Date(),
-          comments,
-        }
-      });
-    }
-
-    // Check if evaluation is finalized
-    const updatedChain = await tx.evaluationApproval.findMany({ where: { evaluationId: evaluation.id } });
-    const allApproved = updatedChain.every(a => a.status === 'Approved');
-
-    let updateData = { approvalStatus: status };
-    if (allApproved && status === 'Approved') {
-      updateData.approvalStatus = 'Approved';
-      updateData.isLocked = true;
-      updateData.lockedAt = new Date();
-    } else if (status === 'Rejected') {
-      updateData.approvalStatus = 'Rejected';
-    } else {
-      updateData.approvalStatus = 'Pending';
-    }
-
-    await tx.behavioralEvaluation.update({
-      where: { id: evaluation.id },
-      data: updateData
-    });
+  await prisma.behavioralEvaluation.update({
+    where: { id: evaluation.id },
+    data: updateData
   });
 
   await logAudit(
@@ -211,7 +168,6 @@ export const approveBehavioralEvaluation = asyncHandler(async (req, res) => {
 
   const finalEval = await prisma.behavioralEvaluation.findUnique({
     where: { id: req.params.id },
-    include: { approvalChain: true }
   });
 
   res.status(200).json({

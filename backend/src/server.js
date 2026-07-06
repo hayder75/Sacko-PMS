@@ -62,6 +62,8 @@ import areaRoutes from './routes/areaRoutes.js';
 import staffPlanRoutes from './routes/staffPlanRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import mappedAccountsRoutes from './routes/mappedAccountsRoutes.js';
+import configRoutes from './routes/configRoutes.js';
+import kpiFrameworkConfigRoutes from './routes/kpiFrameworkConfigRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -82,12 +84,14 @@ app.use('/api/areas', areaRoutes);
 app.use('/api/staff-plans', staffPlanRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/mapped-accounts', mappedAccountsRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/kpi-config', kpiFrameworkConfigRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'SAKO PMS API is running',
+    message: 'Ghion SACCOS PMS API is running',
     timestamp: new Date().toISOString(),
   });
 });

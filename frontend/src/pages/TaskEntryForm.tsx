@@ -7,84 +7,68 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, AlertTriangle, XCircle, Search, User } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Search, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { tasksAPI, mappingsAPI, productMappingAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
-
-const taskTypes = [
-  'Account Productivity Improvement',
-  'Deposit Mobilization',
-  'New Member Registration',
-  'New Account Opening',
-  'Share Capital',
-  'Mobile Banking Activation',
-  'Merchant POS Activation',
-  'Biller Recruitment',
-  'Transaction Processing',
-  'SMS Alert Configuration',
-  'Complaint Resolution',
-];
-
-const taskTypeToKpiCategory: Record<string, string> = {
-  'Account Productivity Improvement': 'Account Productivity',
-  'Deposit Mobilization': 'Deposit Mobilization',
-  'New Member Registration': 'New Member Registration',
-  'New Account Opening': 'New Account Opening',
-  'Share Capital': 'Share Capital Growth',
-  'Mobile Banking Activation': 'Mobile Banking Users',
-  'Merchant POS Activation': 'Merchant POS Growth',
-  'Biller Recruitment': 'Billers Recruitment',
-  'Transaction Processing': 'Internal Operations',
-  'SMS Alert Configuration': 'Internal Operations',
-  'Complaint Resolution': 'Internal Operations',
-};
+import { useConfig } from '@/contexts/ConfigContext';
 
 const FALLBACK_PRODUCTS: Record<string, string[]> = {
   'Deposit Mobilization': [
-    'LOAN SAVING RESERVE ACCOUNT',
-    'REPAYMENT ACCOUNT',
-    'MOTHERS SAVING ACCOUNT',
-    'YOUNG WOMEN SAVING',
-    'SPECIAL SAVING ACCOUNT',
-    'FIXED TIME DEPOSIT',
-    'CHILDREN SAVING ACCOUNT',
-    'ELDERS SAVING ACCOUNT',
-    'WADIAH SAVING ACCOUNT',
-    'Michu Current Account',
-    'GIHON REGULAR SAVING',
+    'LOAN SAVING RESERVE ACCOUNT', 'REPAYMENT ACCOUNT', 'MOTHERS SAVING ACCOUNT',
+    'YOUNG WOMEN SAVING', 'SPECIAL SAVING ACCOUNT', 'FIXED TIME DEPOSIT',
+    'CHILDREN SAVING ACCOUNT', 'ELDERS SAVING ACCOUNT', 'WADIAH SAVING ACCOUNT',
+    'Michu Current Account', 'GIHON REGULAR SAVING',
   ],
-  'New Account Opening': [
-    'Michu Current Account',
-    'GIHON REGULAR SAVING',
-  ],
-  'Share Capital Growth': [
-    'COMMON SHARE',
-  ],
-  'Mobile Banking Users': [
-    'Michu Current Account',
-    'GIHON REGULAR SAVING',
-  ],
-  'Merchant POS Growth': [
-    'MERCHANT ACCOUNT',
-  ],
-  'Billers Recruitment': [
-    'BILLER SERVICE',
-  ],
-  'Internal Operations': [
-    'Transaction Processing',
-    'SMS Alert',
-    'Complaint',
-  ],
+  'New Account Opening': ['Michu Current Account', 'GIHON REGULAR SAVING'],
+  'Share Capital Growth': ['COMMON SHARE'],
+  'Mobile Banking Users': ['Michu Current Account', 'GIHON REGULAR SAVING'],
+  'Merchant POS Growth': ['MERCHANT ACCOUNT'],
+  'Billers Recruitment': ['BILLER SERVICE'],
+  'Internal Operations': ['Transaction Processing', 'SMS Alert', 'Complaint'],
 };
 
 export function TaskEntryForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useUser();
+  const { taskTypes: configTaskTypes, taskTypeToKpiMap: configTaskTypeToKpiMap } = useConfig();
+
+  const preselectedAccount = searchParams.get('accountNumber') || '';
+
+  const taskTypes = configTaskTypes.length > 0
+    ? configTaskTypes.map(t => t.label || t.value)
+    : [
+        'Account Productivity Improvement', 'Deposit Mobilization', 'New Member Registration',
+        'New Account Opening', 'Share Capital', 'Mobile Banking Activation',
+        'Merchant POS Activation', 'Biller Recruitment', 'Transaction Processing',
+        'SMS Alert Configuration', 'Complaint Resolution',
+      ];
+
+  const taskTypeToKpiCategory: Record<string, string> = Object.keys(configTaskTypeToKpiMap).length > 0
+    ? Object.fromEntries(
+        Object.entries(configTaskTypeToKpiMap).map(([k, v]) => {
+          const taskLabel = taskTypes.find(t => t.replace(/\s/g, '_') === k || t === k) || k.replace(/_/g, ' ');
+          const kpiLabel = v.replace(/_/g, ' ');
+          return [taskLabel, kpiLabel];
+        })
+      )
+    : {
+        'Account Productivity Improvement': 'Account Productivity',
+        'Deposit Mobilization': 'Deposit Mobilization',
+        'New Member Registration': 'New Member Registration',
+        'New Account Opening': 'New Account Opening',
+        'Share Capital': 'Share Capital Growth',
+        'Mobile Banking Activation': 'Mobile Banking Users',
+        'Merchant POS Activation': 'Merchant POS Growth',
+        'Biller Recruitment': 'Billers Recruitment',
+        'Transaction Processing': 'Internal Operations',
+        'SMS Alert Configuration': 'Internal Operations',
+        'Complaint Resolution': 'Internal Operations',
+      };
 
   const [taskType, setTaskType] = useState('');
   const [productType, setProductType] = useState('');
-  const [accountNumber, setAccountNumber] = useState(searchParams.get('accountNumber') || '');
+  const [accountNumber, setAccountNumber] = useState(preselectedAccount);
   const [customerName, setCustomerName] = useState('');
   const [amount, setAmount] = useState('');
   const [remarks, setRemarks] = useState('');
@@ -97,6 +81,7 @@ export function TaskEntryForm() {
   const [accountSearch, setAccountSearch] = useState('');
   const [showMappedOnly, setShowMappedOnly] = useState(true);
   const [dynamicProducts, setDynamicProducts] = useState<Record<string, string[]> | null>(null);
+  const [showAccountPicker, setShowAccountPicker] = useState(!!!preselectedAccount);
 
   useEffect(() => {
     loadMappings();
@@ -162,10 +147,7 @@ export function TaskEntryForm() {
         setSubmittedTask(response.data);
         setMappingStatus(response.mappingInfo?.status || response.data.mappingStatus);
         setMappingInfo(response.mappingInfo);
-        // Navigate back to tasks after 2 seconds
-        setTimeout(() => {
-          navigate('/tasks');
-        }, 2000);
+        setTimeout(() => navigate('/tasks'), 2000);
       }
     } catch (error: any) {
       alert(error.message || 'Failed to submit task');
@@ -176,31 +158,20 @@ export function TaskEntryForm() {
 
   const getMappingBadge = () => {
     if (!mappingStatus) return null;
-
     switch (mappingStatus) {
       case 'Mapped to You':
-        return (
-          <Badge variant="success" className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Mapped to You
-          </Badge>
-        );
+        return <Badge variant="success" className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" />Mapped to You</Badge>;
       case 'Mapped to Another Staff':
-        return (
-          <Badge variant="warning" className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Mapped to Another Staff
-          </Badge>
-        );
+        return <Badge variant="warning" className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Mapped to Another Staff</Badge>;
       case 'Unmapped':
-        return (
-          <Badge variant="destructive" className="flex items-center gap-2">
-            <XCircle className="h-4 w-4" />
-            Unmapped – Requires BM Approval
-          </Badge>
-        );
+        return <Badge variant="destructive" className="flex items-center gap-2"><XCircle className="h-4 w-4" />Unmapped – Requires BM Approval</Badge>;
     }
   };
+
+  const filteredMappings = mappings.filter(m =>
+    m.accountNumber.includes(accountSearch) ||
+    m.customerName.toLowerCase().includes(accountSearch.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -217,18 +188,13 @@ export function TaskEntryForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="taskType">Task Type *</Label>
-              <Select value={taskType} onValueChange={(value) => {
-                setTaskType(value);
-                setProductType('');
-              }}>
+              <Select value={taskType} onValueChange={(value) => { setTaskType(value); setProductType(''); }}>
                 <SelectTrigger id="taskType">
                   <SelectValue placeholder="Select task type" />
                 </SelectTrigger>
                 <SelectContent>
                   {taskTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -246,9 +212,7 @@ export function TaskEntryForm() {
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -256,60 +220,92 @@ export function TaskEntryForm() {
               );
             })()}
 
-            <div className="space-y-4 p-4 bg-blue-50/50 border border-blue-100 rounded-lg">
+            <div className="space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-lg">
               <div className="flex items-center justify-between">
-                <Label className="text-blue-900 font-semibold flex items-center gap-2">
+                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Select Mapped Account
+                  Account
+                  {preselectedAccount && (
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] ml-2">
+                      Pre-selected
+                    </Badge>
+                  )}
                 </Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-blue-700">Show My Mappings</span>
-                  <input
-                    type="checkbox"
-                    checked={showMappedOnly}
-                    onChange={(e) => setShowMappedOnly(e.target.checked)}
-                    className="h-4 w-4 rounded border-blue-300"
-                  />
+                {preselectedAccount && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountPicker(!showAccountPicker)}
+                    className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+                  >
+                    {showAccountPicker ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    {showAccountPicker ? 'Hide list' : 'Change account'}
+                  </button>
+                )}
+              </div>
+
+              {selectedMapping && (
+                <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-900">{selectedMapping.accountNumber}</p>
+                      <p className="text-xs text-emerald-700">{selectedMapping.customerName}</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                    {selectedMapping.balance?.toLocaleString()} ETB
+                  </Badge>
                 </div>
-              </div>
+              )}
 
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-400" />
-                <Input
-                  placeholder="Search your accounts by name or number..."
-                  value={accountSearch}
-                  onChange={(e) => setAccountSearch(e.target.value)}
-                  className="pl-10 bg-white border-blue-200 focus:ring-blue-500"
-                />
-              </div>
+              {(showAccountPicker || !preselectedAccount) && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search your accounts by name or number..."
+                        value={accountSearch}
+                        onChange={(e) => setAccountSearch(e.target.value)}
+                        className="pl-10 bg-white border-slate-200"
+                      />
+                    </div>
+                    <label className="flex items-center gap-1.5 text-xs text-slate-500 ml-3 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={showMappedOnly}
+                        onChange={(e) => setShowMappedOnly(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-slate-300"
+                      />
+                      My mappings
+                    </label>
+                  </div>
 
-              {mappings.length > 0 && (
-                <div className="max-h-40 overflow-y-auto border border-blue-100 rounded-md bg-white">
-                  {mappings
-                    .filter(m =>
-                      m.accountNumber.includes(accountSearch) ||
-                      m.customerName.toLowerCase().includes(accountSearch.toLowerCase())
-                    )
-                    .map((m) => (
-                      <div
-                        key={m.id}
-                        className={`p-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center border-b border-blue-50 last:border-0 ${accountNumber === m.accountNumber ? 'bg-blue-100' : ''
+                  {filteredMappings.length > 0 && (
+                    <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-md bg-white">
+                      {filteredMappings.map((m) => (
+                        <div
+                          key={m.id}
+                          className={`p-2 hover:bg-slate-50 cursor-pointer flex justify-between items-center border-b border-slate-100 last:border-0 ${
+                            accountNumber === m.accountNumber ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
                           }`}
-                        onClick={() => {
-                          setAccountNumber(m.accountNumber);
-                          setAccountSearch('');
-                        }}
-                      >
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">{m.accountNumber}</p>
-                          <p className="text-xs text-slate-500">{m.customerName}</p>
+                          onClick={() => {
+                            setAccountNumber(m.accountNumber);
+                            setAccountSearch('');
+                          }}
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-slate-800">{m.accountNumber}</p>
+                            <p className="text-xs text-slate-500">{m.customerName}</p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] bg-slate-50">
+                            {m.balance?.toLocaleString()} ETB
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="text-[10px] bg-blue-50">
-                          {m.balance?.toLocaleString()} ETB
-                        </Badge>
-                      </div>
-                    ))}
-                </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -362,9 +358,7 @@ export function TaskEntryForm() {
                 <div className="mt-2">
                   {getMappingBadge()}
                   {mappingInfo?.canCountForKPI === false && (
-                    <p className="text-xs text-red-600 mt-1">
-                      This task will not count toward your KPI until mapping is resolved.
-                    </p>
+                    <p className="text-xs text-red-600 mt-1">This task will not count toward your KPI until mapping is resolved.</p>
                   )}
                 </div>
               )}

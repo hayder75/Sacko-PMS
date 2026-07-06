@@ -274,7 +274,7 @@ export function PlansOverview() {
                     <TableCell>{sp.role}</TableCell>
                     <TableCell>{sp.branch}</TableCell>
                     <TableCell>{sp.plans}</TableCell>
-                    <TableCell>{sp.target.toLocaleString()}</TableCell>
+                    <TableCell>{(sp.target ?? 0).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -57,11 +57,10 @@ export const POSITION_TO_ENUM = {
  */
 export const KPI_CATEGORY_MAP = {
     'Deposit_Mobilization': 'Deposit Mobilization',
-    'Digital_Channel_Growth': 'Digital Channel Growth',
     'New_Member_Registration': 'New Member Registration',
+    'New_Account_Opening': 'New Account Opening',
     'Share_Capital_Growth': 'Share Capital Growth',
     'Account_Productivity': 'Account Productivity',
-    'New_Account_Opening': 'New Account Opening',
     'Mobile_Banking_Users': 'Mobile Banking Users',
     'Merchant_POS_Growth': 'Merchant POS Growth',
     'Billers_Recruitment': 'Billers Recruitment',
@@ -70,11 +69,10 @@ export const KPI_CATEGORY_MAP = {
 
 export const KPI_CATEGORY_TO_ENUM = {
     'Deposit Mobilization': 'Deposit_Mobilization',
-    'Digital Channel Growth': 'Digital_Channel_Growth',
     'New Member Registration': 'New_Member_Registration',
+    'New Account Opening': 'New_Account_Opening',
     'Share Capital Growth': 'Share_Capital_Growth',
     'Account Productivity': 'Account_Productivity',
-    'New Account Opening': 'New_Account_Opening',
     'Mobile Banking Users': 'Mobile_Banking_Users',
     'Merchant POS Growth': 'Merchant_POS_Growth',
     'Billers Recruitment': 'Billers_Recruitment',
@@ -87,36 +85,31 @@ export const KPI_CATEGORY_TO_ENUM = {
  */
 export const TASK_TYPE_TO_ENUM = {
     'Deposit Mobilization': 'Deposit_Mobilization',
-    'Loan Follow-up': 'Deposit_Mobilization',
-    'New Customer': 'New_Member_Registration',
     'New Member Registration': 'New_Member_Registration',
-    'Digital Activation': 'Mobile_Banking_Activation',
-    'Mobile Banking Activation': 'Mobile_Banking_Activation',
-    'Member Registration': 'New_Member_Registration',
-    'Shareholder Recruitment': 'Share_Capital',
-    'Share Capital': 'Share_Capital',
-    'Account Productivity': 'Account_Productivity',
-    'Account Productivity Improvement': 'Account_Productivity',
     'New Account Opening': 'New_Account_Opening',
+    'Mobile Banking Activation': 'Mobile_Banking_Activation',
     'Merchant POS Activation': 'Merchant_POS_Activation',
     'Biller Recruitment': 'Biller_Recruitment',
     'Transaction Processing': 'Transaction_Processing',
     'SMS Alert Configuration': 'SMS_Alert_Config',
     'Complaint Resolution': 'Complaint_Resolution',
+    'Share Capital': 'Share_Capital',
+    'Account Productivity': 'Account_Productivity',
+    'Account Productivity Improvement': 'Account_Productivity',
 };
 
 export const TASK_TYPE_MAP = {
     'Deposit_Mobilization': 'Deposit Mobilization',
     'New_Member_Registration': 'New Member Registration',
-    'Mobile_Banking_Activation': 'Mobile Banking Activation',
-    'Share_Capital': 'Share Capital',
-    'Account_Productivity': 'Account Productivity',
     'New_Account_Opening': 'New Account Opening',
+    'Mobile_Banking_Activation': 'Mobile Banking Activation',
     'Merchant_POS_Activation': 'Merchant POS Activation',
     'Biller_Recruitment': 'Biller Recruitment',
     'Transaction_Processing': 'Transaction Processing',
     'SMS_Alert_Config': 'SMS Alert Configuration',
     'Complaint_Resolution': 'Complaint Resolution',
+    'Share_Capital': 'Share Capital',
+    'Account_Productivity': 'Account Productivity',
 };
 
 /**
@@ -193,6 +186,9 @@ export const AUDIT_ACTION_TO_ENUM = {
     'Password Reset': 'Password_Reset',
     'Login': 'Login',
     'Logout': 'Logout',
+    'Edit Requested': 'Edit_Requested',
+    'Edit Approved': 'Edit_Approved',
+    'Edit Rejected': 'Edit_Rejected',
 };
 
 /**
