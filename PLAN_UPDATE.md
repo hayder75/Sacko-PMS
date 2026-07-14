@@ -1,5 +1,7 @@
 # Plan & Product Update — Wolayita Sodo Alignment
 
+**Status**: ✅ Implementation Complete — pending seed data deployment
+
 ## Source Files
 - `Accounts.csv` — CBS export of 557+ real customer accounts for Wolayita Sodo
 - `WSodo Plan FY 26 - 27.xlsx` — Branch operational target plan for FY 2026-2027
@@ -139,21 +141,43 @@ Map all CBS product names to KPI categories:
 ## Migration Plan
 
 ### Phase 1: Schema
-- Add `ProductCategory` and expand `KpiCategory` enums
-- Add `product_category`, `target_count`, `monthly_plan` to Plan model
-- Run Prisma migration
+- [x] Add `ProductCategory` and expand `KpiCategory` enums
+- [x] Add `product_category`, `target_count`, `monthly_plan` to Plan model
+- [x] Run Prisma migration
 
 ### Phase 2: Backend
-- Update plan controller for product targets
-- Add seed script for Wolayita Sodo plan data
-- Add seed script for account imports from CSV
+- [x] Update plan controller for product targets
+- [x] Add CBS product → product category mapping (prismaHelpers.js)
+- [x] Update plan cascade to handle product_category plans (planCascade.js)
+- [x] Update performance calculator for per-product achievement (performanceCalculator.js)
+- [x] Update dashboard controller for product-level KPI breakdown (dashboardController.js)
+- [x] Update achievement endpoint for product-level plans (planController.js)
+- [x] Add seed script for Wolayita Sodo plan data
+- [x] Add seed script for account imports from CSV
 
 ### Phase 3: Frontend
-- Update PlanCascade for per-product targets
-- Update PlansOverview for dual metrics
-- Update all product lists
+- [x] Update PlanCascade for per-product targets (product categories dropdown, target count)
+- [x] Update PlansOverview for dual metrics (product achievement data)
+- [x] Update StaffDashboard for product-level breakdown display
+- [x] Update all product lists (ProductMapping, PlanCascade, PlansOverview)
+- [x] Add NPL dashboards (HQ/Area/Branch/Team) with side navigation
 
-### Phase 4: Deploy
-- Run migration on production
-- Run seed scripts
-- Rebuild and deploy frontend
+### Phase 4: Integration Completed
+- [x] NPL & Collection Tracking: DPD/PAR calculation, daily snapshots, loan schedules
+- [x] Regions model with CRUD controller/routes
+- [x] All 118 tests passing
+- [x] Frontend builds clean (tsc + vite build)
+- [x] Database migrations applied (12 migrations)
+- [x] Committed and pushed to Ghion-Saccos branch
+
+### Phase 5: Align Task Types with Plan
+- [x] Add 12 product categories to TaskType enum (Loan_Saving_Deposit, Michu_Current_Saving, etc.)
+- [x] Create Prisma migration
+- [x] Update all backend KPI-to-task-type mappings to include product categories under Deposit_Mobilization
+- [x] Update frontend TaskEntryForm task type dropdown and fallback lists
+- [x] All 118 tests passing (post-migration)
+
+### Phase 6: Deploy
+- [ ] Run `seedFromFiles.js` to populate real customer data from Accounts.csv
+- [ ] Run `seedWolayitaSodoPlan.js` for product-level plan targets
+- [ ] Rebuild and deploy frontend

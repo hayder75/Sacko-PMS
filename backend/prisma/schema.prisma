@@ -104,6 +104,18 @@ enum TaskType {
   Transaction_Processing       @map("Transaction Processing")
   SMS_Alert_Config             @map("SMS Alert Configuration")
   Complaint_Resolution         @map("Complaint Resolution")
+  Loan_Saving_Deposit          @map("Loan Saving Deposit")
+  Michu_Current_Saving         @map("Michu Current Saving")
+  Gihon_Regular_Saving         @map("Gihon Regular Saving")
+  Mothers_Saving               @map("Mothers Saving")
+  Young_Womens_Saving          @map("Young Womens Saving")
+  Elders_Saving                @map("Elders Saving")
+  Children_Saving              @map("Children Saving")
+  Fixed_Time_Deposit           @map("Fixed Time Deposit")
+  Premium_Saving_Deposit       @map("Premium Saving Deposit")
+  Special_Saving               @map("Special Saving")
+  Segment_Deposit              @map("Segment Deposit")
+  Wadiah_IFB_Deposit           @map("Wadiah IFB Deposit")
 }
 
 enum MappingStatus {

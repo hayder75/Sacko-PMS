@@ -23,6 +23,7 @@ jest.unstable_mockModule('../src/utils/prismaHelpers.js', () => ({
     'Internal Operations': 'Internal_Operations',
   },
   TASK_TYPE_TO_ENUM: {},
+  CBS_PRODUCT_TO_CATEGORY: {},
 }));
 jest.unstable_mockModule('../src/middleware/asyncHandler.js', () => ({
   asyncHandler: (fn) => (req, res, next) => {

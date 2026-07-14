@@ -9,7 +9,7 @@ import {
 } from '../utils/performanceCalculator.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
-import { KPI_CATEGORY_TO_ENUM } from '../utils/prismaHelpers.js';
+import { KPI_CATEGORY_TO_ENUM, CBS_PRODUCT_TO_CATEGORY } from '../utils/prismaHelpers.js';
 
 // @desc    Create plan manually
 // @route   POST /api/plans
@@ -386,8 +386,16 @@ export const updatePlan = asyncHandler(async (req, res) => {
   });
 });
 
+const DEPOSIT_TASK_TYPES = [
+  'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+  'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
+  'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
+  'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
+];
+
 const KPI_TASK_TYPES = {
   'Account_Productivity': ['Account_Productivity'],
+  'Deposit_Mobilization': DEPOSIT_TASK_TYPES,
   'New_Member_Registration': ['New_Member_Registration'],
   'New_Account_Opening': ['New_Account_Opening'],
   'Share_Capital_Growth': ['Share_Capital'],
@@ -433,7 +441,24 @@ export const getPlansAchievement = asyncHandler(async (req, res) => {
     const staffIds = staffList.map(s => s.id);
     let actual = 0;
 
-    if (plan.kpi_category === 'Deposit_Mobilization') {
+    if (plan.product_category) {
+      // Product-level plan: calculate growth only for accounts in this product category
+      const productCat = plan.product_category;
+      const branchAccounts = await prisma.accountMapping.findMany({
+        where: { branchId: branch.id, status: 'Active', current_balance: { gte: 1000 } },
+      });
+      const juneBaselines = await prisma.juneBalance.findMany({ where: { is_active: true } });
+      let productGrowth = 0;
+      for (const acct of branchAccounts) {
+        const acctProductCat = CBS_PRODUCT_TO_CATEGORY[acct.product] || null;
+        if (acctProductCat !== productCat) continue;
+        const baseline = juneBaselines.find(j => j.account_id === acct.accountNumber || j.accountNumber === acct.accountNumber);
+        const jb = baseline?.june_balance || 0;
+        const growth = (acct.current_balance || 0) - jb;
+        if (growth > 0) productGrowth += growth;
+      }
+      actual = productGrowth;
+    } else if (plan.kpi_category === 'Deposit_Mobilization') {
       actual = await calculateBranchDepositGrowth(plan.branch_code, period);
     } else if (plan.kpi_category === 'Collection_Rate') {
       let totalRate = 0;

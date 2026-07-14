@@ -75,6 +75,13 @@ export function StaffDashboard() {
   const dayChange = comparative.dayChange || {};
   const monthChange = comparative.monthChange || {};
 
+  const allProducts = Object.values(kpiScores).flatMap((kpi: any) => kpi.products || [])
+    .filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.product_category === p.product_category) === i);
+
+  const totalDepositTarget = allProducts.reduce((s: number, p: any) => s + (p.target || 0), 0);
+  const totalDepositActual = allProducts.reduce((s: number, p: any) => s + (p.actual || 0), 0);
+  const totalDepositPct = totalDepositTarget > 0 ? Math.round((totalDepositActual / totalDepositTarget) * 100) : 0;
+
   const trendIcon = (val: number) => {
     if (val > 0) return <TrendingUp className="h-4 w-4 text-emerald-500" />;
     if (val < 0) return <TrendingDown className="h-4 w-4 text-red-500" />;
@@ -87,62 +94,53 @@ export function StaffDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-800">My Performance Dashboard</h1>
-        <p className="text-slate-600 mt-1">Track your personal KPIs and daily tasks</p>
+        <p className="text-slate-600 mt-1">Track your personal targets and daily tasks</p>
       </div>
 
-      {/* Personal Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Summary bar */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">My Deposit Target</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">Deposit Target</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {kpiScores.deposit?.target?.toLocaleString() || '0'}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">Birr</p>
+            <div className="text-2xl font-bold text-slate-800">{totalDepositTarget.toLocaleString()}</div>
+            <p className="text-xs text-slate-500">Birr</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">Achieved</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {kpiScores.deposit?.actual?.toLocaleString() || '0'}
-            </div>
-            <p className="text-xs text-emerald-600 mt-1">
-              Birr ({kpiScores.deposit?.percent || 0}%)
-            </p>
+            <div className="text-2xl font-bold text-slate-800">{totalDepositActual.toLocaleString()}</div>
+            <p className="text-xs text-emerald-600">Birr ({totalDepositPct}%)</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">Incremental Growth</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {dashboardData?.depositGrowth?.toLocaleString() || '0'}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">From June 30 baseline</p>
+            <div className="text-2xl font-bold text-slate-800">{dashboardData?.depositGrowth?.toLocaleString() || '0'}</div>
+            <p className="text-xs text-slate-500">From June 30 baseline</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-600">Active Accounts (≥1,000 ETB)</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">Active Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-800">
-              {dashboardData?.mappedAccounts || 0}
-            </div>
+            <div className="text-2xl font-bold text-slate-800">{dashboardData?.mappedAccounts || 0}</div>
+            <p className="text-xs text-slate-500">Balance ≥1,000 ETB</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Today vs Yesterday */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">
               Today <span className="text-xs text-slate-400 ml-1">vs Yesterday</span>
             </CardTitle>
@@ -150,11 +148,11 @@ export function StaffDashboard() {
           <CardContent>
             <div className="flex items-baseline gap-4">
               <div>
-                <div className="text-3xl font-bold text-slate-800">{comparative.today?.tasks || 0}</div>
+                <div className="text-2xl font-bold text-slate-800">{comparative.today?.tasks || 0}</div>
                 <p className="text-xs text-slate-500">Tasks completed</p>
               </div>
               <div>
-                <div className="text-3xl font-bold text-slate-800">{(comparative.today?.amount || 0).toLocaleString()}</div>
+                <div className="text-2xl font-bold text-slate-800">{(comparative.today?.amount || 0).toLocaleString()}</div>
                 <p className="text-xs text-slate-500">Birr amount</p>
               </div>
               <div className="flex items-center gap-1 text-sm">
@@ -170,7 +168,7 @@ export function StaffDashboard() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">
               This Month <span className="text-xs text-slate-400 ml-1">vs Last Month</span>
             </CardTitle>
@@ -178,11 +176,11 @@ export function StaffDashboard() {
           <CardContent>
             <div className="flex items-baseline gap-4">
               <div>
-                <div className="text-3xl font-bold text-slate-800">{comparative.thisMonth?.tasks || 0}</div>
+                <div className="text-2xl font-bold text-slate-800">{comparative.thisMonth?.tasks || 0}</div>
                 <p className="text-xs text-slate-500">This month tasks</p>
               </div>
               <div>
-                <div className="text-3xl font-bold text-slate-500">{comparative.lastMonth?.tasks || 0}</div>
+                <div className="text-2xl font-bold text-slate-500">{comparative.lastMonth?.tasks || 0}</div>
                 <p className="text-xs text-slate-500">Last month</p>
               </div>
               <div className="flex items-center gap-1 text-sm">
@@ -195,42 +193,6 @@ export function StaffDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* KPI Progress */}
-      {Object.keys(kpiScores).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>KPI Progress</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(kpiScores).map(([key, kpi]: [string, any]) => {
-              const pct = kpi.percent || 0;
-              const barColor = pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-red-500';
-              const statusLabel = pct >= 80 ? 'On Track' : pct >= 60 ? 'Needs Focus' : 'At Risk';
-              const statusColor = pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-amber-600' : 'text-red-600';
-              return (
-                <div key={key} className="rounded-lg border border-slate-200 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-700">
-                      {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                    </span>
-                    <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
-                  </div>
-                  <div className="flex items-end justify-between">
-                    <span className="text-2xl font-bold text-slate-800">{pct}%</span>
-                    <div className="text-right text-xs text-slate-500">
-                      <div>{kpi.actual?.toLocaleString() || 0} / {kpi.target?.toLocaleString() || 0}</div>
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2.5">
-                    <div className={`h-2.5 rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Collection Alerts */}
       {nplData?.alerts?.length > 0 && (
@@ -299,6 +261,34 @@ export function StaffDashboard() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Compact Product Progress */}
+      {allProducts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">Product Progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+              {allProducts.map((prod: any) => {
+                const pct = prod.percent || 0;
+                const barColor = pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-red-500';
+                return (
+                  <div key={prod.product_category} className="flex items-center gap-2">
+                    <span className="text-xs text-slate-600 w-32 truncate shrink-0">{prod.product_category.replace(/_/g, ' ')}</span>
+                    <div className="flex-1 bg-slate-200 rounded-full h-1.5">
+                      <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-400 w-28 text-right shrink-0">
+                      {prod.actual?.toLocaleString() || 0} / {prod.target?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
       )}

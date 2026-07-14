@@ -100,6 +100,18 @@ export const TASK_TYPE_TO_ENUM = {
     'Share Capital': 'Share_Capital',
     'Account Productivity': 'Account_Productivity',
     'Account Productivity Improvement': 'Account_Productivity',
+    'Loan Saving Deposit': 'Loan_Saving_Deposit',
+    'Michu Current Saving': 'Michu_Current_Saving',
+    'Gihon Regular Saving': 'Gihon_Regular_Saving',
+    'Mothers Saving': 'Mothers_Saving',
+    'Young Womens Saving': 'Young_Womens_Saving',
+    'Elders Saving': 'Elders_Saving',
+    'Children Saving': 'Children_Saving',
+    'Fixed Time Deposit': 'Fixed_Time_Deposit',
+    'Premium Saving Deposit': 'Premium_Saving_Deposit',
+    'Special Saving': 'Special_Saving',
+    'Segment Deposit': 'Segment_Deposit',
+    'Wadiah IFB Deposit': 'Wadiah_IFB_Deposit',
 };
 
 export const TASK_TYPE_MAP = {
@@ -114,6 +126,18 @@ export const TASK_TYPE_MAP = {
     'Complaint_Resolution': 'Complaint Resolution',
     'Share_Capital': 'Share Capital',
     'Account_Productivity': 'Account Productivity',
+    'Loan_Saving_Deposit': 'Loan Saving Deposit',
+    'Michu_Current_Saving': 'Michu Current Saving',
+    'Gihon_Regular_Saving': 'Gihon Regular Saving',
+    'Mothers_Saving': 'Mothers Saving',
+    'Young_Womens_Saving': 'Young Womens Saving',
+    'Elders_Saving': 'Elders Saving',
+    'Children_Saving': 'Children Saving',
+    'Fixed_Time_Deposit': 'Fixed Time Deposit',
+    'Premium_Saving_Deposit': 'Premium Saving Deposit',
+    'Special_Saving': 'Special Saving',
+    'Segment_Deposit': 'Segment Deposit',
+    'Wadiah_IFB_Deposit': 'Wadiah IFB Deposit',
 };
 
 /**
@@ -139,6 +163,46 @@ export const PAYMENT_FREQUENCY_MAP = {
     'Daily': 'Daily',
     'Weekly': 'Weekly',
     'Monthly': 'Monthly',
+};
+
+/**
+ * CBS product name → product category mapping
+ * Maps actual CBS product names (from Accounts.csv) to product categories used in plans
+ */
+export const CBS_PRODUCT_TO_CATEGORY = {
+    'LOAN SAVING RESERVE ACCOUNT': 'Loan_Saving_Deposit',
+    'Michu Current Account': 'Michu_Current_Saving',
+    'GIHON REGULAR SAVING': 'Gihon_Regular_Saving',
+    'MOTHERS SAVING ACCOUNT': 'Mothers_Saving',
+    'YOUNG WOMEN SAVING': 'Young_Womens_Saving',
+    'ELDERS SAVING ACCOUNT': 'Elders_Saving',
+    'CHILDREN SAVING ACCOUNT': 'Children_Saving',
+    'FIXED TIME DEPOSIT': 'Fixed_Time_Deposit',
+    'Premium Saving Deposit': 'Premium_Saving_Deposit',
+    'Premium Saving': 'Premium_Saving_Deposit',
+    'SPECIAL SAVING ACCOUNT': 'Special_Saving',
+    'Segment Account': 'Segment_Deposit',
+    'WADIAH SAVING ACCOUNT': 'Wadiah_IFB_Deposit',
+    'School': 'Children_Saving',
+};
+
+/**
+ * Product category → parent KPI category mapping
+ * All deposit product categories map to Deposit_Mobilization KPI
+ */
+export const PRODUCT_CATEGORY_TO_KPI = {
+    'Loan_Saving_Deposit': 'Deposit_Mobilization',
+    'Michu_Current_Saving': 'Deposit_Mobilization',
+    'Gihon_Regular_Saving': 'Deposit_Mobilization',
+    'Mothers_Saving': 'Deposit_Mobilization',
+    'Young_Womens_Saving': 'Deposit_Mobilization',
+    'Elders_Saving': 'Deposit_Mobilization',
+    'Children_Saving': 'Deposit_Mobilization',
+    'Fixed_Time_Deposit': 'Deposit_Mobilization',
+    'Premium_Saving_Deposit': 'Deposit_Mobilization',
+    'Special_Saving': 'Deposit_Mobilization',
+    'Segment_Deposit': 'Deposit_Mobilization',
+    'Wadiah_IFB_Deposit': 'Deposit_Mobilization',
 };
 
 export const INSTALLMENT_STATUS_MAP = {

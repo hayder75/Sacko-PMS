@@ -2,6 +2,7 @@ import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { normalizeRole } from '../utils/roleNormalizer.js';
 import { calculateIncrementalGrowth, calculateBranchDepositGrowth, calculateBranchDigitalGrowth, calculateStaffCollectionRate, calculateParMetrics } from '../utils/performanceCalculator.js';
+import { CBS_PRODUCT_TO_CATEGORY } from '../utils/prismaHelpers.js';
 
 const simplifyKpiKey = (key) => {
   const map = {
@@ -20,15 +21,22 @@ const simplifyKpiKey = (key) => {
   return map[key] || key.toLowerCase();
 };
 
+const DEPOSIT_TASK_TYPES_ALL = [
+  'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+  'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
+  'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
+  'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
+];
+
 const getCategoryTaskTypes = (category) => {
   const normalized = (category || '').toLowerCase().trim();
-  if (normalized.includes('deposit')) return ['Deposit_Mobilization'];
+  if (normalized.includes('deposit')) return [...DEPOSIT_TASK_TYPES_ALL];
   if (normalized.includes('digital') || normalized.includes('mobile')) return ['Mobile_Banking_Activation'];
   if (normalized.includes('member')) return ['New_Member_Registration'];
   if (normalized.includes('account opening') || normalized.includes('new account')) return ['New_Account_Opening'];
   if (normalized.includes('share')) return ['Share_Capital'];
   if (normalized.includes('productivity')) return ['Account_Productivity'];
-  return ['Deposit_Mobilization', 'Mobile_Banking_Activation', 'New_Member_Registration', 'New_Account_Opening', 'Share_Capital', 'Account_Productivity'];
+  return [...DEPOSIT_TASK_TYPES_ALL, 'Mobile_Banking_Activation', 'New_Member_Registration', 'New_Account_Opening', 'Share_Capital', 'Account_Productivity'];
 };
 
 // Helper: Generate analytical gauge, breakdown table, and top ranking metrics for Yesterday vs Today (Real-time DB Queries)
@@ -693,8 +701,15 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
     taskAmountByType[key] = (taskAmountByType[key] || 0) + (t.amount || 0);
   }
 
+  const DEPOSIT_TASK_TYPES = [
+    'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+    'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
+    'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
+    'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
+  ];
+
   const KPI_TO_TASK = {
-    Deposit_Mobilization: ['Deposit_Mobilization'],
+    Deposit_Mobilization: DEPOSIT_TASK_TYPES,
     New_Member_Registration: ['New_Member_Registration'],
     New_Account_Opening: ['New_Account_Opening'],
     Share_Capital_Growth: ['Share_Capital'],
@@ -705,10 +720,34 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
   };
 
   const kpiBreakdown = {};
-  for (const plan of staffPlans) {
+  const productBreakdown = {};
+
+  // First pass: product-level plans
+  const productPlans = staffPlans.filter(p => p.product_category);
+  for (const plan of productPlans) {
+    const productGrowth = await calculateIncrementalGrowth(userId, branchCode, plan.kpi_category, '2025-H2', plan.product_category);
+    const percent = plan.individual_target > 0 ? (productGrowth / plan.individual_target) * 100 : 0;
+    productBreakdown[plan.product_category] = {
+      product_category: plan.product_category,
+      target: plan.individual_target,
+      target_count: plan.target_count,
+      actual: productGrowth,
+      percent: Math.round(percent * 100) / 100,
+    };
+  }
+
+  // Second pass: KPI-level plans
+  const kpiOnlyPlans = staffPlans.filter(p => !p.product_category);
+  for (const plan of kpiOnlyPlans) {
     let actual = 0;
     if (plan.kpi_category === 'Deposit_Mobilization') {
-      actual = depositGrowth;
+      // If we have product breakdowns, sum them up for aggregate display
+      const productKeys = Object.keys(productBreakdown);
+      if (productKeys.length > 0) {
+        actual = productKeys.reduce((s, k) => s + (productBreakdown[k].actual || 0), 0);
+      } else {
+        actual = depositGrowth;
+      }
     } else if (plan.kpi_category === 'Account_Productivity') {
       for (const t of approvedTasks) {
         actual += t.amount || 0;
@@ -737,6 +776,7 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
       target: plan.individual_target,
       actual: actual,
       percent: Math.round(percent * 100) / 100,
+      products: Object.keys(productBreakdown).length > 0 ? Object.values(productBreakdown) : undefined,
     };
   }
 
@@ -806,6 +846,7 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
       mappedAccounts, 
       depositGrowth,
       kpiBreakdown,
+      productBreakdown: Object.keys(productBreakdown).length > 0 ? Object.values(productBreakdown) : undefined,
       behavioralEvaluation: behavioralEval || null,
       comparative: {
         today: { tasks: todayTasks, amount: todayAmt },
@@ -898,8 +939,15 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
       for (const t of ownApprovedTasks) {
         taskCountByType[t.taskType] = (taskCountByType[t.taskType] || 0) + 1;
       }
+      const DEPOSIT_TASK_TYPES = [
+        'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+        'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
+        'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
+        'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
+      ];
+
       const KPI_TO_TASK = {
-        Deposit_Mobilization: ['Deposit_Mobilization'],
+        Deposit_Mobilization: DEPOSIT_TASK_TYPES,
         New_Member_Registration: ['New_Member_Registration'],
         New_Account_Opening: ['New_Account_Opening'],
         Share_Capital_Growth: ['Share_Capital'],
@@ -955,8 +1003,15 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
       where: { userId: { in: allStaffIds }, status: 'Active' }
     });
     const categories = [...new Set(allPlans.map(p => p.kpi_category))];
+    const DEPOSIT_TASK_TYPES = [
+      'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+      'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
+      'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
+      'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
+    ];
+
     const KPI_TO_TASK_MAP = {
-      Deposit_Mobilization: ['Deposit_Mobilization'],
+      Deposit_Mobilization: DEPOSIT_TASK_TYPES,
       New_Member_Registration: ['New_Member_Registration'],
       New_Account_Opening: ['New_Account_Opening'],
       Share_Capital_Growth: ['Share_Capital'],

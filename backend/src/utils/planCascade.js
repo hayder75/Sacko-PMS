@@ -1,4 +1,5 @@
 import prisma from '../config/database.js';
+import { PRODUCT_CATEGORY_TO_KPI } from './prismaHelpers.js';
 
 const CASCADE_MATRIX = {
   'Account Productivity':       { operationSupervisor: 30, crSupervisor: 15, crOfficer: 20, csOfficer: 35 },
@@ -59,9 +60,19 @@ const calculateBreakdowns = (target, period) => {
 
 export const cascadePlanToStaff = async (branchPlan) => {
   try {
-    const { branch_code, kpi_category, period, target_value, target_type, id: branchPlanId, branchId } = branchPlan;
+    const { branch_code, kpi_category, product_category, period, target_value, target_count, target_type, id: branchPlanId, branchId } = branchPlan;
 
-    const kpiKey = kpi_category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    // Determine the effective KPI key for the cascade matrix
+    let kpiKey;
+    if (product_category) {
+      // Product-level plans: use the parent KPI for cascade shares
+      const parentKpi = PRODUCT_CATEGORY_TO_KPI[product_category];
+      if (!parentKpi) throw new Error(`No parent KPI for product category: ${product_category}`);
+      kpiKey = parentKpi.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    } else {
+      kpiKey = kpi_category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
     const shares = CASCADE_MATRIX[kpiKey];
     if (!shares) throw new Error(`No cascade matrix for KPI: ${kpiKey}`);
 
@@ -79,6 +90,7 @@ export const cascadePlanToStaff = async (branchPlan) => {
     }
 
     const staffPlansCreated = [];
+    const effectiveKpi = product_category ? (PRODUCT_CATEGORY_TO_KPI[product_category] || kpi_category) : kpi_category;
 
     for (const [group, members] of Object.entries(grouped)) {
       const sharePercent = shares[group] || 0;
@@ -86,6 +98,7 @@ export const cascadePlanToStaff = async (branchPlan) => {
 
       const groupTarget = (target_value * sharePercent) / 100;
       const perPerson = groupTarget / members.length;
+      const perPersonCount = target_count ? (target_count * sharePercent) / 100 / members.length : 0;
 
       for (const member of members) {
         const breakdowns = calculateBreakdowns(perPerson, period);
@@ -96,10 +109,12 @@ export const cascadePlanToStaff = async (branchPlan) => {
             branchId,
             userId: member.id,
             position: member.position,
-            kpi_category,
+            kpi_category: effectiveKpi,
+            product_category: product_category || null,
             period,
             target_type,
             individual_target: perPerson,
+            target_count: perPersonCount,
             yearly_target: breakdowns.yearly,
             monthly_target: breakdowns.monthly,
             weekly_target: breakdowns.weekly,

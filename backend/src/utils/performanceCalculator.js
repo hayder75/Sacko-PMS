@@ -1,40 +1,45 @@
 import prisma from '../config/database.js';
-import { KPI_CATEGORY_TO_ENUM, TASK_TYPE_TO_ENUM } from './prismaHelpers.js';
+import { KPI_CATEGORY_TO_ENUM, TASK_TYPE_TO_ENUM, CBS_PRODUCT_TO_CATEGORY, PRODUCT_CATEGORY_TO_KPI } from './prismaHelpers.js';
 
 /**
- * Calculate incremental growth for a user in a given period
+ * Calculate incremental growth for a user in a given period.
+ * Optionally filtered by product category for product-level plans.
  * Growth = current_balance - june_balance
  * Only accounts with current_balance ≥ 1,000 ETB count
  */
-export const calculateIncrementalGrowth = async (userId, branch_code, kpi_category, period) => {
+export const calculateIncrementalGrowth = async (userId, branch_code, kpi_category, period, product_category) => {
   try {
     // Get all mapped accounts for this user
     const mappedAccounts = await prisma.accountMapping.findMany({
       where: {
         mappedToId: userId,
         status: 'Active',
-        current_balance: { gte: 1000 }, // Only active accounts ≥ 1,000 ETB
+        current_balance: { gte: 1000 },
       },
     });
 
     let totalGrowth = 0;
 
     for (const account of mappedAccounts) {
-      // Get active baseline balance for this account
+      // If filtering by product category, check account's product mapping
+      if (product_category) {
+        const acctProductCat = CBS_PRODUCT_TO_CATEGORY[account.product] || null;
+        if (acctProductCat !== product_category) continue;
+      }
+
       const juneBalance = await prisma.juneBalance.findFirst({
         where: {
           OR: [
             { account_id: account.accountNumber },
             { accountNumber: account.accountNumber },
           ],
-          is_active: true, // Use active baseline
+          is_active: true,
         },
       });
 
       const june_balance = juneBalance?.june_balance || 0;
       const current_balance = account.current_balance || 0;
 
-      // Calculate incremental growth
       const growth = current_balance - june_balance;
       if (growth > 0) {
         totalGrowth += growth;
@@ -67,18 +72,53 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
       throw new Error('No staff plans found for user in this period');
     }
 
+    // Separate product-level plans from KPI-level plans
+    const productStaffPlans = staffPlans.filter(p => p.product_category);
+    const kpiStaffPlans = staffPlans.filter(p => !p.product_category);
+
     const kpiScores = {};
     let totalScorePoints = 0;
 
-    // Calculate score for each KPI category
-    for (const plan of staffPlans) {
+    // First pass: calculate product-level achievements for Deposit Mobilization
+    const productAchievements = {};
+    if (productStaffPlans.length > 0) {
+      for (const plan of productStaffPlans) {
+        const { product_category, individual_target, target_count } = plan;
+        if (!product_category) continue;
+
+        const parentKpi = PRODUCT_CATEGORY_TO_KPI[product_category];
+        if (!parentKpi) continue;
+
+        const actualGrowth = await calculateIncrementalGrowth(userId, branch_code, parentKpi, period, product_category);
+
+        if (!productAchievements[parentKpi]) {
+          productAchievements[parentKpi] = { totalActual: 0, totalTarget: 0, products: [] };
+        }
+        productAchievements[parentKpi].totalActual += actualGrowth;
+        productAchievements[parentKpi].totalTarget += individual_target;
+        productAchievements[parentKpi].products.push({
+          product_category,
+          target: individual_target,
+          target_count,
+          actual: actualGrowth,
+          percent: individual_target > 0 ? Math.round((actualGrowth / individual_target) * 10000) / 100 : 0,
+        });
+      }
+    }
+
+    // Calculate score for each KPI-level StaffPlan
+    for (const plan of kpiStaffPlans) {
       const { kpi_category, individual_target } = plan;
 
-      // Calculate incremental growth for this KPI
       let actualGrowth = 0;
 
       if (kpi_category === 'Deposit_Mobilization') {
-        actualGrowth = await calculateIncrementalGrowth(userId, branch_code, kpi_category, period);
+        // If we have product-level breakdown, use aggregate from products
+        if (productAchievements[kpi_category]) {
+          actualGrowth = productAchievements[kpi_category].totalActual;
+        } else {
+          actualGrowth = await calculateIncrementalGrowth(userId, branch_code, kpi_category, period);
+        }
       } else if (kpi_category === 'Mobile_Banking_Users') {
         actualGrowth = await prisma.dailyTask.count({
           where: {
@@ -181,12 +221,43 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
       const weight = weights[kpi_category] || 0;
       const categoryScore = (percent / 100) * weight;
 
-      kpiScores[kpi_category] = {
+      const scoreEntry = {
         target: individual_target,
         actual: actualGrowth,
         percent: Math.round(percent * 100) / 100,
         weight: weight,
         score: Math.round(categoryScore * 100) / 100,
+      };
+
+      // Attach product-level breakdown if available
+      if (productAchievements[kpi_category]) {
+        scoreEntry.products = productAchievements[kpi_category].products;
+        scoreEntry.productTarget = productAchievements[kpi_category].totalTarget;
+        scoreEntry.productActual = productAchievements[kpi_category].totalActual;
+      }
+
+      kpiScores[kpi_category] = scoreEntry;
+
+      totalScorePoints += categoryScore;
+    }
+
+    // Also handle product-only plans (no KPI-level StaffPlan, only product StaffPlans)
+    for (const [kpi, achievement] of Object.entries(productAchievements)) {
+      if (kpiScores[kpi]) continue; // Already handled above
+
+      const weight = weights[kpi] || 0;
+      const percent = achievement.totalTarget > 0 ? (achievement.totalActual / achievement.totalTarget) * 100 : 0;
+      const categoryScore = (percent / 100) * weight;
+
+      kpiScores[kpi] = {
+        target: achievement.totalTarget,
+        actual: achievement.totalActual,
+        percent: Math.round(percent * 100) / 100,
+        weight,
+        score: Math.round(categoryScore * 100) / 100,
+        products: achievement.products,
+        productTarget: achievement.totalTarget,
+        productActual: achievement.totalActual,
       };
 
       totalScorePoints += categoryScore;
@@ -245,8 +316,16 @@ export const calculateBranchKPIScore = async (branch_code, period) => {
       });
     }
 
+    const DEPOSIT_TASK_TYPES = [
+      'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+      'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
+      'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
+      'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
+    ];
+
     const KPI_TASK_TYPES = {
       'Account_Productivity': ['Account_Productivity'],
+      'Deposit_Mobilization': DEPOSIT_TASK_TYPES,
       'New_Member_Registration': ['New_Member_Registration'],
       'New_Account_Opening': ['New_Account_Opening'],
       'Share_Capital_Growth': ['Share_Capital'],

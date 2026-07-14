@@ -5,14 +5,16 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Key, Trash2 } from 'lucide-react';
+import { Plus, Edit, Key, Trash2, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { usersAPI } from '@/lib/api';
 
 export function UserManagement() {
   const [showForm, setShowForm] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
+  const [supervisors, setSupervisors] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     employeeId: '',
     name: '',
@@ -21,6 +23,7 @@ export function UserManagement() {
     role: '',
     position: '',
     branch_code: '',
+    supervisorId: '',
   });
 
   useEffect(() => {
@@ -33,6 +36,7 @@ export function UserManagement() {
       const response = await usersAPI.getAll();
       if (response.success) {
         setUsers(response.data || []);
+        setSupervisors((response.data || []).filter((u: any) => u.role === 'supervisor'));
       }
     } catch (error) {
       console.error('Error loading users:', error);
@@ -41,27 +45,55 @@ export function UserManagement() {
     }
   };
 
+  const openCreateForm = () => {
+    setEditingId(null);
+    setFormData({ employeeId: '', name: '', email: '', password: '', role: '', position: '', branch_code: '', supervisorId: '' });
+    setShowForm(true);
+  };
+
+  const openEditForm = (user: any) => {
+    setEditingId(user._id);
+    setFormData({
+      employeeId: user.employeeId || '',
+      name: user.name || '',
+      email: user.email || '',
+      password: '',
+      role: user.role || '',
+      position: user.position || '',
+      branch_code: user.branch_code || '',
+      supervisorId: user.supervisorId || '',
+    });
+    setShowForm(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      await usersAPI.create(formData);
+      const payload = { ...formData };
+      if (!payload.password && editingId) delete (payload as any).password;
+      if (!payload.supervisorId) delete (payload as any).supervisorId;
+
+      if (editingId) {
+        await usersAPI.update(editingId, payload);
+      } else {
+        await usersAPI.create(payload);
+      }
+
       setShowForm(false);
-      setFormData({
-        employeeId: '',
-        name: '',
-        email: '',
-        password: '',
-        role: '',
-        position: '',
-        branch_code: '',
-      });
+      setEditingId(null);
+      setFormData({ employeeId: '', name: '', email: '', password: '', role: '', position: '', branch_code: '', supervisorId: '' });
       loadUsers();
     } catch (error: any) {
-      alert(error.message || 'Failed to create user');
+      alert(error.message || 'Failed to save user');
     } finally {
       setLoading(false);
     }
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
   };
 
   return (
@@ -69,9 +101,9 @@ export function UserManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">User & Role Management</h1>
-          <p className="text-slate-600 mt-1">Create, edit, and manage staff accounts and roles</p>
+          <p className="text-slate-600 mt-1">Create, edit, and manage staff accounts, roles, and team assignments</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
+        <Button onClick={openCreateForm}>
           <Plus className="h-4 w-4 mr-2" />
           Add New User
         </Button>
@@ -79,64 +111,33 @@ export function UserManagement() {
 
       {showForm && (
         <Card>
-          <CardHeader>
-            <CardTitle>Create New User</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>{editingId ? 'Edit User' : 'Create New User'}</CardTitle>
+            <Button variant="ghost" size="sm" onClick={cancelForm}><X className="h-4 w-4" /></Button>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="employeeId">Employee ID *</Label>
-                  <Input
-                    id="employeeId"
-                    value={formData.employeeId}
-                    onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                    required
-                    disabled={loading}
-                  />
+                  <Input id="employeeId" value={formData.employeeId} onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })} required disabled={loading} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    disabled={loading}
-                  />
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loading} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    disabled={loading}
-                  />
+                  <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required disabled={loading} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                    disabled={loading}
-                    minLength={6}
-                  />
+                  <Label htmlFor="password">{editingId ? 'New Password (leave blank to keep)' : 'Password *'}</Label>
+                  <Input id="password" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required={!editingId} disabled={loading} minLength={6} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) => setFormData({ ...formData, role: value })}
-                  >
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
+                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value, supervisorId: '' })}>
+                    <SelectTrigger id="role"><SelectValue placeholder="Select role" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="areaManager">Area Manager</SelectItem>
@@ -148,38 +149,25 @@ export function UserManagement() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="position">Position *</Label>
-                  <Select
-                    value={formData.position}
-                    onValueChange={(value) => setFormData({ ...formData, position: value })}
-                    required
-                    disabled={!formData.role}
-                  >
-                    <SelectTrigger id="position">
-                      <SelectValue placeholder={formData.role ? "Select position" : "Select role first"} />
-                    </SelectTrigger>
+                  <Select value={formData.position} onValueChange={(value) => setFormData({ ...formData, position: value })} required disabled={!formData.role}>
+                    <SelectTrigger id="position"><SelectValue placeholder={formData.role ? "Select position" : "Select role first"} /></SelectTrigger>
                     <SelectContent>
-                      {formData.role === 'admin' && (
-                        <SelectItem value="CEO">CEO</SelectItem>
-                      )}
-                      {formData.role === 'areaManager' && (
-                        <SelectItem value="Area Manager">Area Manager</SelectItem>
-                      )}
-                      {formData.role === 'branchManager' && (
-                        <SelectItem value="Branch Manager">Branch Manager</SelectItem>
-                      )}
+                      {formData.role === 'admin' && <SelectItem value="CEO">CEO</SelectItem>}
+                      {formData.role === 'areaManager' && <SelectItem value="Area_Manager">Area Manager</SelectItem>}
+                      {formData.role === 'branchManager' && <SelectItem value="Branch_Manager">Branch Manager</SelectItem>}
                       {formData.role === 'supervisor' && (
                         <>
-                          <SelectItem value="Operation Supervisor">Operation Supervisor</SelectItem>
-                          <SelectItem value="Customer Relationship Supervisor">Customer Relationship Supervisor</SelectItem>
+                          <SelectItem value="Operation_Supervisor">Operation Supervisor</SelectItem>
+                          <SelectItem value="Customer_Relationship_Supervisor">Customer Relationship Supervisor</SelectItem>
                         </>
                       )}
                       {formData.role === 'staff' && (
                         <>
-                          <SelectItem value="Customer Service Officer I">Customer Service Officer I</SelectItem>
-                          <SelectItem value="Customer Service Officer II">Customer Service Officer II</SelectItem>
-                          <SelectItem value="Customer Relationship Officer I">Customer Relationship Officer I</SelectItem>
-                          <SelectItem value="Sales & Marketing Officer I">Sales & Marketing Officer I</SelectItem>
-                          <SelectItem value="Internal Auditor">Internal Auditor</SelectItem>
+                          <SelectItem value="Customer_Service_Officer_I">Customer Service Officer I</SelectItem>
+                          <SelectItem value="Customer_Service_Officer_II">Customer Service Officer II</SelectItem>
+                          <SelectItem value="Customer_Relationship_Officer_I">Customer Relationship Officer I</SelectItem>
+                          <SelectItem value="Sales_Marketing_Officer_I">Sales & Marketing Officer I</SelectItem>
+                          <SelectItem value="Internal_Auditor">Internal Auditor</SelectItem>
                         </>
                       )}
                     </SelectContent>
@@ -187,19 +175,26 @@ export function UserManagement() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="branch_code">Branch Code *</Label>
-                  <Input
-                    id="branch_code"
-                    value={formData.branch_code}
-                    onChange={(e) => setFormData({ ...formData, branch_code: e.target.value })}
-                    placeholder="e.g., WOLAYTA_SODO"
-                    required
-                    disabled={loading || formData.role === 'admin'}
-                  />
+                  <Input id="branch_code" value={formData.branch_code} onChange={(e) => setFormData({ ...formData, branch_code: e.target.value })} placeholder="e.g., WOLAYTA_SODO" required disabled={loading || formData.role === 'admin'} />
                 </div>
+                {formData.role === 'staff' && supervisors.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="supervisorId">Assign to Supervisor (Group)</Label>
+                    <Select value={formData.supervisorId} onValueChange={(value) => setFormData({ ...formData, supervisorId: value })}>
+                      <SelectTrigger id="supervisorId"><SelectValue placeholder="Select a supervisor" /></SelectTrigger>
+                      <SelectContent>
+                        {supervisors.map((sup) => (
+                          <SelectItem key={sup._id} value={sup._id}>{sup.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-slate-400">Assigning to a supervisor creates a team/group</p>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
-                <Button type="submit" disabled={loading}>Create User</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)} disabled={loading}>Cancel</Button>
+                <Button type="submit" disabled={loading}>{editingId ? 'Update User' : 'Create User'}</Button>
+                <Button type="button" variant="outline" onClick={cancelForm} disabled={loading}>Cancel</Button>
               </div>
             </form>
           </CardContent>
@@ -223,6 +218,7 @@ export function UserManagement() {
                   <TableHead>Role</TableHead>
                   <TableHead>Branch</TableHead>
                   <TableHead>Position</TableHead>
+                  <TableHead>Supervisor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -230,43 +226,33 @@ export function UserManagement() {
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-slate-500 py-8">
-                      No users found
-                    </TableCell>
+                    <TableCell colSpan={9} className="text-center text-slate-500 py-8">No users found</TableCell>
                   </TableRow>
                 ) : (
-                  users.map((user) => (
-                    <TableRow key={user._id}>
-                      <TableCell className="font-mono text-xs font-bold text-blue-600">
-                        {user.employeeId}
-                      </TableCell>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{user.role}</Badge>
-                      </TableCell>
-                      <TableCell>{user.branch_code || user.branchId?.name || 'N/A'}</TableCell>
-                      <TableCell>{user.position || 'N/A'}</TableCell>
-                      <TableCell>
-                        <Badge variant={user.isActive ? 'success' : 'destructive'}>
-                          {user.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Key className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  users.map((user) => {
+                    const sup = supervisors.find(s => s._id === user.supervisorId);
+                    return (
+                      <TableRow key={user._id}>
+                        <TableCell className="font-mono text-xs font-bold text-blue-600">{user.employeeId}</TableCell>
+                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
+                        <TableCell>{user.branch_code || 'N/A'}</TableCell>
+                        <TableCell>{(user.position || '').replace(/_/g, ' ')}</TableCell>
+                        <TableCell className="text-xs text-slate-500">{sup ? sup.name : '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={user.isActive ? 'success' : 'destructive'}>{user.isActive ? 'Active' : 'Inactive'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openEditForm(user)}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm"><Key className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

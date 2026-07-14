@@ -36,9 +36,17 @@ export function TaskEntryForm() {
 
   const preselectedAccount = searchParams.get('accountNumber') || '';
 
+  const DEPOSIT_PRODUCT_TASK_TYPES = [
+    'Loan Saving Deposit', 'Michu Current Saving', 'Gihon Regular Saving',
+    'Mothers Saving', 'Young Womens Saving', 'Elders Saving',
+    'Children Saving', 'Fixed Time Deposit', 'Premium Saving Deposit',
+    'Special Saving', 'Segment Deposit', 'Wadiah IFB Deposit',
+  ];
+
   const taskTypes = configTaskTypes.length > 0
     ? configTaskTypes.map(t => t.label || t.value)
     : [
+        ...DEPOSIT_PRODUCT_TASK_TYPES,
         'Account Productivity Improvement', 'Deposit Mobilization', 'New Member Registration',
         'New Account Opening', 'Share Capital', 'Mobile Banking Activation',
         'Merchant POS Activation', 'Biller Recruitment', 'Transaction Processing',
@@ -54,6 +62,18 @@ export function TaskEntryForm() {
         })
       )
     : {
+        'Loan Saving Deposit': 'Deposit Mobilization',
+        'Michu Current Saving': 'Deposit Mobilization',
+        'Gihon Regular Saving': 'Deposit Mobilization',
+        'Mothers Saving': 'Deposit Mobilization',
+        'Young Womens Saving': 'Deposit Mobilization',
+        'Elders Saving': 'Deposit Mobilization',
+        'Children Saving': 'Deposit Mobilization',
+        'Fixed Time Deposit': 'Deposit Mobilization',
+        'Premium Saving Deposit': 'Deposit Mobilization',
+        'Special Saving': 'Deposit Mobilization',
+        'Segment Deposit': 'Deposit Mobilization',
+        'Wadiah IFB Deposit': 'Deposit Mobilization',
         'Account Productivity Improvement': 'Account Productivity',
         'Deposit Mobilization': 'Deposit Mobilization',
         'New Member Registration': 'New Member Registration',
