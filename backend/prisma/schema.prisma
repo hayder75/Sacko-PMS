@@ -248,6 +248,9 @@ model User {
 
   // Relations
   supervisees             User[]               @relation("Supervisor")
+  managedTeams            Team[]               @relation("TeamManager")
+  ledSubTeams             SubTeam[]            @relation("SubTeamLeader")
+  subTeamMemberships      SubTeam[]            @relation("SubTeamMembers")
   createdPlans            Plan[]               @relation("PlanCreator")
   submittedTasks          DailyTask[]          @relation("TaskSubmitter")
   receivedEvaluations     BehavioralEvaluation[] @relation("EvaluatedUser")
@@ -323,6 +326,8 @@ model Branch {
 
   // Relations
   users                 User[]               @relation("BranchUsers")
+  teams                 Team[]
+  subTeams              SubTeam[]
   plans                 Plan[]
   staffPlans            StaffPlan[]
   dailyTasks            DailyTask[]
@@ -735,6 +740,38 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+model Team {
+  id        String   @id @default(uuid()) @map("_id")
+  name      String
+  code      String   @unique
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  managerId String?
+  manager   User?    @relation("TeamManager", fields: [managerId], references: [id])
+  isActive  Boolean  @default(true)
+  subTeams  SubTeam[]
+
+  @@unique([branchId, code])
+  @@map("teams")
+}
+
+model SubTeam {
+  id        String   @id @default(uuid()) @map("_id")
+  name      String
+  code      String   @unique
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  leaderId  String?
+  leader    User?    @relation("SubTeamLeader", fields: [leaderId], references: [id])
+  members   User[]   @relation("SubTeamMembers")
+  isActive  Boolean  @default(true)
+
+  @@unique([branchId, code])
+  @@map("sub_teams")
 }
 
 model KpiFrameworkConfig {

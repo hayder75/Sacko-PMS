@@ -73,6 +73,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'MONITORING', icon: Eye, path: '/branch-monitoring' },
       { title: 'NPL DASHBOARD', icon: AlertTriangle, path: '/npl/branch' },
       { title: 'APPROVALS', icon: CheckCircle2, path: '/approvals' },
+      { title: 'TEAM MANAGEMENT', icon: Users, path: '/teams' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
       { title: 'BULK MAPPING UPLOAD', icon: Upload, path: '/bulk-mapping-upload' },
       { title: 'CBS VALIDATION', icon: CheckCircle2, path: '/cbs-validation' },

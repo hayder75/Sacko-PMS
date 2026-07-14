@@ -628,6 +628,48 @@ export const configAPI = {
   },
 };
 
+export const teamsAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/teams${queryString}`);
+  },
+  create: async (teamData: any) => {
+    return apiRequest('/teams', {
+      method: 'POST',
+      body: JSON.stringify(teamData),
+    });
+  },
+  delete: async (id: string) => {
+    return apiRequest(`/teams/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+export const subTeamsAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/sub-teams${queryString}`);
+  },
+  create: async (subTeamData: any) => {
+    return apiRequest('/sub-teams', {
+      method: 'POST',
+      body: JSON.stringify(subTeamData),
+    });
+  },
+  update: async (id: string, subTeamData: any) => {
+    return apiRequest(`/sub-teams/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(subTeamData),
+    });
+  },
+  delete: async (id: string) => {
+    return apiRequest(`/sub-teams/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 export const nplAPI = {
   getStaff: async () => {
     return apiRequest('/npl/staff');

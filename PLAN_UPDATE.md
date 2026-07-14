@@ -181,3 +181,36 @@ Map all CBS product names to KPI categories:
 - [ ] Run `seedFromFiles.js` to populate real customer data from Accounts.csv
 - [ ] Run `seedWolayitaSodoPlan.js` for product-level plan targets
 - [ ] Rebuild and deploy frontend
+
+### Phase 7: Team & Sub-Team Management for Branch Managers
+
+**Goal**: Replicate the Team/Sub-Team management system from `main` branch onto Ghion-Saccos, adapted to our current role/position schema. Branch managers get a `/teams` page to create teams (supervisor-led) and sub-teams (staff-led with members).
+
+**Key Adaptations from `main`**:
+- Old role `lineManager` → now `supervisor` (team manager)
+- Old role `subTeamLeader` → now any `staff` user (sub-team leader, flexible)
+- Old role `staff` → same `staff` (sub-team members)
+- Team & SubTeam Prisma models added back to schema
+- isBranchManager middleware already exists and allows admin/areaManager/branchManager/supervisor
+
+**Backend Tasks**:
+- [x] Add Team + SubTeam models to Prisma schema with User ↔ Team/SubTeam relations
+- [x] Create and apply Prisma migration (`20260714222048_add_team_subteam_models`)
+- [x] Create `teamController.js` — CRUD for Team & SubTeam (adapted: supervisor role for manager, staff for leader/members)
+- [x] Create `teamRoutes.js` — routes protected by isBranchManager
+- [x] Register routes in `server.js`
+
+**Frontend Tasks**:
+- [x] Add `teamsAPI` and `subTeamsAPI` to `api.ts`
+- [x] Create `TeamManagement.tsx` — form to create Team (name, code, assign supervisor as manager) + SubTeam (name, code, pick team, assign leader, pick member checkboxes)
+- [x] Add route `/teams` in App.tsx for branchManager
+- [x] Add sidebar "TEAM MANAGEMENT" link for branchManager
+
+**Testing & Verification**:
+- [x] Backend tests pass (all 118 passing)
+- [x] Frontend builds clean (tsc + vite build)
+- [x] API verified: branch manager can create teams with supervisor (Kidistale assigned as manager of "Wolayta Team A")
+- [x] API verified: branch manager can create sub-teams with leader + members (Meron as leader, Tezera & Yaredabebe as members)
+- [x] Team query verified: full relation chain works (Team → SubTeam → Leader → Members)
+- [x] Supervisor dashboard already shows team members via supervisorId (no change needed)
+- [x] Branch manager dashboard already shows all staff performance (no change needed)

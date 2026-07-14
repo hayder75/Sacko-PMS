@@ -41,6 +41,7 @@ import { HqNplDashboard } from './pages/HqNplDashboard';
 import { AreaNplDashboard } from './pages/AreaNplDashboard';
 import { BranchNplDashboard } from './pages/BranchNplDashboard';
 import { TeamNplAlerts } from './pages/TeamNplAlerts';
+import { TeamManagement } from './pages/TeamManagement';
 
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
@@ -119,6 +120,7 @@ function AppRoutes() {
       <Route path="/area-performance" element={<ProtectedRoute allowedRoles={['areaManager']}><AreaPerformance /></ProtectedRoute>} />
       <Route path="/branch-monitoring" element={<ProtectedRoute allowedRoles={['areaManager', 'branchManager']}><BranchMonitoring /></ProtectedRoute>} />
       <Route path="/branch-performance" element={<ProtectedRoute allowedRoles={['branchManager']}><BranchPerformance /></ProtectedRoute>} />
+      <Route path="/teams" element={<ProtectedRoute allowedRoles={['branchManager']}><TeamManagement /></ProtectedRoute>} />
       <Route path="/behavioral-evaluation" element={<ProtectedRoute allowedRoles={['admin', 'areaManager', 'branchManager', 'supervisor']}><BehavioralEvaluation /></ProtectedRoute>} />
       <Route path="/behavioral-input" element={<ProtectedRoute allowedRoles={['supervisor']}><BehavioralInput /></ProtectedRoute>} />
       <Route path="/approvals" element={<ProtectedRoute allowedRoles={['supervisor', 'branchManager']}><SupervisorApprovals /></ProtectedRoute>} />

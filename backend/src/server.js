@@ -66,6 +66,7 @@ import mappedAccountsRoutes from './routes/mappedAccountsRoutes.js';
 import configRoutes from './routes/configRoutes.js';
 import kpiFrameworkConfigRoutes from './routes/kpiFrameworkConfigRoutes.js';
 import nplRoutes from './routes/nplRoutes.js';
+import teamRoutes from './routes/teamRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -90,6 +91,7 @@ app.use('/api/mapped-accounts', mappedAccountsRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/kpi-config', kpiFrameworkConfigRoutes);
 app.use('/api/npl', nplRoutes);
+app.use('/api', teamRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
