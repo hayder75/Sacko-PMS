@@ -157,8 +157,8 @@ export function BranchOperations() {
         <CardContent>
           {branch.recentTasks.length > 0 ? (
             <div className="space-y-2">
-              {branch.recentTasks.map((t: any, i: number) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+              {branch.recentTasks.map((t: any) => (
+                <div key={t._id || t.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-slate-700">{t.type}</span>
                     {t.amount > 0 && <span className="text-sm font-mono text-slate-500">{(t.amount || 0).toLocaleString()} ETB</span>}

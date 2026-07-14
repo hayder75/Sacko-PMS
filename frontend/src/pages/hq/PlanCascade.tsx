@@ -20,9 +20,18 @@ const kpiCategories = [
   'Merchant POS Growth',
   'Billers Recruitment',
   'Internal Operations',
+  'Collection Rate',
+  'Portfolio Quality',
 ];
 
-const periods = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];
+export const productCategories = [
+  'Loan Saving Deposit', 'Michu Current Saving', 'Gihon Regular Saving',
+  'Mothers Saving', 'Young Womens Saving', 'Elders Saving',
+  'Children Saving', 'Fixed Time Deposit', 'Premium Saving Deposit',
+  'Special Saving', 'Segment Deposit', 'Wadiah IFB Deposit',
+];
+
+const periods = ['FY-2026-27', '2025-H2', 'Q4-2025', 'December-2025', '2025'];
 
 export function PlanCascade() {
   const [activeTab, setActiveTab] = useState('manual');
@@ -34,8 +43,10 @@ export function PlanCascade() {
   const [formData, setFormData] = useState({
     branch_code: '',
     kpi_category: '',
+    product_category: '',
     period: '',
     target_value: '',
+    target_count: '',
     target_type: 'incremental',
   });
   const [file, setFile] = useState<File | null>(null);
@@ -44,6 +55,9 @@ export function PlanCascade() {
     loadPlans();
     if (activeTab === 'staff-plans') {
       loadStaffPlans();
+    }
+    if (activeTab === 'product-plans' && plans.length === 0) {
+      loadPlans();
     }
   }, [activeTab]);
 
@@ -82,17 +96,22 @@ export function PlanCascade() {
     e.preventDefault();
     try {
       setLoading(true);
-      const response = await plansAPI.create({
+      const payload: any = {
         ...formData,
         target_value: parseFloat(formData.target_value),
-      });
+      };
+      if (!payload.product_category) delete payload.product_category;
+      if (!payload.target_count) delete payload.target_count;
+      const response = await plansAPI.create(payload);
       if (response.success) {
         alert('Plan created and cascaded successfully!');
         setFormData({
           branch_code: '',
           kpi_category: '',
+          product_category: '',
           period: '',
           target_value: '',
+          target_count: '',
           target_type: 'incremental',
         });
         loadPlans();
@@ -152,6 +171,7 @@ export function PlanCascade() {
           <TabsTrigger value="manual">Manual Entry</TabsTrigger>
           <TabsTrigger value="upload">Upload Excel</TabsTrigger>
           <TabsTrigger value="plans">View Plans</TabsTrigger>
+          <TabsTrigger value="product-plans">Product Plans</TabsTrigger>
           <TabsTrigger value="staff-plans">Staff Plans</TabsTrigger>
         </TabsList>
 
@@ -225,17 +245,45 @@ export function PlanCascade() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="target_type">Target Type</Label>
-                  <Input
-                    id="target_type"
-                    value={formData.target_type}
-                    disabled
-                    className="bg-slate-50"
-                  />
-                  <p className="text-xs text-slate-500">Only incremental targets are supported</p>
-                </div>
-                <div className="flex gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="product_category">Product Category (optional)</Label>
+                    <Select
+                      value={formData.product_category}
+                      onValueChange={(value) => setFormData({ ...formData, product_category: value })}
+                    >
+                      <SelectTrigger id="product_category">
+                        <SelectValue placeholder="None (KPI-based plan)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="target_count">Target Count (optional)</Label>
+                    <Input
+                      id="target_count"
+                      type="number"
+                      value={formData.target_count}
+                      onChange={(e) => setFormData({ ...formData, target_count: e.target.value })}
+                      placeholder="Account/number target"
+                      disabled={loading}
+                      min="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="target_type">Target Type</Label>
+                    <Input
+                      id="target_type"
+                      value={formData.target_type}
+                      disabled
+                      className="bg-slate-50"
+                    />
+                    <p className="text-xs text-slate-500">Only incremental targets are supported</p>
+                  </div>
+                  <div className="flex gap-2">
                   <Button type="submit" disabled={loading}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create Plan
@@ -246,8 +294,10 @@ export function PlanCascade() {
                     onClick={() => setFormData({
                       branch_code: '',
                       kpi_category: '',
+                      product_category: '',
                       period: '',
                       target_value: '',
+                      target_count: '',
                       target_type: 'incremental',
                     })}
                     disabled={loading}
@@ -288,6 +338,58 @@ export function PlanCascade() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="product-plans" className="space-y-4">
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : (
+            <div className="space-y-6">
+              {productCategories.map((product) => {
+                const productPlans = plans.filter(p => p.product_category === product);
+                if (productPlans.length === 0) return null;
+                const totalAmount = productPlans.reduce((s, p) => s + (p.target_value || 0), 0);
+                const totalCount = productPlans.reduce((s, p) => s + (p.target_count || 0), 0);
+                const monthlyPlan = productPlans[0]?.monthly_plan;
+                return (
+                  <Card key={product}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{product}</span>
+                        <span className="text-sm font-normal text-slate-500">
+                          {totalAmount.toLocaleString()} ETB | {totalCount.toLocaleString()} accounts
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {monthlyPlan && monthlyPlan.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Month</TableHead>
+                              <TableHead>Amount Target</TableHead>
+                              <TableHead>Account Target</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {monthlyPlan.map((m: any, i: number) => (
+                              <TableRow key={i}>
+                                <TableCell className="font-medium">{m.month}</TableCell>
+                                <TableCell>{(m.amount || 0).toLocaleString()}</TableCell>
+                                <TableCell>{(m.count || 0).toLocaleString()}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="text-sm text-slate-500">No monthly breakdown available</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="staff-plans" className="space-y-4">
@@ -392,8 +494,10 @@ export function PlanCascade() {
                     <TableRow>
                       <TableHead>Branch Code</TableHead>
                       <TableHead>KPI Category</TableHead>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Target Amount</TableHead>
+                      <TableHead>Target Count</TableHead>
                       <TableHead>Period</TableHead>
-                      <TableHead>Target Value</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Created</TableHead>
                     </TableRow>
@@ -401,7 +505,7 @@ export function PlanCascade() {
                   <TableBody>
                     {plans.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                        <TableCell colSpan={8} className="text-center text-slate-500 py-8">
                           No plans found
                         </TableCell>
                       </TableRow>
@@ -409,9 +513,11 @@ export function PlanCascade() {
                       plans.map((plan) => (
                         <TableRow key={plan._id}>
                           <TableCell className="font-medium">{plan.branch_code}</TableCell>
-                          <TableCell>{plan.kpi_category}</TableCell>
-                          <TableCell>{plan.period}</TableCell>
+                          <TableCell>{plan.kpi_category?.replace(/_/g, ' ')}</TableCell>
+                          <TableCell>{plan.product_category || '-'}</TableCell>
                           <TableCell>{plan.target_value?.toLocaleString()}</TableCell>
+                          <TableCell>{(plan.target_count ?? 0).toLocaleString()}</TableCell>
+                          <TableCell>{plan.period}</TableCell>
                           <TableCell>
                             <Badge variant={plan.status === 'Active' ? 'default' : 'outline'}>
                               {plan.status}

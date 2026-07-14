@@ -59,11 +59,13 @@ import productKpiMappingRoutes from './routes/productKpiMappingRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import areaRoutes from './routes/areaRoutes.js';
+import regionRoutes from './routes/regionRoutes.js';
 import staffPlanRoutes from './routes/staffPlanRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import mappedAccountsRoutes from './routes/mappedAccountsRoutes.js';
 import configRoutes from './routes/configRoutes.js';
 import kpiFrameworkConfigRoutes from './routes/kpiFrameworkConfigRoutes.js';
+import nplRoutes from './routes/nplRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -81,11 +83,13 @@ app.use('/api/product-mappings', productKpiMappingRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/areas', areaRoutes);
+app.use('/api/regions', regionRoutes);
 app.use('/api/staff-plans', staffPlanRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/mapped-accounts', mappedAccountsRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/kpi-config', kpiFrameworkConfigRoutes);
+app.use('/api/npl', nplRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

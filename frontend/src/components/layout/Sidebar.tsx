@@ -15,7 +15,9 @@ import {
   ClipboardList,
   Eye,
   CheckCircle2,
-  User
+  User,
+  AlertTriangle,
+  Settings
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { cn } from '@/lib/utils';
@@ -50,6 +52,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'KPI FRAMEWORK', icon: Target, path: '/kpi-framework' },
       { title: 'COMPETENCY FRAMEWORK', icon: Shield, path: '/competency-framework' },
       { title: 'AUDIT TRAIL', icon: FileText, path: '/audit-trail' },
+      { title: 'NPL DASHBOARD', icon: AlertTriangle, path: '/npl/hq' },
     ];
   }
 
@@ -57,6 +60,7 @@ const getNavItems = (role: string): NavItem[] => {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/area' },
       { title: 'BRANCH MONITORING', icon: Eye, path: '/branch-monitoring' },
+      { title: 'NPL OVERVIEW', icon: AlertTriangle, path: '/npl/area' },
       { title: 'AREA PERFORMANCE', icon: BarChart3, path: '/area-performance' },
       { title: 'BEHAVIORAL EVALUATION', icon: ClipboardList, path: '/behavioral-evaluation' },
       { title: 'REPORTS', icon: FileText, path: '/reports' },
@@ -67,6 +71,7 @@ const getNavItems = (role: string): NavItem[] => {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/branch' },
       { title: 'MONITORING', icon: Eye, path: '/branch-monitoring' },
+      { title: 'NPL DASHBOARD', icon: AlertTriangle, path: '/npl/branch' },
       { title: 'APPROVALS', icon: CheckCircle2, path: '/approvals' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
       { title: 'BULK MAPPING UPLOAD', icon: Upload, path: '/bulk-mapping-upload' },
@@ -83,6 +88,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
       { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
+      { title: 'TEAM COLLECTION', icon: AlertTriangle, path: '/npl/team-alerts' },
       { title: 'BEHAVIORAL INPUT', icon: ClipboardList, path: '/behavioral-input' },
       { title: 'REPORTS', icon: FileText, path: '/reports' },
     ];
@@ -200,6 +206,19 @@ export function Sidebar() {
             >
               <BookOpen className="h-5 w-5 shrink-0" />
               <span>Routes Guide</span>
+            </Link>
+            <Link
+              to="/settings"
+              onClick={() => setIsOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors rounded-md",
+                location.pathname === '/settings'
+                  ? "bg-white text-primary"
+                  : "text-white hover:bg-primary-600 hover:text-white"
+              )}
+            >
+              <Settings className="h-5 w-5 shrink-0" />
+              <span>Settings</span>
             </Link>
           </div>
         </nav>

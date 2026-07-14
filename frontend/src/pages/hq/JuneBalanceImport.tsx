@@ -167,7 +167,7 @@ export function JuneBalanceImport() {
                     </div>
                     <ul className="list-disc list-inside mt-1 text-xs">
                       {result.errors.slice(0, 5).map((error: string, idx: number) => (
-                        <li key={idx}>{error}</li>
+                        <li key={`err-${idx}`}>{error}</li>
                       ))}
                       {result.errors.length > 5 && (
                         <li>... and {result.errors.length - 5} more errors</li>

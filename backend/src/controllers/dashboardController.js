@@ -1,7 +1,7 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { normalizeRole } from '../utils/roleNormalizer.js';
-import { calculateIncrementalGrowth, calculateBranchDepositGrowth, calculateBranchDigitalGrowth } from '../utils/performanceCalculator.js';
+import { calculateIncrementalGrowth, calculateBranchDepositGrowth, calculateBranchDigitalGrowth, calculateStaffCollectionRate, calculateParMetrics } from '../utils/performanceCalculator.js';
 
 const simplifyKpiKey = (key) => {
   const map = {
@@ -14,6 +14,8 @@ const simplifyKpiKey = (key) => {
     'Merchant_POS_Growth': 'merchantPos',
     'Billers_Recruitment': 'billers',
     'Internal_Operations': 'internalOps',
+    'Collection_Rate': 'collectionRate',
+    'Portfolio_Quality': 'portfolioQuality',
   };
   return map[key] || key.toLowerCase();
 };
@@ -286,8 +288,15 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
 
 // @desc    Get Area Manager Dashboard
 export const getAreaDashboard = asyncHandler(async (req, res) => {
+  const areaId = req.user.areaId;
+  if (!areaId) {
+    return res.status(200).json({
+      success: true,
+      data: { branches: [], branchComparison: [], summary: { totalBranches: 0, totalStaff: 0, totalTarget: 0, totalActual: 0, averagePerformance: 0, lowPerformersCount: 0 } }
+    });
+  }
   const branches = await prisma.branch.findMany({
-    where: { areaId: req.user.areaId, isActive: true },
+    where: { areaId, isActive: true },
     select: { id: true, name: true, code: true }
   });
 
@@ -412,7 +421,7 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
   const dailyTasks = await prisma.dailyTask.findMany({
     where: {
       taskDate: { gte: thirtyDaysAgo },
-      branch: { areaId: req.user.areaId },
+      branch: { areaId },
       taskType: 'Deposit_Mobilization',
       approvalStatus: 'Approved',
     },
@@ -459,8 +468,23 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
 
 // @desc    Get Branch Manager Dashboard
 export const getBranchDashboard = asyncHandler(async (req, res) => {
-  const branchId = req.user.branchId;
-  const branchCode = req.user.branch_code;
+  let branchId = req.user.branchId || req.query.branchId;
+  let branchCode = req.user.branch_code || req.query.branch_code;
+
+  if (!branchId && branchCode) {
+    const branch = await prisma.branch.findUnique({
+      where: { code: branchCode.toUpperCase().trim() },
+      select: { id: true }
+    });
+    if (branch) branchId = branch.id;
+  }
+
+  if (!branchId || !branchCode) {
+    return res.status(400).json({
+      success: false,
+      message: 'Branch dashboard requires a branch assignment or branch_code parameter'
+    });
+  }
 
   const totalStaff = await prisma.user.count({
     where: { branchId, isActive: true, role: { in: ['staff', 'supervisor'] } }
@@ -527,6 +551,23 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
       actual = await prisma.dailyTask.count({
         where: { submittedById: { in: staffIds }, taskType: 'Share_Capital', approvalStatus: 'Approved', cbsValidated: true }
       });
+    } else if (plan.kpi_category === 'Collection_Rate') {
+      let totalRate = 0;
+      let withData = 0;
+      for (const sid of staffIds) {
+        const cd = await calculateStaffCollectionRate(sid);
+        if (cd.expected > 0) { totalRate += cd.percent; withData++; }
+      }
+      actual = withData > 0 ? Math.round(totalRate / withData) : 0;
+    } else if (plan.kpi_category === 'Portfolio_Quality') {
+      const loanAccounts = await prisma.accountMapping.findMany({
+        where: { branchId: branch?.id, accountType: 'Loan', status: 'Active' },
+        select: { id: true },
+      });
+      if (loanAccounts.length > 0) {
+        const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
+        actual = parMetrics.totalPortfolio > 0 ? Math.round(100 - parMetrics.par90Ratio) : 100;
+      }
     } else {
       const taskTypes = {
         'Account_Productivity': ['Account_Productivity'],
@@ -625,6 +666,10 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const branchCode = req.user.branch_code;
 
+  if (!branchCode) {
+    return res.status(400).json({ success: false, message: 'Staff dashboard requires a branch assignment' });
+  }
+
   const mappedAccounts = await prisma.accountMapping.count({
     where: { mappedToId: userId, status: 'Active', current_balance: { gte: 1000 }, active_status: true }
   });
@@ -667,6 +712,18 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
     } else if (plan.kpi_category === 'Account_Productivity') {
       for (const t of approvedTasks) {
         actual += t.amount || 0;
+      }
+    } else if (plan.kpi_category === 'Collection_Rate') {
+      const collectionData = await calculateStaffCollectionRate(userId);
+      actual = collectionData.percent;
+    } else if (plan.kpi_category === 'Portfolio_Quality') {
+      const loanAccounts = await prisma.accountMapping.findMany({
+        where: { mappedToId: userId, accountType: 'Loan', status: 'Active' },
+        select: { id: true },
+      });
+      if (loanAccounts.length > 0) {
+        const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
+        actual = parMetrics.totalPortfolio > 0 ? 100 - parMetrics.par90Ratio : 100;
       }
     } else {
       const taskTypes = KPI_TO_TASK[plan.kpi_category] || [];
@@ -857,6 +914,18 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
           actual = ownDepositGrowth;
         } else if (plan.kpi_category === 'Account_Productivity') {
           for (const t of ownApprovedTasks) actual += t.amount || 0;
+        } else if (plan.kpi_category === 'Collection_Rate') {
+          const cd = await calculateStaffCollectionRate(supervisorId);
+          actual = cd.percent;
+        } else if (plan.kpi_category === 'Portfolio_Quality') {
+          const loanAccounts = await prisma.accountMapping.findMany({
+            where: { mappedToId: supervisorId, accountType: 'Loan', status: 'Active' },
+            select: { id: true },
+          });
+          if (loanAccounts.length > 0) {
+            const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
+            actual = parMetrics.totalPortfolio > 0 ? 100 - parMetrics.par90Ratio : 100;
+          }
         } else {
           const types = KPI_TO_TASK[plan.kpi_category] || [];
           for (const tt of types) actual += taskCountByType[tt] || 0;
@@ -903,6 +972,23 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
       if (cat === 'Deposit_Mobilization') {
         for (const member of supervisees) {
           totalActual += await calculateIncrementalGrowth(member.id, member.branch_code, cat, '2025-H2');
+        }
+      } else if (cat === 'Collection_Rate') {
+        let totalRate = 0;
+        let withData = 0;
+        for (const member of supervisees) {
+          const cd = await calculateStaffCollectionRate(member.id);
+          if (cd.expected > 0) { totalRate += cd.percent; withData++; }
+        }
+        totalActual = withData > 0 ? totalRate / withData : 0;
+      } else if (cat === 'Portfolio_Quality') {
+        const loanAccounts = await prisma.accountMapping.findMany({
+          where: { mappedToId: { in: allStaffIds }, accountType: 'Loan', status: 'Active' },
+          select: { id: true },
+        });
+        if (loanAccounts.length > 0) {
+          const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
+          totalActual = parMetrics.totalPortfolio > 0 ? 100 - parMetrics.par90Ratio : 100;
         }
       } else {
         const taskTypes = KPI_TO_TASK_MAP[cat] || [];

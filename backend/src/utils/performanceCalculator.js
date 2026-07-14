@@ -144,6 +144,18 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
             approvalStatus: 'Approved',
           }
         });
+      } else if (kpi_category === 'Collection_Rate') {
+        const collectionData = await calculateStaffCollectionRate(userId);
+        actualGrowth = collectionData.percent;
+      } else if (kpi_category === 'Portfolio_Quality') {
+        const loanAccounts = await prisma.accountMapping.findMany({
+          where: { mappedToId: userId, accountType: 'Loan', status: 'Active' },
+          select: { id: true },
+        });
+        if (loanAccounts.length > 0) {
+          const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
+          actualGrowth = parMetrics.totalPortfolio > 0 ? 100 - parMetrics.par90Ratio : 100;
+        }
       }
 
       // Calculate percentage and score
@@ -161,6 +173,7 @@ export const calculateKPIScore = async (userId, branch_code, period) => {
           'Account_Productivity': 30, 'Deposit_Mobilization': 24, 'Internal_Operations': 12,
           'Share_Capital_Growth': 9, 'New_Member_Registration': 6, 'New_Account_Opening': 6,
           'Mobile_Banking_Users': 5, 'Billers_Recruitment': 5, 'Merchant_POS_Growth': 3,
+          'Collection_Rate': 8, 'Portfolio_Quality': 7,
         };
         Object.assign(weights, defaultWeights);
       }
@@ -228,6 +241,7 @@ export const calculateBranchKPIScore = async (branch_code, period) => {
         'Account_Productivity': 30, 'Deposit_Mobilization': 24, 'Internal_Operations': 12,
         'Share_Capital_Growth': 9, 'New_Member_Registration': 6, 'New_Account_Opening': 6,
         'Mobile_Banking_Users': 5, 'Billers_Recruitment': 5, 'Merchant_POS_Growth': 3,
+        'Collection_Rate': 8, 'Portfolio_Quality': 7,
       });
     }
 
@@ -248,6 +262,27 @@ export const calculateBranchKPIScore = async (branch_code, period) => {
 
       if (kpi_category === 'Deposit_Mobilization') {
         actualGrowth = await calculateBranchDepositGrowth(branch_code, period);
+      } else if (kpi_category === 'Collection_Rate') {
+        // Average collection rate across all staff
+        let totalRate = 0;
+        let staffWithData = 0;
+        for (const sid of staffIds) {
+          const cd = await calculateStaffCollectionRate(sid);
+          if (cd.expected > 0) {
+            totalRate += cd.percent;
+            staffWithData++;
+          }
+        }
+        actualGrowth = staffWithData > 0 ? totalRate / staffWithData : 0;
+      } else if (kpi_category === 'Portfolio_Quality') {
+        const loanAccounts = await prisma.accountMapping.findMany({
+          where: { branchId: branch?.id, accountType: 'Loan', status: 'Active' },
+          select: { id: true },
+        });
+        if (loanAccounts.length > 0) {
+          const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
+          actualGrowth = parMetrics.totalPortfolio > 0 ? 100 - parMetrics.par90Ratio : 100;
+        }
       } else {
         const taskTypes = KPI_TASK_TYPES[kpi_category] || [];
         if (taskTypes.length > 0) {
@@ -387,5 +422,407 @@ export const calculateBranchDigitalGrowth = async (branch_code, period) => {
   } catch (error) {
     console.error('Branch digital growth error:', error);
     return 0;
+  }
+};
+
+// ============================================================
+// NPL & Collection Tracking Engine
+// ============================================================
+
+/**
+ * Calculate DPD (Days Past Due) for a single loan account.
+ * DPD = days since the oldest unpaid installment's expected date.
+ */
+export const calculateLoanDpd = async (accountId) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const unpaidInstallments = await prisma.loanSchedule.findMany({
+      where: {
+        accountId,
+        expectedDate: { lte: today },
+        status: { in: ['Pending', 'Partial'] },
+      },
+      orderBy: { expectedDate: 'asc' },
+      take: 1,
+    });
+
+    if (unpaidInstallments.length === 0) return 0;
+
+    const oldestDue = new Date(unpaidInstallments[0].expectedDate);
+    oldestDue.setHours(0, 0, 0, 0);
+    const diffTime = today.getTime() - oldestDue.getTime();
+    return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+  } catch (error) {
+    console.error('DPD calculation error:', error);
+    return 0;
+  }
+};
+
+/**
+ * Calculate DPD for all loan accounts in a given scope (branch or staff).
+ * Returns an array of { accountId, accountNumber, current_balance, dpd, classification }
+ */
+export const calculateBatchDpd = async (accountIds) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const accounts = await prisma.accountMapping.findMany({
+      where: {
+        id: { in: accountIds },
+        accountType: 'Loan',
+        status: 'Active',
+      },
+      select: { id: true, accountNumber: true, current_balance: true },
+    });
+
+    if (accounts.length === 0) return [];
+
+    const allSchedules = await prisma.loanSchedule.findMany({
+      where: {
+        accountId: { in: accounts.map(a => a.id) },
+        expectedDate: { lte: today },
+        status: { in: ['Pending', 'Partial'] },
+      },
+      orderBy: { expectedDate: 'asc' },
+    });
+
+    // Group by account, take the oldest unpaid installment per account
+    const oldestPerAccount = {};
+    for (const s of allSchedules) {
+      if (!oldestPerAccount[s.accountId]) {
+        oldestPerAccount[s.accountId] = s;
+      }
+    }
+
+    return accounts.map(acct => {
+      const oldest = oldestPerAccount[acct.id];
+      let dpd = 0;
+      if (oldest) {
+        const dueDate = new Date(oldest.expectedDate);
+        dueDate.setHours(0, 0, 0, 0);
+        dpd = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+      }
+      const classification = dpd >= 180 ? 'Loss' : dpd >= 90 ? 'Doubtful' : dpd >= 30 ? 'Substandard' : dpd >= 1 ? 'Watch' : 'Performing';
+      return {
+        accountId: acct.id,
+        accountNumber: acct.accountNumber,
+        currentBalance: acct.current_balance,
+        dpd,
+        classification,
+      };
+    });
+  } catch (error) {
+    console.error('Batch DPD calculation error:', error);
+    return [];
+  }
+};
+
+/**
+ * Calculate PAR (Portfolio at Risk) metrics for a set of loan accounts.
+ * Returns { totalPortfolio, par1Amount, par30Amount, par90Amount, par1Ratio, par30Ratio, par90Ratio, totalLoans, par1Count, par30Count, par90Count }
+ */
+export const calculateParMetrics = async (accountIds) => {
+  try {
+    const dpdResults = await calculateBatchDpd(accountIds);
+    let totalPortfolio = 0;
+    let par1Amount = 0, par30Amount = 0, par90Amount = 0;
+    let par1Count = 0, par30Count = 0, par90Count = 0;
+
+    for (const r of dpdResults) {
+      totalPortfolio += r.currentBalance || 0;
+      if (r.dpd >= 1) { par1Amount += r.currentBalance || 0; par1Count++; }
+      if (r.dpd >= 30) { par30Amount += r.currentBalance || 0; par30Count++; }
+      if (r.dpd >= 90) { par90Amount += r.currentBalance || 0; par90Count++; }
+    }
+
+    return {
+      totalPortfolio,
+      par1Amount,
+      par30Amount,
+      par90Amount,
+      par1Ratio: totalPortfolio > 0 ? (par1Amount / totalPortfolio) * 100 : 0,
+      par30Ratio: totalPortfolio > 0 ? (par30Amount / totalPortfolio) * 100 : 0,
+      par90Ratio: totalPortfolio > 0 ? (par90Amount / totalPortfolio) * 100 : 0,
+      totalLoans: dpdResults.length,
+      par1Count,
+      par30Count,
+      par90Count,
+    };
+  } catch (error) {
+    console.error('PAR metrics error:', error);
+    return {
+      totalPortfolio: 0, par1Amount: 0, par30Amount: 0, par90Amount: 0,
+      par1Ratio: 0, par30Ratio: 0, par90Ratio: 0,
+      totalLoans: 0, par1Count: 0, par30Count: 0, par90Count: 0,
+    };
+  }
+};
+
+/**
+ * Calculate a single staff member's collection rate for today.
+ * Collection Rate % = total paid / total expected * 100
+ */
+export const calculateStaffCollectionRate = async (userId, date) => {
+  try {
+    const queryDate = date ? new Date(date) : new Date();
+    const dayStart = new Date(queryDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const loanAccounts = await prisma.accountMapping.findMany({
+      where: {
+        mappedToId: userId,
+        accountType: 'Loan',
+        status: 'Active',
+      },
+      select: { id: true },
+    });
+
+    if (loanAccounts.length === 0) return { expected: 0, paid: 0, percent: 0, count: 0, paidCount: 0 };
+
+    const accountIds = loanAccounts.map(a => a.id);
+
+    const todayInstallments = await prisma.loanSchedule.findMany({
+      where: {
+        accountId: { in: accountIds },
+        expectedDate: { gte: dayStart, lt: dayEnd },
+      },
+    });
+
+    if (todayInstallments.length === 0) return { expected: 0, paid: 0, percent: 0, count: 0, paidCount: 0 };
+
+    const totalExpected = todayInstallments.reduce((s, i) => s + i.expectedAmount, 0);
+    const totalPaid = todayInstallments.reduce((s, i) => s + i.paidAmount, 0);
+    const paidCount = todayInstallments.filter(i => i.status === 'Paid' || i.status === 'Partial').length;
+
+    return {
+      expected: totalExpected,
+      paid: totalPaid,
+      percent: totalExpected > 0 ? Math.round((totalPaid / totalExpected) * 100 * 100) / 100 : 0,
+      count: todayInstallments.length,
+      paidCount,
+    };
+  } catch (error) {
+    console.error('Collection rate error:', error);
+    return { expected: 0, paid: 0, percent: 0, count: 0, paidCount: 0 };
+  }
+};
+
+/**
+ * Generate or update daily NPL snapshot for a branch.
+ */
+export const generateNplSnapshot = async (branchId) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const loanAccounts = await prisma.accountMapping.findMany({
+      where: {
+        branchId,
+        accountType: 'Loan',
+        status: 'Active',
+      },
+      select: { id: true },
+    });
+
+    const accountIds = loanAccounts.map(a => a.id);
+    const parMetrics = await calculateParMetrics(accountIds);
+
+    // Upsert today's snapshot
+    const existing = await prisma.nplSnapshot.findFirst({
+      where: {
+        branchId,
+        snapshotDate: { gte: today, lt: tomorrow },
+      },
+    });
+
+    const data = {
+      branchId,
+      snapshotDate: today,
+      totalPortfolio: parMetrics.totalPortfolio,
+      par1Amount: parMetrics.par1Amount,
+      par30Amount: parMetrics.par30Amount,
+      par90Amount: parMetrics.par90Amount,
+      par1Ratio: Math.round(parMetrics.par1Ratio * 100) / 100,
+      par30Ratio: Math.round(parMetrics.par30Ratio * 100) / 100,
+      par90Ratio: Math.round(parMetrics.par90Ratio * 100) / 100,
+      totalLoans: parMetrics.totalLoans,
+      par1Count: parMetrics.par1Count,
+      par30Count: parMetrics.par30Count,
+      par90Count: parMetrics.par90Count,
+    };
+
+    if (existing) {
+      await prisma.nplSnapshot.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.nplSnapshot.create({ data });
+    }
+
+    return data;
+  } catch (error) {
+    console.error('NPL snapshot error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Auto-generate loan repayment schedules for a loan account.
+ * Creates installments from next_payment_date to maturity_date based on payment_frequency.
+ */
+export const autoGenerateLoanSchedules = async (accountId) => {
+  try {
+    const account = await prisma.accountMapping.findUnique({
+      where: { id: accountId },
+    });
+
+    if (!account || account.accountType !== 'Loan') {
+      throw new Error('Account is not a loan account');
+    }
+    if (!account.payment_frequency || !account.loan_principal || !account.next_payment_date) {
+      throw new Error('Missing loan data: payment_frequency, loan_principal, or next_payment_date');
+    }
+
+    // Determine installment amount (simple: principal split evenly)
+    const maturityDate = account.loan_maturity_date ? new Date(account.loan_maturity_date) : new Date();
+    const startDate = new Date(account.next_payment_date);
+    const principal = account.loan_principal;
+
+    let installments = [];
+    let currentDate = new Date(startDate);
+    let remainingPrincipal = principal;
+    let count = 0;
+
+    // Generate up to 200 installments (safety limit)
+    while (currentDate <= maturityDate && count < 200) {
+      count++;
+
+      // Estimate installment amount based on frequency and remaining time
+      let installmentAmount;
+      let nextDate;
+      if (account.payment_frequency === 'Monthly') {
+        installmentAmount = Math.round((principal / 12) * 100) / 100;
+        nextDate = new Date(currentDate);
+        nextDate.setMonth(nextDate.getMonth() + 1);
+      } else if (account.payment_frequency === 'Weekly') {
+        installmentAmount = Math.round((principal / 52) * 100) / 100;
+        nextDate = new Date(currentDate);
+        nextDate.setDate(nextDate.getDate() + 7);
+      } else {
+        installmentAmount = Math.round((principal / 365) * 100) / 100;
+        nextDate = new Date(currentDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+
+      // Check if schedule already exists for this date
+      const existing = await prisma.loanSchedule.findFirst({
+        where: {
+          accountId,
+          expectedDate: {
+            gte: new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate()),
+            lt: new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1),
+          },
+        },
+      });
+
+      if (!existing) {
+        installments.push({
+          accountId,
+          expectedDate: new Date(currentDate),
+          expectedAmount: installmentAmount,
+          paidAmount: 0,
+          status: 'Pending',
+          daysPastDue: 0,
+        });
+      }
+
+      currentDate = nextDate;
+    }
+
+    if (installments.length > 0) {
+      await prisma.loanSchedule.createMany({ data: installments });
+    }
+
+    return { generated: installments.length };
+  } catch (error) {
+    console.error('Auto-generate schedules error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get staff collection alerts for today.
+ * Returns installments due today or overdue that haven't been paid.
+ */
+export const getStaffCollectionAlerts = async (userId) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const loanAccounts = await prisma.accountMapping.findMany({
+      where: {
+        mappedToId: userId,
+        accountType: 'Loan',
+        status: 'Active',
+      },
+      select: { id: true, accountNumber: true, customerName: true, current_balance: true },
+    });
+
+    if (loanAccounts.length === 0) return [];
+
+    const accountIds = loanAccounts.map(a => a.id);
+
+    const overdueInstallments = await prisma.loanSchedule.findMany({
+      where: {
+        accountId: { in: accountIds },
+        expectedDate: { gte: thirtyDaysAgo, lte: today },
+        status: { in: ['Pending', 'Partial'] },
+      },
+      orderBy: { expectedDate: 'asc' },
+    });
+
+    // Build a map of account id -> account info
+    const accountMap = {};
+    for (const a of loanAccounts) {
+      accountMap[a.id] = a;
+    }
+
+    const alerts = [];
+    for (const inst of overdueInstallments) {
+      const acct = accountMap[inst.accountId];
+      const dueDate = new Date(inst.expectedDate);
+      dueDate.setHours(0, 0, 0, 0);
+      const dpd = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const remaining = inst.expectedAmount - inst.paidAmount;
+
+      alerts.push({
+        scheduleId: inst.id,
+        accountNumber: acct?.accountNumber || 'N/A',
+        customerName: acct?.customerName || 'N/A',
+        currentBalance: acct?.current_balance || 0,
+        expectedDate: inst.expectedDate,
+        expectedAmount: inst.expectedAmount,
+        paidAmount: inst.paidAmount,
+        remaining: Math.max(0, remaining),
+        dpd,
+        status: inst.status,
+        severity: dpd >= 30 ? 'high' : dpd >= 7 ? 'medium' : 'low',
+      });
+    }
+
+    // Sort by DPD descending (most urgent first)
+    alerts.sort((a, b) => b.dpd - a.dpd);
+
+    return alerts;
+  } catch (error) {
+    console.error('Collection alerts error:', error);
+    return [];
   }
 };

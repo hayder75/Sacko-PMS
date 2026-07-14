@@ -1,15 +1,17 @@
 import prisma from '../config/database.js';
 
 const CASCADE_MATRIX = {
-  'Account Productivity':       { branchManager: 15, operationSupervisor: 15, crSupervisor: 15, crOfficer: 20, csOfficer: 35 },
-  'Deposit Mobilization':       { branchManager: 25, operationSupervisor: 10, crSupervisor: 25, crOfficer: 15, csOfficer: 25 },
-  'New Member Registration':    { branchManager: 10, operationSupervisor:  0, crSupervisor: 35, crOfficer: 25, csOfficer: 30 },
-  'New Account Opening':        { branchManager: 10, operationSupervisor: 10, crSupervisor: 20, crOfficer: 20, csOfficer: 40 },
-  'Share Capital Growth':       { branchManager: 10, operationSupervisor:  0, crSupervisor: 40, crOfficer: 25, csOfficer: 25 },
-  'Mobile Banking Users':       { branchManager:  5, operationSupervisor:  5, crSupervisor: 20, crOfficer: 20, csOfficer: 50 },
-  'Merchant POS Growth':        { branchManager: 10, operationSupervisor:  0, crSupervisor: 35, crOfficer: 30, csOfficer: 25 },
-  'Billers Recruitment':        { branchManager: 10, operationSupervisor:  0, crSupervisor: 35, crOfficer: 30, csOfficer: 25 },
-  'Internal Operations':        { branchManager: 20, operationSupervisor: 30, crSupervisor:  0, crOfficer:  0, csOfficer: 50 },
+  'Account Productivity':       { operationSupervisor: 30, crSupervisor: 15, crOfficer: 20, csOfficer: 35 },
+  'Deposit Mobilization':       { operationSupervisor: 35, crSupervisor: 25, crOfficer: 15, csOfficer: 25 },
+  'New Member Registration':    { operationSupervisor: 10, crSupervisor: 35, crOfficer: 25, csOfficer: 30 },
+  'New Account Opening':        { operationSupervisor: 20, crSupervisor: 20, crOfficer: 20, csOfficer: 40 },
+  'Share Capital Growth':       { operationSupervisor: 10, crSupervisor: 40, crOfficer: 25, csOfficer: 25 },
+  'Mobile Banking Users':       { operationSupervisor: 10, crSupervisor: 20, crOfficer: 20, csOfficer: 50 },
+  'Merchant POS Growth':        { operationSupervisor: 10, crSupervisor: 35, crOfficer: 30, csOfficer: 25 },
+  'Billers Recruitment':        { operationSupervisor: 10, crSupervisor: 35, crOfficer: 30, csOfficer: 25 },
+  'Internal Operations':        { operationSupervisor: 50, crSupervisor:  0, crOfficer:  0, csOfficer: 50 },
+  'Collection Rate':            { operationSupervisor: 20, crSupervisor: 20, crOfficer: 25, csOfficer: 35 },
+  'Portfolio Quality':          { operationSupervisor: 50, crSupervisor: 20, crOfficer: 15, csOfficer: 15 },
 };
 
 const POSITION_GROUP = {

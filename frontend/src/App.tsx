@@ -31,11 +31,16 @@ import { JuneBalanceImport } from './pages/hq/JuneBalanceImport';
 import { ProductMapping } from './pages/hq/ProductMapping';
 import { AreaPerformance } from './pages/AreaPerformance';
 import { BranchMonitoring } from './pages/BranchMonitoring';
+import { BranchPerformance } from './pages/BranchPerformance';
 import { BehavioralEvaluation } from './pages/BehavioralEvaluation';
 import { BehavioralInput } from './pages/BehavioralInput';
 import { BulkMappingUpload } from './pages/BulkMappingUpload';
 import { MappedAccounts } from './pages/MappedAccounts';
 import { SupervisorApprovals } from './pages/SupervisorApprovals';
+import { HqNplDashboard } from './pages/HqNplDashboard';
+import { AreaNplDashboard } from './pages/AreaNplDashboard';
+import { BranchNplDashboard } from './pages/BranchNplDashboard';
+import { TeamNplAlerts } from './pages/TeamNplAlerts';
 
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
@@ -113,12 +118,17 @@ function AppRoutes() {
       <Route path="/routes" element={<ProtectedRoute allowedRoles={['admin', 'areaManager', 'branchManager', 'supervisor', 'staff']}><RoutesGuide /></ProtectedRoute>} />
       <Route path="/area-performance" element={<ProtectedRoute allowedRoles={['areaManager']}><AreaPerformance /></ProtectedRoute>} />
       <Route path="/branch-monitoring" element={<ProtectedRoute allowedRoles={['areaManager', 'branchManager']}><BranchMonitoring /></ProtectedRoute>} />
+      <Route path="/branch-performance" element={<ProtectedRoute allowedRoles={['branchManager']}><BranchPerformance /></ProtectedRoute>} />
       <Route path="/behavioral-evaluation" element={<ProtectedRoute allowedRoles={['admin', 'areaManager', 'branchManager', 'supervisor']}><BehavioralEvaluation /></ProtectedRoute>} />
       <Route path="/behavioral-input" element={<ProtectedRoute allowedRoles={['supervisor']}><BehavioralInput /></ProtectedRoute>} />
       <Route path="/approvals" element={<ProtectedRoute allowedRoles={['supervisor', 'branchManager']}><SupervisorApprovals /></ProtectedRoute>} />
       <Route path="/june-balance-import" element={<ProtectedRoute allowedRoles={['admin']}><JuneBalanceImport /></ProtectedRoute>} />
       <Route path="/product-mapping" element={<ProtectedRoute allowedRoles={['admin']}><ProductMapping /></ProtectedRoute>} />
       <Route path="/mapped-accounts" element={<ProtectedRoute allowedRoles={['branchManager', 'supervisor', 'staff']}><MappedAccounts /></ProtectedRoute>} />
+      <Route path="/npl/hq" element={<ProtectedRoute allowedRoles={['admin']}><HqNplDashboard /></ProtectedRoute>} />
+      <Route path="/npl/area" element={<ProtectedRoute allowedRoles={['areaManager']}><AreaNplDashboard /></ProtectedRoute>} />
+      <Route path="/npl/branch" element={<ProtectedRoute allowedRoles={['branchManager']}><BranchNplDashboard /></ProtectedRoute>} />
+      <Route path="/npl/team-alerts" element={<ProtectedRoute allowedRoles={['supervisor']}><TeamNplAlerts /></ProtectedRoute>} />
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>

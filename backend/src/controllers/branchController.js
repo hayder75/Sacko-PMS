@@ -68,10 +68,10 @@ export const createBranch = asyncHandler(async (req, res) => {
   const { name, code, areaId, managerId, address, phone } = req.body;
 
   // Validate required fields
-  if (!name || !code || !areaId) {
+  if (!name || !code) {
     return res.status(400).json({
       success: false,
-      message: 'Missing required fields: name, code, areaId',
+      message: 'Missing required fields: name, code',
     });
   }
 
@@ -86,13 +86,15 @@ export const createBranch = asyncHandler(async (req, res) => {
     });
   }
 
-  // Verify area exists
-  const area = await prisma.area.findUnique({ where: { id: areaId } });
-  if (!area) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid areaId',
-    });
+  // Verify area exists (if provided)
+  if (areaId) {
+    const area = await prisma.area.findUnique({ where: { id: areaId } });
+    if (!area) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid areaId',
+      });
+    }
   }
 
   // Verify manager exists and is a Branch Manager (if provided)
@@ -119,7 +121,7 @@ export const createBranch = asyncHandler(async (req, res) => {
     data: {
       name: name.trim(),
       code: code.toUpperCase().trim(),
-      areaId,
+      areaId: areaId || null,
       managerId: managerId || null,
       address: address?.trim() || '',
       phone: phone?.trim() || '',
@@ -203,7 +205,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
   const updateData = {};
   if (name) updateData.name = name.trim();
   if (code) updateData.code = code.toUpperCase().trim();
-  if (areaId) updateData.areaId = areaId;
+  if (areaId !== undefined) updateData.areaId = areaId || null;
   if (managerId !== undefined) updateData.managerId = managerId || null;
   if (address !== undefined) updateData.address = address?.trim() || '';
   if (phone !== undefined) updateData.phone = phone?.trim() || '';

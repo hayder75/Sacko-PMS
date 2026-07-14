@@ -294,8 +294,8 @@ export function BranchMonitoring() {
                     {statusFilter !== 'All' && <span className="text-slate-400 normal-case ml-1">({statusFilter})</span>}
                   </h4>
                   <div className="space-y-1.5">
-                    {branch._filteredTasks.length > 0 ? branch._filteredTasks.map((t: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between p-2.5 rounded-md bg-slate-50 border border-slate-100">
+                    {branch._filteredTasks.length > 0 ? branch._filteredTasks.map((t: any) => (
+                      <div key={t._id || t.id} className="flex items-center justify-between p-2.5 rounded-md bg-slate-50 border border-slate-100">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-xs font-medium text-slate-700">{t.type}</span>
                           {t.amount > 0 && (
@@ -434,8 +434,8 @@ export function BranchMonitoring() {
                           {statusFilter !== 'All' && <span className="text-slate-400 normal-case ml-1">({statusFilter})</span>}
                         </h4>
                         <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                          {branch._filteredTasks.map((t: any, i: number) => (
-                            <div key={i} className="flex items-center justify-between p-2 rounded-md bg-slate-50 border border-slate-100">
+                          {branch._filteredTasks.map((t: any) => (
+                            <div key={t._id || t.id} className="flex items-center justify-between p-2 rounded-md bg-slate-50 border border-slate-100">
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="text-xs font-medium text-slate-700">{t.type}</span>
                                 {t.amount > 0 && (

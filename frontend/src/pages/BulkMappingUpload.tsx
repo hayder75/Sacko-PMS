@@ -188,8 +188,8 @@ export function BulkMappingUpload() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {result.successful.map((item: any, index: number) => (
-                            <TableRow key={index} className="bg-green-50">
+                          {result.successful.map((item: any) => (
+                            <TableRow key={item.accountNumber || item.row} className="bg-green-50">
                               <TableCell>{item.row}</TableCell>
                               <TableCell className="font-medium">{item.accountNumber}</TableCell>
                               <TableCell>{item.customerName}</TableCell>
@@ -233,8 +233,8 @@ export function BulkMappingUpload() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {result.errors.map((error: any, index: number) => (
-                            <TableRow key={index} className="bg-red-50">
+                          {result.errors.map((error: any) => (
+                            <TableRow key={error.accountNumber || error.row} className="bg-red-50">
                               <TableCell>{error.row}</TableCell>
                               <TableCell className="font-medium">{error.accountNumber || 'N/A'}</TableCell>
                               <TableCell>{error.customerName || 'N/A'}</TableCell>

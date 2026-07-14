@@ -16,6 +16,8 @@ const DEFAULT_KPI_DATA = [
   { id: 'Mobile_Banking_Users', kpiId: 'Mobile_Banking_Users', name: 'Mobile Banking Users', weight: 5, minBalance: 0 },
   { id: 'Billers_Recruitment', kpiId: 'Billers_Recruitment', name: 'Billers Recruitment', weight: 5, minBalance: 0 },
   { id: 'Merchant_POS_Growth', kpiId: 'Merchant_POS_Growth', name: 'Merchant POS Growth', weight: 3, minBalance: 0 },
+  { id: 'Collection_Rate', kpiId: 'Collection_Rate', name: 'Collection Rate', weight: 0, minBalance: 0 },
+  { id: 'Portfolio_Quality', kpiId: 'Portfolio_Quality', name: 'Portfolio Quality', weight: 0, minBalance: 0 },
 ];
 
 const thresholds = [

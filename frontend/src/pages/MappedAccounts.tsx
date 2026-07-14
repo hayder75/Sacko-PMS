@@ -3,7 +3,6 @@ import { useUser } from '@/contexts/UserContext';
 import { mappedAccountsAPI, dashboardAPI } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Phone, TrendingUp, TrendingDown, Banknote, Target, Users, PiggyBank, FileText, ChevronDown, ChevronRight, User } from 'lucide-react';
 
 const KPI_COLORS: Record<string, string> = {

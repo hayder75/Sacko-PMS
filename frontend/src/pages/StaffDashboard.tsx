@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Phone, TrendingUp, TrendingDown, Minus, Save, X } from 'lucide-react';
+import { Phone, TrendingUp, TrendingDown, Minus, Save, X, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { dashboardAPI, mappedAccountsAPI } from '@/lib/api';
+import { dashboardAPI, mappedAccountsAPI, nplAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 
 export function StaffDashboard() {
@@ -15,9 +15,11 @@ export function StaffDashboard() {
   const [loading, setLoading] = useState(false);
   const [editingPhone, setEditingPhone] = useState<string | null>(null);
   const [phoneValue, setPhoneValue] = useState('');
+  const [nplData, setNplData] = useState<any>(null);
 
   useEffect(() => {
     loadDashboardData();
+    loadNplData();
   }, []);
 
   const loadDashboardData = async () => {
@@ -41,6 +43,15 @@ export function StaffDashboard() {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadNplData = async () => {
+    try {
+      const res = await nplAPI.getStaff();
+      if (res.success) setNplData(res.data);
+    } catch (e) {
+      // NPL data is optional
     }
   };
 
@@ -217,6 +228,77 @@ export function StaffDashboard() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Collection Alerts */}
+      {nplData?.alerts?.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <AlertTriangle className={`h-5 w-5 ${nplData.alertCount > 0 ? 'text-red-500' : 'text-emerald-500'}`} />
+              Collection Alerts
+              <span className="ml-2 text-sm font-normal text-slate-400">
+                ({nplData.totalAlerts} pending)
+              </span>
+              {nplData.alertCount > 0 && (
+                <Badge variant="destructive" className="text-xs ml-1">{nplData.alertCount} high priority</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {nplData.alerts.slice(0, 10).map((alert: any) => (
+                <div key={alert.scheduleId}
+                  className={`flex items-center justify-between p-3 rounded-lg border text-sm
+                    ${alert.severity === 'high' ? 'bg-red-50 border-red-200' :
+                      alert.severity === 'medium' ? 'bg-amber-50 border-amber-200' :
+                      'bg-slate-50 border-slate-200'}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0
+                      ${alert.severity === 'high' ? 'bg-red-500' :
+                        alert.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-400'}`}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-mono text-xs text-slate-500">{alert.accountNumber}</div>
+                      <div className="font-medium text-slate-800 truncate">{alert.customerName}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0 ml-4">
+                    <div className="text-right">
+                      <div className="font-mono text-sm font-semibold text-red-600">{alert.remaining?.toLocaleString()}</div>
+                      <div className="text-xs text-slate-400">due {new Date(alert.expectedDate).toLocaleDateString()}</div>
+                    </div>
+                    <Badge variant={alert.severity === 'high' ? 'destructive' : 'warning'} className="text-xs">
+                      {alert.dpd}d overdue
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+              {nplData.alerts.length > 10 && (
+                <p className="text-xs text-slate-400 text-center pt-2">
+                  +{nplData.alerts.length - 10} more alerts
+                </p>
+              )}
+            </div>
+            {nplData.collectionRate && nplData.collectionRate.expected > 0 && (
+              <div className="mt-4 pt-3 border-t flex items-center justify-between text-sm">
+                <span className="text-slate-600">Today's Collection Rate</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-500">
+                    {nplData.collectionRate.paid?.toLocaleString()} / {nplData.collectionRate.expected?.toLocaleString()} Birr
+                  </span>
+                  <span className={`font-bold text-lg ${
+                    nplData.collectionRate.percent >= 90 ? 'text-emerald-600' :
+                    nplData.collectionRate.percent >= 60 ? 'text-amber-600' : 'text-red-600'
+                  }`}>
+                    {nplData.collectionRate.percent?.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

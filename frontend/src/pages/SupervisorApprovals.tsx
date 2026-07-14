@@ -9,7 +9,7 @@ import { useUser } from '@/contexts/UserContext';
 import { Home, CheckCircle2, XCircle, Clock, MessageSquare, CheckCheck } from 'lucide-react';
 
 export function SupervisorApprovals() {
-  const { user, role } = useUser();
+  const { user } = useUser();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);

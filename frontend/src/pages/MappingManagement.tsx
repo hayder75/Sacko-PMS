@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Eye, UserPlus, RefreshCw, Users } from 'lucide-react';
+import { Search, Eye, UserPlus, RefreshCw } from 'lucide-react';
 import { mappingsAPI, branchesAPI, usersAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 

@@ -65,6 +65,8 @@ export const KPI_CATEGORY_MAP = {
     'Merchant_POS_Growth': 'Merchant POS Growth',
     'Billers_Recruitment': 'Billers Recruitment',
     'Internal_Operations': 'Internal Operations',
+    'Collection_Rate': 'Collection Rate',
+    'Portfolio_Quality': 'Portfolio Quality',
 };
 
 export const KPI_CATEGORY_TO_ENUM = {
@@ -77,6 +79,8 @@ export const KPI_CATEGORY_TO_ENUM = {
     'Merchant POS Growth': 'Merchant_POS_Growth',
     'Billers Recruitment': 'Billers_Recruitment',
     'Internal Operations': 'Internal_Operations',
+    'Collection Rate': 'Collection_Rate',
+    'Portfolio Quality': 'Portfolio_Quality',
 };
 
 /**
@@ -129,6 +133,19 @@ export const ACCOUNT_TYPE_MAP = {
     'Fixed_Deposit': 'Fixed Deposit',
     'Recurring_Deposit': 'Recurring Deposit',
     'Loan': 'Loan',
+};
+
+export const PAYMENT_FREQUENCY_MAP = {
+    'Daily': 'Daily',
+    'Weekly': 'Weekly',
+    'Monthly': 'Monthly',
+};
+
+export const INSTALLMENT_STATUS_MAP = {
+    'Pending': 'Pending',
+    'Paid': 'Paid',
+    'Partial': 'Partial',
+    'Missed': 'Missed',
 };
 
 /**

@@ -136,6 +136,10 @@ export const usersAPI = {
 
 // Plans API
 export const plansAPI = {
+  getAchievement: async (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/plans/achievement${queryString}`);
+  },
   create: async (planData: any) => {
     return apiRequest('/plans', {
       method: 'POST',
@@ -409,38 +413,6 @@ export const juneBalanceAPI = {
   },
 };
 
-// Plan Share Config API
-export const planShareConfigAPI = {
-  getAll: async (params?: any) => {
-    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
-    return apiRequest(`/plan-share-config${queryString}`);
-  },
-  
-  getById: async (id: string) => {
-    return apiRequest(`/plan-share-config/${id}`);
-  },
-  
-  create: async (configData: any) => {
-    return apiRequest('/plan-share-config', {
-      method: 'POST',
-      body: JSON.stringify(configData),
-    });
-  },
-  
-  update: async (id: string, configData: any) => {
-    return apiRequest(`/plan-share-config/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(configData),
-    });
-  },
-  
-  delete: async (id: string) => {
-    return apiRequest(`/plan-share-config/${id}`, {
-      method: 'DELETE',
-    });
-  },
-};
-
 // Product KPI Mapping API
 export const productMappingAPI = {
   getAll: async (params?: any) => {
@@ -611,55 +583,6 @@ export const areasAPI = {
   },
 };
 
-// Teams API
-export const teamsAPI = {
-  getAll: async (params?: any) => {
-    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
-    return apiRequest(`/teams/teams${queryString}`);
-  },
-
-  create: async (teamData: any) => {
-    return apiRequest('/teams/teams', {
-      method: 'POST',
-      body: JSON.stringify(teamData),
-    });
-  },
-
-  delete: async (id: string) => {
-    return apiRequest(`/teams/teams/${id}`, {
-      method: 'DELETE',
-    });
-  },
-};
-
-// Sub-Teams API
-export const subTeamsAPI = {
-  getAll: async (params?: any) => {
-    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
-    return apiRequest(`/teams/sub-teams${queryString}`);
-  },
-
-  create: async (subTeamData: any) => {
-    return apiRequest('/teams/sub-teams', {
-      method: 'POST',
-      body: JSON.stringify(subTeamData),
-    });
-  },
-
-  update: async (id: string, subTeamData: any) => {
-    return apiRequest(`/teams/sub-teams/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(subTeamData),
-    });
-  },
-
-  delete: async (id: string) => {
-    return apiRequest(`/teams/sub-teams/${id}`, {
-      method: 'DELETE',
-    });
-  },
-};
-
 // Transactions API
 export const transactionsAPI = {
   getAll: async (params?: any) => {
@@ -702,6 +625,43 @@ export const mappedAccountsAPI = {
 export const configAPI = {
   getConfig: async () => {
     return apiRequest('/config');
+  },
+};
+
+export const nplAPI = {
+  getStaff: async () => {
+    return apiRequest('/npl/staff');
+  },
+  getBranch: async (branchId?: string) => {
+    const params = branchId ? `?branchId=${branchId}` : '';
+    return apiRequest(`/npl/branch${params}`);
+  },
+  getArea: async () => {
+    return apiRequest('/npl/area');
+  },
+  getHq: async () => {
+    return apiRequest('/npl/hq');
+  },
+  getTeamAlerts: async () => {
+    return apiRequest('/npl/team-alerts');
+  },
+  getSchedule: async (accountId: string) => {
+    return apiRequest(`/npl/schedules/${accountId}`);
+  },
+  generateSchedule: async (accountId: string) => {
+    return apiRequest(`/npl/schedules/${accountId}/generate`, { method: 'POST' });
+  },
+  markPaid: async (scheduleId: string, data: { paidAmount?: number; paidDate?: string }) => {
+    return apiRequest(`/npl/schedules/${scheduleId}/pay`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+  triggerSnapshot: async (branchId?: string) => {
+    return apiRequest('/npl/snapshot', {
+      method: 'POST',
+      body: JSON.stringify({ branchId }),
+    });
   },
 };
 

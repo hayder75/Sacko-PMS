@@ -9,6 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { productMappingAPI, cbsAPI } from '@/lib/api';
 
+export const productCategories = [
+  'Loan Saving Deposit', 'Michu Current Saving', 'Gihon Regular Saving',
+  'Mothers Saving', 'Young Womens Saving', 'Elders Saving',
+  'Children Saving', 'Fixed Time Deposit', 'Premium Saving Deposit',
+  'Special Saving', 'Segment Deposit', 'Wadiah IFB Deposit',
+];
+
 const kpiCategories = [
   'Account Productivity',
   'Deposit Mobilization',
@@ -184,9 +191,9 @@ export function ProductMapping() {
               Please map them to ensure accurate KPI calculations.
             </p>
             <div className="space-y-2">
-              {unmappedProducts.map((product, idx) => (
+              {unmappedProducts.map((product) => (
                 <div
-                  key={idx}
+                  key={product.productName}
                   className="flex items-center justify-between p-3 bg-white border border-amber-200 rounded-md"
                 >
                   <div>

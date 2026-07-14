@@ -16,6 +16,8 @@ export const getKpiConfig = asyncHandler(async (req, res) => {
       { kpiId: 'Mobile_Banking_Users', name: 'Mobile Banking Users', weight: 5, minBalance: 0 },
       { kpiId: 'Billers_Recruitment', name: 'Billers Recruitment', weight: 5, minBalance: 0 },
       { kpiId: 'Merchant_POS_Growth', name: 'Merchant POS Growth', weight: 3, minBalance: 0 },
+      { kpiId: 'Collection_Rate', name: 'Collection Rate', weight: 8, minBalance: 0 },
+      { kpiId: 'Portfolio_Quality', name: 'Portfolio Quality', weight: 7, minBalance: 0 },
     ];
     for (const d of defaults) {
       await prisma.kpiFrameworkConfig.upsert({
@@ -71,6 +73,8 @@ export const resetKpiConfig = asyncHandler(async (req, res) => {
     { kpiId: 'Mobile_Banking_Users', name: 'Mobile Banking Users', weight: 5, minBalance: 0 },
     { kpiId: 'Billers_Recruitment', name: 'Billers Recruitment', weight: 5, minBalance: 0 },
     { kpiId: 'Merchant_POS_Growth', name: 'Merchant POS Growth', weight: 3, minBalance: 0 },
+    { kpiId: 'Collection_Rate', name: 'Collection Rate', weight: 8, minBalance: 0 },
+    { kpiId: 'Portfolio_Quality', name: 'Portfolio Quality', weight: 7, minBalance: 0 },
   ];
   for (const d of defaults) {
     await prisma.kpiFrameworkConfig.upsert({

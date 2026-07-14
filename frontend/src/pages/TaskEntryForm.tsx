@@ -14,12 +14,13 @@ import { useConfig } from '@/contexts/ConfigContext';
 
 const FALLBACK_PRODUCTS: Record<string, string[]> = {
   'Deposit Mobilization': [
-    'LOAN SAVING RESERVE ACCOUNT', 'REPAYMENT ACCOUNT', 'MOTHERS SAVING ACCOUNT',
-    'YOUNG WOMEN SAVING', 'SPECIAL SAVING ACCOUNT', 'FIXED TIME DEPOSIT',
-    'CHILDREN SAVING ACCOUNT', 'ELDERS SAVING ACCOUNT', 'WADIAH SAVING ACCOUNT',
-    'Michu Current Account', 'GIHON REGULAR SAVING',
+    'LOAN SAVING RESERVE ACCOUNT', 'Michu Current Account', 'GIHON REGULAR SAVING',
+    'MOTHERS SAVING ACCOUNT', 'YOUNG WOMEN SAVING', 'ELDERS SAVING ACCOUNT',
+    'CHILDREN SAVING ACCOUNT', 'FIXED TIME DEPOSIT', 'Premium Saving Deposit',
+    'SPECIAL SAVING ACCOUNT', 'Segment Deposit', 'WADIAH SAVING ACCOUNT',
+    'REPAYMENT ACCOUNT', 'School',
   ],
-  'New Account Opening': ['Michu Current Account', 'GIHON REGULAR SAVING'],
+  'New Account Opening': ['Michu Current Account', 'GIHON REGULAR SAVING', 'Premium Saving Deposit'],
   'Share Capital Growth': ['COMMON SHARE'],
   'Mobile Banking Users': ['Michu Current Account', 'GIHON REGULAR SAVING'],
   'Merchant POS Growth': ['MERCHANT ACCOUNT'],
@@ -193,7 +194,7 @@ export function TaskEntryForm() {
                   <SelectValue placeholder="Select task type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {taskTypes.map((type) => (
+                  {taskTypes.filter((t, i, arr) => arr.indexOf(t) === i).map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>

@@ -16,13 +16,26 @@ const KPI_COLORS: Record<string, string> = {
   'Merchant POS Growth': '#ef4444',
   'Billers Recruitment': '#f97316',
   'Internal Operations': '#6b7280',
+  'Loan Saving Deposit': '#059669',
+  'Michu Current Saving': '#2563eb',
+  'Gihon Regular Saving': '#7c3aed',
+  'Mothers Saving': '#db2777',
+  'Young Womens Saving': '#d946ef',
+  'Elders Saving': '#ea580c',
+  'Children Saving': '#0d9488',
+  'Fixed Time Deposit': '#ca8a04',
+  'Premium Saving Deposit': '#dc2626',
+  'Special Saving': '#4f46e5',
+  'Segment Deposit': '#0891b2',
+  'Wadiah IFB Deposit': '#65a30d',
 };
 
-const periodOptions = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];
+const periodOptions = ['FY-2026-27', '2025-H2', 'Q4-2025', 'December-2025', '2025'];
 
 export function PlansOverview() {
   const [plans, setPlans] = useState<any[]>([]);
   const [staffPlans, setStaffPlans] = useState<any[]>([]);
+  const [achievementPlans, setAchievementPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('2025-H2');
 
@@ -33,12 +46,14 @@ export function PlansOverview() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [plansRes, staffRes] = await Promise.all([
+      const [plansRes, staffRes, achievementRes] = await Promise.all([
         plansAPI.getAll({ period: selectedPeriod }),
         staffPlansAPI.getAll({ period: selectedPeriod }),
+        plansAPI.getAchievement({ period: selectedPeriod }),
       ]);
       if (plansRes.success) setPlans(plansRes.data || []);
       if (staffRes.success) setStaffPlans(staffRes.data || []);
+      if (achievementRes.success) setAchievementPlans(achievementRes.data || []);
     } catch (error) {
       console.error('Error loading plan data:', error);
     } finally {
@@ -46,7 +61,13 @@ export function PlansOverview() {
     }
   };
 
+  const achievementMap = new Map<string, any>();
+  for (const ap of achievementPlans) {
+    achievementMap.set(`${ap.branch_code}-${ap.kpi_category}-${ap.product_category || ''}`, ap);
+  }
+
   const totalTarget = plans.reduce((s, p) => s + p.target_value, 0);
+  const totalTargetCount = plans.reduce((s, p) => s + (p.target_count || 0), 0);
   const activePlans = plans.filter(p => p.status === 'Active').length;
   const totalStaffPlans = staffPlans.length;
   const totalStaffTarget = staffPlans.reduce((s, p) => s + p.individual_target, 0);
@@ -66,11 +87,26 @@ export function PlansOverview() {
     const existing = acc.find(a => a.name === label);
     if (existing) {
       existing.value += plan.target_value;
+      existing.count += plan.target_count || 0;
     } else {
-      acc.push({ name: label, value: plan.target_value, fill: KPI_COLORS[label] || '#6b7280' });
+      acc.push({ name: label, value: plan.target_value, count: plan.target_count || 0, fill: KPI_COLORS[label] || '#6b7280' });
     }
     return acc;
   }, []);
+
+  const targetByProduct = plans
+    .filter(p => p.product_category)
+    .reduce((acc: any[], plan) => {
+      const label = plan.product_category;
+      const existing = acc.find(a => a.name === label);
+      if (existing) {
+        existing.amount += plan.target_value;
+        existing.count += plan.target_count || 0;
+      } else {
+        acc.push({ name: label, amount: plan.target_value, count: plan.target_count || 0, fill: KPI_COLORS[label] || '#6b7280' });
+      }
+      return acc;
+    }, []);
 
   const staffPlanByUser = staffPlans.reduce((acc: any[], sp) => {
     const existing = acc.find(a => a.name === sp.user?.name);
@@ -134,6 +170,16 @@ export function PlansOverview() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">Target Accounts</CardTitle>
+            <Users className="h-4 w-4 text-violet-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-800">{totalTargetCount.toLocaleString()}</div>
+            <p className="text-xs text-slate-500 mt-1">Across all plans</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">Staff Plans</CardTitle>
             <Users className="h-4 w-4 text-violet-500" />
           </CardHeader>
@@ -183,6 +229,33 @@ export function PlansOverview() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="text-base font-semibold">Target by Product</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {targetByProduct.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={targetByProduct} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={80} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(value: number) => value.toLocaleString()} />
+                  <Bar dataKey="amount" name="Target Amount" radius={[4, 4, 0, 0]}>
+                    {targetByProduct.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.fill || '#6b7280'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-slate-400 py-8">No product data for {selectedPeriod}</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base font-semibold">Target by KPI Category</CardTitle>
           </CardHeader>
           <CardContent>
@@ -219,29 +292,54 @@ export function PlansOverview() {
                 <TableRow>
                   <TableHead>Branch</TableHead>
                   <TableHead>KPI Category</TableHead>
-                  <TableHead>Target Value</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Target Amount</TableHead>
+                  <TableHead>Actual</TableHead>
+                  <TableHead>Achievement</TableHead>
+                  <TableHead>Target Count</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {plans.map((plan) => (
-                  <TableRow key={plan._id || plan.id}>
-                    <TableCell className="font-medium">{plan.branch_code}</TableCell>
-                    <TableCell>{plan.kpi_category?.replace(/_/g, ' ')}</TableCell>
-                    <TableCell>{plan.target_value?.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge variant={plan.status === 'Active' ? 'success' : plan.status === 'Draft' ? 'warning' : 'secondary'}>
-                        {plan.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{plan.createdBy?.name || 'N/A'}</TableCell>
-                    <TableCell className="text-sm text-slate-500">
-                      {new Date(plan.createdAt).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {plans.map((plan) => {
+                  const ach = achievementMap.get(`${plan.branch_code}-${plan.kpi_category}-${plan.product_category || ''}`);
+                  const actual = ach?.actual ?? 0;
+                  const pct = ach?.achievementPercent ?? 0;
+                  return (
+                    <TableRow key={plan._id || plan.id}>
+                      <TableCell className="font-medium">{plan.branch_code}</TableCell>
+                      <TableCell>{plan.kpi_category?.replace(/_/g, ' ')}</TableCell>
+                      <TableCell>{plan.product_category || '-'}</TableCell>
+                      <TableCell>{plan.target_value?.toLocaleString()}</TableCell>
+                      <TableCell>{actual.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-full max-w-[100px] bg-slate-100 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                              style={{ width: `${Math.min(pct, 100)}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-semibold ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {pct}%
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{(plan.target_count ?? 0).toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={plan.status === 'Active' ? 'success' : plan.status === 'Draft' ? 'warning' : 'secondary'}>
+                          {plan.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{plan.createdBy?.name || 'N/A'}</TableCell>
+                      <TableCell className="text-sm text-slate-500">
+                        {new Date(plan.createdAt).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
@@ -268,8 +366,8 @@ export function PlansOverview() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {staffPlanByUser.map((sp, idx) => (
-                  <TableRow key={idx}>
+                {staffPlanByUser.map((sp) => (
+                  <TableRow key={sp.name}>
                     <TableCell className="font-medium">{sp.name}</TableCell>
                     <TableCell>{sp.role}</TableCell>
                     <TableCell>{sp.branch}</TableCell>

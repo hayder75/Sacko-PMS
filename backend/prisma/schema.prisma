@@ -33,6 +33,19 @@ enum Position {
   Internal_Auditor             @map("Internal Auditor")
 }
 
+enum PaymentFrequency {
+  Daily
+  Weekly
+  Monthly
+}
+
+enum InstallmentStatus {
+  Pending
+  Paid
+  Partial
+  Missed
+}
+
 enum KpiCategory {
   Account_Productivity       @map("Account Productivity")
   Deposit_Mobilization       @map("Deposit Mobilization")
@@ -43,6 +56,8 @@ enum KpiCategory {
   Merchant_POS_Growth        @map("Merchant POS Growth")
   Billers_Recruitment        @map("Billers Recruitment")
   Internal_Operations        @map("Internal Operations")
+  Collection_Rate            @map("Collection Rate")
+  Portfolio_Quality          @map("Portfolio Quality")
 }
 
 enum PlanPeriod {
@@ -246,10 +261,26 @@ model User {
   @@map("users")
 }
 
+model Region {
+  id        String   @id @default(uuid()) @map("_id")
+  name      String
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  areas Area[]
+
+  @@map("regions")
+}
+
 model Area {
   id        String   @id @default(uuid()) @map("_id")
   name      String
   code      String   @unique
+  regionId  String?
+  region    Region?  @relation(fields: [regionId], references: [id])
   managerId String?
   manager   User?    @relation("AreaManager", fields: [managerId], references: [id])
   isActive  Boolean  @default(true)
@@ -260,6 +291,7 @@ model Area {
   branches Branch[]
   users    User[]   @relation("AreaUsers")
 
+  @@index([regionId])
   @@map("areas")
 }
 
@@ -267,8 +299,8 @@ model Branch {
   id        String   @id @default(uuid()) @map("_id")
   name      String
   code      String   @unique
-  areaId    String
-  area      Area     @relation(fields: [areaId], references: [id])
+  areaId    String?
+  area      Area?    @relation(fields: [areaId], references: [id])
   managerId String?
   manager   User?    @relation("BranchManager", fields: [managerId], references: [id])
   address   String?
@@ -286,30 +318,35 @@ model Branch {
   behavioralEvaluations BehavioralEvaluation[]
   cbsValidations        CBSValidation[]
   accountMappings       AccountMapping[]
+  nplSnapshots          NplSnapshot[]
 
   @@index([areaId])
   @@map("branches")
 }
 
 model Plan {
-  id           String      @id @default(uuid()) @map("_id")
-  branch_code  String
-  branchId     String
-  branch       Branch      @relation(fields: [branchId], references: [id])
-  kpi_category KpiCategory
-  period       String
-  target_value Float       @default(0)
-  target_type  TargetType  @default(incremental)
-  status       PlanStatus  @default(Draft)
-  createdById  String
-  createdBy    User        @relation("PlanCreator", fields: [createdById], references: [id])
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id               String      @id @default(uuid()) @map("_id")
+  branch_code      String
+  branchId         String
+  branch           Branch      @relation(fields: [branchId], references: [id])
+  kpi_category     KpiCategory
+  product_category String?     // Product-level plans (e.g. "Michu_Current_Saving")
+  period           String
+  target_value     Float       @default(0)  // Deposit amount target
+  target_count     Float       @default(0)  // Account count target
+  monthly_plan     Json?       // Monthly breakdown [{month: "July", amount: X, count: Y}, ...]
+  target_type      TargetType  @default(incremental)
+  status           PlanStatus  @default(Draft)
+  createdById      String
+  createdBy        User        @relation("PlanCreator", fields: [createdById], references: [id])
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   // Relations
   staffPlans StaffPlan[]
 
   @@index([branch_code, kpi_category, period])
+  @@index([branch_code, product_category, period])
   @@index([branch_code, period])
   @@index([status])
   @@index([branchId])
@@ -327,6 +364,7 @@ model StaffPlan {
   user               User        @relation(fields: [userId], references: [id])
   position           String
   kpi_category       KpiCategory
+  product_category   String?     // Product-level plan category
   period             String
   target_type        TargetType  @default(incremental)
   individual_target  Float       @default(0)
@@ -334,6 +372,7 @@ model StaffPlan {
   monthly_target     Float       @default(0)
   weekly_target      Float       @default(0)
   daily_target       Float       @default(0)
+  target_count       Float       @default(0)  // Account count target
   plan_share_percent Float
   status             PlanStatus  @default(Active)
   createdAt          DateTime    @default(now())
@@ -347,39 +386,91 @@ model StaffPlan {
 }
 
 model AccountMapping {
-  id                    String        @id @default(uuid()) @map("_id")
-  accountNumber         String        @unique
+  id                    String            @id @default(uuid()) @map("_id")
+  accountNumber         String            @unique
   customerName          String
   accountType           AccountType
-  balance               Float         @default(0)
-  june_balance          Float         @default(0)
-  current_balance       Float         @default(0)
-  active_status         Boolean       @default(false)
+  balance               Float             @default(0)
+  june_balance          Float             @default(0)
+  current_balance       Float             @default(0)
+  active_status         Boolean           @default(false)
   last_transaction_date DateTime?
-  isProductive          Boolean       @default(false)
+  isProductive          Boolean           @default(false)
   mappedToId            String
-  mappedTo              User          @relation("MappedToUser", fields: [mappedToId], references: [id])
+  mappedTo              User              @relation("MappedToUser", fields: [mappedToId], references: [id])
   branchId              String
-  branch                Branch        @relation(fields: [branchId], references: [id])
-  mappedAt              DateTime      @default(now())
+  branch                Branch            @relation(fields: [branchId], references: [id])
+  mappedAt              DateTime          @default(now())
   mappedById            String?
-  mappedBy              User?         @relation("MappingCreator", fields: [mappedById], references: [id])
-  isAutoBalanced        Boolean       @default(false)
-  status                AccountStatus @default(Active)
+  mappedBy              User?             @relation("MappingCreator", fields: [mappedById], references: [id])
+  isAutoBalanced        Boolean           @default(false)
+  status                AccountStatus     @default(Active)
   notes                 String?
   phoneNumber           String?
   product               String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  // Loan-specific fields
+  loan_disbursement_date DateTime?
+  loan_maturity_date     DateTime?
+  loan_principal         Float             @default(0)
+  payment_frequency      PaymentFrequency?
+  interest_rate          Float             @default(0)
+  next_payment_date      DateTime?
+  last_payment_date      DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   // Relations
-  dailyTasks DailyTask[]
+  dailyTasks    DailyTask[]
+  loanSchedules LoanSchedule[]
 
   @@index([mappedToId, branchId, status])
   @@index([accountNumber])
   @@index([branchId])
   @@index([isProductive])
   @@map("account_mappings")
+}
+
+model LoanSchedule {
+  id              String            @id @default(uuid()) @map("_id")
+  accountId       String
+  account         AccountMapping    @relation(fields: [accountId], references: [id])
+  expectedDate    DateTime
+  expectedAmount  Float
+  paidAmount      Float             @default(0)
+  status          InstallmentStatus @default(Pending)
+  paidDate        DateTime?
+  daysPastDue     Int               @default(0)
+  remarks         String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([accountId, expectedDate])
+  @@index([status])
+  @@index([expectedDate])
+  @@map("loan_schedules")
+}
+
+model NplSnapshot {
+  id              String   @id @default(uuid()) @map("_id")
+  branchId        String
+  branch          Branch   @relation(fields: [branchId], references: [id])
+  snapshotDate    DateTime
+  totalPortfolio  Float    @default(0)
+  par1Amount      Float    @default(0)
+  par30Amount     Float    @default(0)
+  par90Amount     Float    @default(0)
+  par1Ratio       Float    @default(0)
+  par30Ratio      Float    @default(0)
+  par90Ratio      Float    @default(0)
+  totalLoans      Int      @default(0)
+  par1Count       Int      @default(0)
+  par30Count      Int      @default(0)
+  par90Count      Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([branchId, snapshotDate])
+  @@index([snapshotDate])
+  @@map("npl_snapshots")
 }
 
 model DailyTask {

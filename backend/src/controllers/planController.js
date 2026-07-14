@@ -2,6 +2,11 @@ import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
 import { cascadeBranchPlan } from '../utils/planCascade.js';
+import {
+  calculateBranchDepositGrowth,
+  calculateStaffCollectionRate,
+  calculateParMetrics,
+} from '../utils/performanceCalculator.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
 import { KPI_CATEGORY_TO_ENUM } from '../utils/prismaHelpers.js';
@@ -10,7 +15,7 @@ import { KPI_CATEGORY_TO_ENUM } from '../utils/prismaHelpers.js';
 // @route   POST /api/plans
 // @access  Private (Admin)
 export const createPlan = asyncHandler(async (req, res) => {
-  const { branch_code, kpi_category, period, target_value, target_type: rawTargetType } = req.body;
+  const { branch_code, kpi_category, period, target_value, target_count, product_category, monthly_plan, target_type: rawTargetType } = req.body;
   const target_type = rawTargetType === 'Numeric' ? 'incremental' : (rawTargetType || 'incremental');
 
   // Validate required fields
@@ -36,20 +41,21 @@ export const createPlan = asyncHandler(async (req, res) => {
   // Convert KPI category string to enum
   const kpiEnum = KPI_CATEGORY_TO_ENUM[kpi_category] || kpi_category;
 
-  // Check if plan already exists
-  const existingPlan = await prisma.plan.findFirst({
-    where: {
-      branch_code: branch_code.toUpperCase().trim(),
-      kpi_category: kpiEnum,
-      period,
-      status: { in: ['Draft', 'Active'] },
-    },
-  });
+  // Check if plan already exists (include product_category if provided)
+  const existingWhere = {
+    branch_code: branch_code.toUpperCase().trim(),
+    kpi_category: kpiEnum,
+    period,
+    status: { in: ['Draft', 'Active'] },
+  };
+  if (product_category) existingWhere.product_category = product_category;
+
+  const existingPlan = await prisma.plan.findFirst({ where: existingWhere });
 
   if (existingPlan) {
     return res.status(400).json({
       success: false,
-      message: 'A plan already exists for this branch, KPI category, and period',
+      message: 'A plan already exists for this branch, KPI category, period, and product',
     });
   }
 
@@ -61,6 +67,9 @@ export const createPlan = asyncHandler(async (req, res) => {
       kpi_category: kpiEnum,
       period,
       target_value: parseFloat(target_value),
+      target_count: target_count ? parseInt(target_count) : undefined,
+      product_category: product_category || null,
+      monthly_plan: monthly_plan || undefined,
       target_type: target_type || 'incremental',
       status: 'Active',
       createdById: req.user.id,
@@ -141,9 +150,23 @@ export const uploadPlan = asyncHandler(async (req, res) => {
       'Merchant POS Growth',
       'Billers Recruitment',
       'Internal Operations',
+      'Collection Rate',
+      'Portfolio Quality',
+      'Loan Saving Deposit',
+      'Michu Current Saving',
+      'Gihon Regular Saving',
+      'Mothers Saving',
+      'Young Womens Saving',
+      'Elders Saving',
+      'Children Saving',
+      'Fixed Time Deposit',
+      'Premium Saving Deposit',
+      'Special Saving',
+      'Segment Deposit',
+      'Wadiah IFB Deposit',
     ];
 
-    const validPeriods = ['2025-H2', 'Q4-2025', 'December-2025', '2025'];
+    const validPeriods = ['2025-H2', 'Q4-2025', 'December-2025', '2025', 'FY-2026-27'];
 
     for (const [index, row] of data.entries()) {
       try {
@@ -153,6 +176,15 @@ export const uploadPlan = asyncHandler(async (req, res) => {
         const kpi_category = row.kpi_category || row.kpicategory || '';
         const period = row.period || '';
         const target_value = parseFloat(row.target_value || row.targetvalue || 0);
+        const target_count = row.target_count || row.targetcount ? parseInt(row.target_count || row.targetcount) : undefined;
+        const product_category = row.product_category || row.productcategory || undefined;
+
+        let monthly_plan = undefined;
+        if (row.monthly_plan || row.monthlyplan) {
+          try {
+            monthly_plan = JSON.parse(row.monthly_plan || row.monthlyplan);
+          } catch { }
+        }
 
         if (!branch_code || !kpi_category || !period || isNaN(target_value) || target_value <= 0) {
           results.errors.push(`Row ${index + 2}: Missing or invalid required fields.`);
@@ -179,17 +211,18 @@ export const uploadPlan = asyncHandler(async (req, res) => {
           continue;
         }
 
-        const kpiEnum = KPI_CATEGORY_TO_ENUM[kpi_category];
+        const kpiEnum = KPI_CATEGORY_TO_ENUM[kpi_category] || kpi_category;
 
-        // Check if plan already exists
-        const existingPlan = await prisma.plan.findFirst({
-          where: {
-            branch_code,
-            kpi_category: kpiEnum,
-            period,
-            status: { in: ['Draft', 'Active'] },
-          },
-        });
+        // Check if plan already exists (include product_category if provided)
+        const existingWhere = {
+          branch_code,
+          kpi_category: kpiEnum,
+          period,
+          status: { in: ['Draft', 'Active'] },
+        };
+        if (product_category) existingWhere.product_category = product_category;
+
+        const existingPlan = await prisma.plan.findFirst({ where: existingWhere });
 
         if (existingPlan) {
           results.errors.push(`Row ${index + 2}: Plan already exists`);
@@ -204,6 +237,9 @@ export const uploadPlan = asyncHandler(async (req, res) => {
             kpi_category: kpiEnum,
             period,
             target_value,
+            target_count: target_count || undefined,
+            product_category: product_category || null,
+            monthly_plan: monthly_plan || undefined,
             target_type: 'incremental',
             status: 'Active',
             createdById: req.user.id,
@@ -250,7 +286,7 @@ export const uploadPlan = asyncHandler(async (req, res) => {
 // @route   GET /api/plans
 // @access  Private
 export const getPlans = asyncHandler(async (req, res) => {
-  const { branch_code, kpi_category, period, status } = req.query;
+  const { branch_code, kpi_category, period, status, product_category } = req.query;
 
   const where = {};
 
@@ -262,13 +298,14 @@ export const getPlans = asyncHandler(async (req, res) => {
   if (kpi_category) where.kpi_category = KPI_CATEGORY_TO_ENUM[kpi_category] || kpi_category;
   if (period) where.period = period;
   if (status) where.status = status;
+  if (product_category) where.product_category = product_category;
 
   const plans = await prisma.plan.findMany({
     where,
     include: {
       createdBy: { select: { id: true, name: true, email: true } },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ product_category: 'asc' }, { createdAt: 'desc' }],
   });
 
   res.status(200).json({
@@ -326,6 +363,9 @@ export const updatePlan = asyncHandler(async (req, res) => {
     data: updateData,
   });
 
+  if (updateData.target_count) updateData.target_count = parseInt(updateData.target_count);
+  if (updateData.monthly_plan) updateData.monthly_plan = updateData.monthly_plan;
+
   if (targetChanged) {
     await cascadeBranchPlan(plan);
   }
@@ -343,5 +383,103 @@ export const updatePlan = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     data: { ...plan, _id: plan.id },
+  });
+});
+
+const KPI_TASK_TYPES = {
+  'Account_Productivity': ['Account_Productivity'],
+  'New_Member_Registration': ['New_Member_Registration'],
+  'New_Account_Opening': ['New_Account_Opening'],
+  'Share_Capital_Growth': ['Share_Capital'],
+  'Mobile_Banking_Users': ['Mobile_Banking_Activation'],
+  'Merchant_POS_Growth': ['Merchant_POS_Activation'],
+  'Billers_Recruitment': ['Biller_Recruitment'],
+  'Internal_Operations': ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
+};
+
+// @desc    Get plans with actual achievement
+// @route   GET /api/plans/achievement?period=xxx
+// @access  Private (Admin)
+export const getPlansAchievement = asyncHandler(async (req, res) => {
+  const { period } = req.query;
+  if (!period) {
+    return res.status(400).json({ success: false, message: 'Period query parameter is required' });
+  }
+
+  const where = { period, status: 'Active' };
+  if (req.user.role !== 'admin' && req.user.branch_code) {
+    where.branch_code = req.user.branch_code;
+  }
+
+  const plans = await prisma.plan.findMany({
+    where,
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: [{ branch_code: 'asc' }, { kpi_category: 'asc' }],
+  });
+
+  const enrichedPlans = [];
+  for (const plan of plans) {
+    const branch = await prisma.branch.findUnique({ where: { code: plan.branch_code } });
+    if (!branch) {
+      enrichedPlans.push({ ...plan, actual: 0, achievementPercent: 0 });
+      continue;
+    }
+
+    const staffList = await prisma.user.findMany({
+      where: { branchId: branch.id, isActive: true, role: { in: ['staff', 'supervisor'] } },
+    });
+    const staffIds = staffList.map(s => s.id);
+    let actual = 0;
+
+    if (plan.kpi_category === 'Deposit_Mobilization') {
+      actual = await calculateBranchDepositGrowth(plan.branch_code, period);
+    } else if (plan.kpi_category === 'Collection_Rate') {
+      let totalRate = 0;
+      let withData = 0;
+      for (const sid of staffIds) {
+        const cd = await calculateStaffCollectionRate(sid);
+        if (cd.expected > 0) { totalRate += cd.percent; withData++; }
+      }
+      actual = withData > 0 ? Math.round(totalRate / withData) : 0;
+    } else if (plan.kpi_category === 'Portfolio_Quality') {
+      const loanAccounts = await prisma.accountMapping.findMany({
+        where: { branchId: branch.id, accountType: 'Loan', status: 'Active' },
+        select: { id: true },
+      });
+      if (loanAccounts.length > 0) {
+        const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
+        actual = parMetrics.totalPortfolio > 0 ? Math.round(100 - parMetrics.par90Ratio) : 100;
+      }
+    } else {
+      const taskTypes = KPI_TASK_TYPES[plan.kpi_category] || [];
+      if (taskTypes.length > 0) {
+        const countWhere = {
+          submittedById: { in: staffIds },
+          taskType: { in: taskTypes },
+          approvalStatus: 'Approved',
+        };
+        if (plan.kpi_category === 'Share_Capital_Growth') {
+          countWhere.cbsValidated = true;
+        }
+        actual = await prisma.dailyTask.count({ where: countWhere });
+      }
+    }
+
+    const achievementPercent = plan.target_value > 0 ? Math.round((actual / plan.target_value) * 100) : 0;
+
+    enrichedPlans.push({
+      ...plan,
+      _id: plan.id,
+      actual,
+      achievementPercent,
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    count: enrichedPlans.length,
+    data: enrichedPlans,
   });
 });

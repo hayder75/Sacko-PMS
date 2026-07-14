@@ -5,10 +5,11 @@ import prisma from '../config/database.js';
 // @route   GET /api/areas
 // @access  Private (Admin)
 export const getAreas = asyncHandler(async (req, res) => {
-  const { isActive } = req.query;
+  const { isActive, regionId } = req.query;
 
   const where = {};
   if (isActive !== undefined) where.isActive = isActive === 'true';
+  if (regionId) where.regionId = regionId;
 
   const areas = await prisma.area.findMany({
     where,
@@ -60,7 +61,7 @@ export const getArea = asyncHandler(async (req, res) => {
 // @route   POST /api/areas
 // @access  Private (Admin)
 export const createArea = asyncHandler(async (req, res) => {
-  const { name, code, managerId } = req.body;
+  const { name, code, regionId, managerId } = req.body;
 
   if (!name || !code) {
     return res.status(400).json({
@@ -81,6 +82,7 @@ export const createArea = asyncHandler(async (req, res) => {
     data: {
       name,
       code,
+      regionId: regionId || null,
       managerId: managerId || null,
     },
   });
