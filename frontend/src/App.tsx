@@ -42,6 +42,7 @@ import { AreaNplDashboard } from './pages/AreaNplDashboard';
 import { BranchNplDashboard } from './pages/BranchNplDashboard';
 import { TeamNplAlerts } from './pages/TeamNplAlerts';
 import { TeamManagement } from './pages/TeamManagement';
+import { TeamHub } from './pages/TeamHub';
 
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
@@ -123,6 +124,7 @@ function AppRoutes() {
       <Route path="/teams" element={<ProtectedRoute allowedRoles={['branchManager']}><TeamManagement /></ProtectedRoute>} />
       <Route path="/behavioral-evaluation" element={<ProtectedRoute allowedRoles={['admin', 'areaManager', 'branchManager', 'supervisor']}><BehavioralEvaluation /></ProtectedRoute>} />
       <Route path="/behavioral-input" element={<ProtectedRoute allowedRoles={['supervisor']}><BehavioralInput /></ProtectedRoute>} />
+      <Route path="/team-hub" element={<ProtectedRoute allowedRoles={['supervisor']}><TeamHub /></ProtectedRoute>} />
       <Route path="/approvals" element={<ProtectedRoute allowedRoles={['supervisor', 'branchManager']}><SupervisorApprovals /></ProtectedRoute>} />
       <Route path="/june-balance-import" element={<ProtectedRoute allowedRoles={['admin']}><JuneBalanceImport /></ProtectedRoute>} />
       <Route path="/product-mapping" element={<ProtectedRoute allowedRoles={['admin']}><ProductMapping /></ProtectedRoute>} />

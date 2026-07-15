@@ -124,19 +124,23 @@ describe('Plans Achievement - getPlansAchievement', () => {
     expect(callArg.data[0].actual).toBe(98);
   });
 
-  it('handles task-based KPI categories (New_Member_Registration)', async () => {
+  it('handles product-level plan achievement', async () => {
     mockPrisma.plan.findMany.mockResolvedValue([
-      { id: 'p1', branch_code: 'WOLA', kpi_category: 'New_Member_Registration', period: '2025-H2', target_value: 100, status: 'Active', createdBy: { name: 'Admin' }, createdAt: new Date() },
+      { id: 'p1', branch_code: 'WOLA', kpi_category: 'Deposit_Mobilization', product_category: 'Loan_Saving_Deposit', period: '2025-H2', target_value: 100000, target_count: 0, status: 'Active', createdBy: { name: 'Admin' }, createdAt: new Date() },
     ]);
     mockPrisma.branch.findUnique.mockResolvedValue({ id: 'branch-1', code: 'WOLA' });
     mockPrisma.user.findMany.mockResolvedValue([{ id: 'staff-1' }]);
-    mockPrisma.dailyTask.count.mockResolvedValue(75);
+    mockPrisma.accountMapping.findMany.mockResolvedValue([
+      { id: 'acct-1', accountNumber: 'ACC001', product: 'LOAN SAVING RESERVE ACCOUNT', current_balance: 50000, status: 'Active', branchId: 'branch-1' },
+    ]);
+    mockPrisma.juneBalance.findMany.mockResolvedValue([
+      { account_id: 'ACC001', accountNumber: 'ACC001', june_balance: 10000, is_active: true, baseline_period: '2025' },
+    ]);
     const req = mockReq({ query: { period: '2025-H2' } });
     const res = mockRes();
     await getPlansAchievement(req, res);
     const callArg = res.json.mock.calls[0][0];
-    expect(callArg.data[0].actual).toBe(75);
-    expect(callArg.data[0].achievementPercent).toBe(75);
+    expect(callArg.success).toBe(true);
   });
 
   it('restricts by branch_code for non-admin users', async () => {

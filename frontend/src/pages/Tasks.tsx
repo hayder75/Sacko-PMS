@@ -20,19 +20,18 @@ import { useUser } from '@/contexts/UserContext';
 import { useConfig } from '@/contexts/ConfigContext';
 
 const FALLBACK_TASK_TYPES = [
-  'Deposit_Mobilization',
-  'New_Member_Registration',
-  'New_Account_Opening',
-  'Share_Capital_Growth',
-  'Mobile_Banking_Users',
-  'Merchant_POS_Growth',
-  'Billers_Recruitment',
-  'Internal_Operations',
-  'SMS_Alert_Config',
-  'Transaction_Processing',
-  'Complaint_Resolution',
-  'Biller_Recruitment',
-  'Merchant_POS_Activation',
+  'Loan_Saving_Deposit',
+  'Michu_Current_Saving',
+  'Gihon_Regular_Saving',
+  'Mothers_Saving',
+  'Young_Womens_Saving',
+  'Elders_Saving',
+  'Children_Saving',
+  'Fixed_Time_Deposit',
+  'Premium_Saving_Deposit',
+  'Special_Saving',
+  'Segment_Deposit',
+  'Wadiah_IFB_Deposit',
 ];
 
 export function Tasks() {

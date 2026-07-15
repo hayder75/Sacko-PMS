@@ -456,7 +456,7 @@ async function main() {
 
   // ========== SAMPLE DAILY TASKS ==========
   console.log('\n📝 Creating sample daily tasks...');
-  const taskTypes = ['Deposit_Mobilization', 'New_Member_Registration', 'New_Account_Opening', 'Mobile_Banking_Activation', 'Share_Capital'];
+  const taskTypes = ['Loan_Saving_Deposit', 'Michu_Current_Saving', 'Gihon_Regular_Saving', 'Mothers_Saving', 'Premium_Saving_Deposit'];
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
   let taskCount = 0;
@@ -469,7 +469,7 @@ async function main() {
     for (let i = 0; i < staffMappings.length; i++) {
       const mapping = staffMappings[i];
       const taskType = taskTypes[i % taskTypes.length];
-      const amount = ['Deposit_Mobilization', 'Share_Capital'].includes(taskType)
+      const amount = Math.floor(Math.random() * 5000) + 500
         ? Math.floor(Math.random() * 5000) + 500 : 0;
       const taskDate = i < 2 ? today : yesterday;
 

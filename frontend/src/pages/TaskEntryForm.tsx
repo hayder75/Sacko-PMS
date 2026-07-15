@@ -20,12 +20,6 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     'SPECIAL SAVING ACCOUNT', 'Segment Deposit', 'WADIAH SAVING ACCOUNT',
     'REPAYMENT ACCOUNT', 'School',
   ],
-  'New Account Opening': ['Michu Current Account', 'GIHON REGULAR SAVING', 'Premium Saving Deposit'],
-  'Share Capital Growth': ['COMMON SHARE'],
-  'Mobile Banking Users': ['Michu Current Account', 'GIHON REGULAR SAVING'],
-  'Merchant POS Growth': ['MERCHANT ACCOUNT'],
-  'Billers Recruitment': ['BILLER SERVICE'],
-  'Internal Operations': ['Transaction Processing', 'SMS Alert', 'Complaint'],
 };
 
 export function TaskEntryForm() {
@@ -45,13 +39,7 @@ export function TaskEntryForm() {
 
   const taskTypes = configTaskTypes.length > 0
     ? configTaskTypes.map(t => t.label || t.value)
-    : [
-        ...DEPOSIT_PRODUCT_TASK_TYPES,
-        'Account Productivity Improvement', 'Deposit Mobilization', 'New Member Registration',
-        'New Account Opening', 'Share Capital', 'Mobile Banking Activation',
-        'Merchant POS Activation', 'Biller Recruitment', 'Transaction Processing',
-        'SMS Alert Configuration', 'Complaint Resolution',
-      ];
+    : [...DEPOSIT_PRODUCT_TASK_TYPES];
 
   const taskTypeToKpiCategory: Record<string, string> = Object.keys(configTaskTypeToKpiMap).length > 0
     ? Object.fromEntries(
@@ -74,17 +62,6 @@ export function TaskEntryForm() {
         'Special Saving': 'Deposit Mobilization',
         'Segment Deposit': 'Deposit Mobilization',
         'Wadiah IFB Deposit': 'Deposit Mobilization',
-        'Account Productivity Improvement': 'Account Productivity',
-        'Deposit Mobilization': 'Deposit Mobilization',
-        'New Member Registration': 'New Member Registration',
-        'New Account Opening': 'New Account Opening',
-        'Share Capital': 'Share Capital Growth',
-        'Mobile Banking Activation': 'Mobile Banking Users',
-        'Merchant POS Activation': 'Merchant POS Growth',
-        'Biller Recruitment': 'Billers Recruitment',
-        'Transaction Processing': 'Internal Operations',
-        'SMS Alert Configuration': 'Internal Operations',
-        'Complaint Resolution': 'Internal Operations',
       };
 
   const [taskType, setTaskType] = useState('');

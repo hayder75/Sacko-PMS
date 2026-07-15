@@ -141,17 +141,6 @@ export const uploadPlan = asyncHandler(async (req, res) => {
     };
 
     const validKpiCategories = [
-      'Deposit Mobilization',
-      'New Member Registration',
-      'New Account Opening',
-      'Share Capital Growth',
-      'Account Productivity',
-      'Mobile Banking Users',
-      'Merchant POS Growth',
-      'Billers Recruitment',
-      'Internal Operations',
-      'Collection Rate',
-      'Portfolio Quality',
       'Loan Saving Deposit',
       'Michu Current Saving',
       'Gihon Regular Saving',
@@ -387,22 +376,14 @@ export const updatePlan = asyncHandler(async (req, res) => {
 });
 
 const DEPOSIT_TASK_TYPES = [
-  'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+  'Loan_Saving_Deposit', 'Michu_Current_Saving',
   'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
   'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
   'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
 ];
 
 const KPI_TASK_TYPES = {
-  'Account_Productivity': ['Account_Productivity'],
   'Deposit_Mobilization': DEPOSIT_TASK_TYPES,
-  'New_Member_Registration': ['New_Member_Registration'],
-  'New_Account_Opening': ['New_Account_Opening'],
-  'Share_Capital_Growth': ['Share_Capital'],
-  'Mobile_Banking_Users': ['Mobile_Banking_Activation'],
-  'Merchant_POS_Growth': ['Merchant_POS_Activation'],
-  'Billers_Recruitment': ['Biller_Recruitment'],
-  'Internal_Operations': ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
 };
 
 // @desc    Get plans with actual achievement

@@ -22,21 +22,14 @@ const simplifyKpiKey = (key) => {
 };
 
 const DEPOSIT_TASK_TYPES_ALL = [
-  'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+  'Loan_Saving_Deposit', 'Michu_Current_Saving',
   'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
   'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
   'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
 ];
 
-const getCategoryTaskTypes = (category) => {
-  const normalized = (category || '').toLowerCase().trim();
-  if (normalized.includes('deposit')) return [...DEPOSIT_TASK_TYPES_ALL];
-  if (normalized.includes('digital') || normalized.includes('mobile')) return ['Mobile_Banking_Activation'];
-  if (normalized.includes('member')) return ['New_Member_Registration'];
-  if (normalized.includes('account opening') || normalized.includes('new account')) return ['New_Account_Opening'];
-  if (normalized.includes('share')) return ['Share_Capital'];
-  if (normalized.includes('productivity')) return ['Account_Productivity'];
-  return [...DEPOSIT_TASK_TYPES_ALL, 'Mobile_Banking_Activation', 'New_Member_Registration', 'New_Account_Opening', 'Share_Capital', 'Account_Productivity'];
+const getCategoryTaskTypes = () => {
+  return [...DEPOSIT_TASK_TYPES_ALL];
 };
 
 // Helper: Generate analytical gauge, breakdown table, and top ranking metrics for Yesterday vs Today (Real-time DB Queries)
@@ -702,7 +695,7 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
   }
 
   const DEPOSIT_TASK_TYPES = [
-    'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+    'Loan_Saving_Deposit', 'Michu_Current_Saving',
     'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
     'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
     'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
@@ -710,13 +703,6 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
 
   const KPI_TO_TASK = {
     Deposit_Mobilization: DEPOSIT_TASK_TYPES,
-    New_Member_Registration: ['New_Member_Registration'],
-    New_Account_Opening: ['New_Account_Opening'],
-    Share_Capital_Growth: ['Share_Capital'],
-    Mobile_Banking_Users: ['Mobile_Banking_Activation'],
-    Merchant_POS_Growth: ['Merchant_POS_Activation'],
-    Billers_Recruitment: ['Biller_Recruitment'],
-    Internal_Operations: ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
   };
 
   const kpiBreakdown = {};
@@ -940,7 +926,7 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
         taskCountByType[t.taskType] = (taskCountByType[t.taskType] || 0) + 1;
       }
       const DEPOSIT_TASK_TYPES = [
-        'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+        'Loan_Saving_Deposit', 'Michu_Current_Saving',
         'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
         'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
         'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
@@ -948,13 +934,6 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
 
       const KPI_TO_TASK = {
         Deposit_Mobilization: DEPOSIT_TASK_TYPES,
-        New_Member_Registration: ['New_Member_Registration'],
-        New_Account_Opening: ['New_Account_Opening'],
-        Share_Capital_Growth: ['Share_Capital'],
-        Mobile_Banking_Users: ['Mobile_Banking_Activation'],
-        Merchant_POS_Growth: ['Merchant_POS_Activation'],
-        Billers_Recruitment: ['Biller_Recruitment'],
-        Internal_Operations: ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
       };
       for (const plan of ownPlans) {
         let actual = 0;
@@ -1004,7 +983,7 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
     });
     const categories = [...new Set(allPlans.map(p => p.kpi_category))];
     const DEPOSIT_TASK_TYPES = [
-      'Deposit_Mobilization', 'Loan_Saving_Deposit', 'Michu_Current_Saving',
+      'Loan_Saving_Deposit', 'Michu_Current_Saving',
       'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
       'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
       'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
@@ -1012,13 +991,6 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
 
     const KPI_TO_TASK_MAP = {
       Deposit_Mobilization: DEPOSIT_TASK_TYPES,
-      New_Member_Registration: ['New_Member_Registration'],
-      New_Account_Opening: ['New_Account_Opening'],
-      Share_Capital_Growth: ['Share_Capital'],
-      Mobile_Banking_Users: ['Mobile_Banking_Activation'],
-      Merchant_POS_Growth: ['Merchant_POS_Activation'],
-      Billers_Recruitment: ['Biller_Recruitment'],
-      Internal_Operations: ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
     };
     for (const cat of categories) {
       const catPlans = allPlans.filter(p => p.kpi_category === cat);

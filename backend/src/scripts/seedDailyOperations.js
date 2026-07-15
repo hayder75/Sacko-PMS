@@ -3,13 +3,13 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const TASK_TYPES = [
-  'Deposit_Mobilization', 'New_Member_Registration', 'New_Account_Opening',
-  'Share_Capital', 'Mobile_Banking_Activation', 'Merchant_POS_Activation',
-  'Biller_Recruitment', 'Transaction_Processing', 'SMS_Alert_Config',
-  'Complaint_Resolution',
+  'Loan_Saving_Deposit', 'Michu_Current_Saving', 'Gihon_Regular_Saving',
+  'Mothers_Saving', 'Young_Womens_Saving', 'Elders_Saving',
+  'Children_Saving', 'Fixed_Time_Deposit', 'Premium_Saving_Deposit',
+  'Special_Saving',
 ];
 
-const AMOUNT_TYPES = ['Deposit_Mobilization', 'Share_Capital', 'Transaction_Processing'];
+const AMOUNT_TYPES = ['Loan_Saving_Deposit', 'Premium_Saving_Deposit', 'Fixed_Time_Deposit'];
 
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;

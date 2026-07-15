@@ -210,3 +210,33 @@ Map all CBS product names to KPI categories:
 **Testing & Verification**:
 - [x] Backend tests pass (all 118 passing)
 - [x] Frontend builds clean (tsc + vite build)
+
+### Phase 8: Supervisor Team Hub — Dedicated Team Performance Page
+
+**Goal**: Slim down the Supervisor Dashboard to only key stats, and move all detailed team member data to a new dedicated "Team Hub" page (`/team-hub`). Supervisors get one place to see everything their team is doing.
+
+**Changes**:
+
+**SupervisorDashboard.tsx** (simplified):
+- Keep only 4 stat cards: Team Members, Mapped Accounts, Avg KPI Achievement, Pending Approvals
+- Add prominent "View Team Hub →" button
+- Remove: Own KPI progress, Team KPI breakdown, Team Members table, Edit Requests section
+
+**TeamHub.tsx** (new page at `/team-hub`):
+- **Team Members table** — name, position, mapped accounts, KPI %, status (On Track/Needs Focus/At Risk)
+- **Team KPI Breakdown** — per-category progress bars (moved from dashboard)
+- **Recent Team Tasks** — last 10 tasks from all team members with status
+- **Pending Edit Requests** — approve/reject inline (moved from dashboard)
+
+**Files to modify/create**:
+- `frontend/src/pages/SupervisorDashboard.tsx` — strip down to stats only
+- `frontend/src/pages/TeamHub.tsx` — new full detail page
+- `frontend/src/App.tsx` — add route `/team-hub` for supervisor
+- `frontend/src/components/layout/Sidebar.tsx` — add "TEAM HUB" link for supervisor
+
+**Testing**:
+- [ ] Backend tests pass
+- [ ] Frontend builds clean
+- [ ] Supervisor dashboard shows only stats + link to team hub
+- [ ] Team hub shows members table, KPI breakdown, recent tasks, edit requests
+- [ ] All existing functionality still works

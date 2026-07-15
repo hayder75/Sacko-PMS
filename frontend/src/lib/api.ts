@@ -639,6 +639,12 @@ export const teamsAPI = {
       body: JSON.stringify(teamData),
     });
   },
+  update: async (id: string, data: any) => {
+    return apiRequest(`/teams/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
   delete: async (id: string) => {
     return apiRequest(`/teams/${id}`, {
       method: 'DELETE',

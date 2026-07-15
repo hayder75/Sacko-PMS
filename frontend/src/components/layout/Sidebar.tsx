@@ -85,6 +85,7 @@ const getNavItems = (role: string): NavItem[] => {
   if (role === 'supervisor') {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/supervisor' },
+      { title: 'TEAM HUB', icon: Users, path: '/team-hub' },
       { title: 'APPROVALS', icon: CheckCircle2, path: '/approvals' },
       { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },

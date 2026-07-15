@@ -23,6 +23,7 @@ export const getTeams = asyncHandler(async (req, res) => {
     where: { branchId: targetBranchId, isActive: true },
     include: {
       manager: { select: { id: true, name: true, email: true, role: true, position: true } },
+      members: { select: { id: true, name: true, email: true, position: true } },
     },
     orderBy: { name: 'asc' },
   });
@@ -30,6 +31,7 @@ export const getTeams = asyncHandler(async (req, res) => {
   const mappedTeams = teams.map(team => ({
     ...team,
     _id: team.id,
+    memberCount: team.members.length,
     managerId: team.manager ? {
       ...team.manager,
       _id: team.manager.id,
@@ -41,7 +43,7 @@ export const getTeams = asyncHandler(async (req, res) => {
 });
 
 export const createTeam = asyncHandler(async (req, res) => {
-  const { name, code, managerId, branchId } = req.body;
+  const { name, code, managerId, memberIds, branchId } = req.body;
   const targetBranchId = branchId || req.user.branchId;
 
   if (!name || !code) {
@@ -73,7 +75,80 @@ export const createTeam = asyncHandler(async (req, res) => {
     },
   });
 
-  res.status(201).json({ success: true, message: 'Team created', data: { ...team, _id: team.id } });
+  const validMemberIds = Array.isArray(memberIds) ? memberIds.filter(Boolean) : [];
+  if (validMemberIds.length > 0) {
+    const result = await prisma.user.updateMany({
+      where: { id: { in: validMemberIds } },
+      data: { teamId: team.id },
+    });
+    if (result.count === 0) {
+      console.warn(`[teamController] createTeam: updateMany matched 0 users for memberIds ${JSON.stringify(validMemberIds)}`);
+    }
+  }
+
+  const created = await prisma.team.findUnique({
+    where: { id: team.id },
+    include: {
+      manager: { select: { id: true, name: true, email: true, role: true, position: true } },
+      members: { select: { id: true, name: true, email: true, position: true } },
+    },
+  });
+
+  res.status(201).json({ success: true, message: 'Team created', data: { ...created, _id: created.id, managerId: created.manager ? { ...created.manager, _id: created.manager.id } : null } });
+});
+
+export const updateTeam = asyncHandler(async (req, res) => {
+  const { name, code, managerId, memberIds } = req.body;
+
+  const existing = await prisma.team.findUnique({ where: { id: req.params.id } });
+  if (!existing) return res.status(404).json({ success: false, message: 'Team not found' });
+
+  if (!(await ensureBranchAccess(req, existing.branchId))) {
+    return res.status(403).json({ success: false, message: 'Not authorized' });
+  }
+
+  if (managerId) {
+    const manager = await prisma.user.findUnique({ where: { id: managerId } });
+    if (!manager || normalizeRole(manager.role) !== 'supervisor') {
+      return res.status(400).json({ success: false, message: 'Manager must be a Supervisor' });
+    }
+  }
+
+  await prisma.team.update({
+    where: { id: req.params.id },
+    data: {
+      ...(name && { name }),
+      ...(code && { code }),
+      managerId: managerId !== undefined ? (managerId || null) : undefined,
+    },
+  });
+
+  if (Array.isArray(memberIds)) {
+    await prisma.user.updateMany({
+      where: { teamId: existing.id },
+      data: { teamId: null },
+    });
+    const valid = memberIds.filter(Boolean);
+    if (valid.length > 0) {
+      const result = await prisma.user.updateMany({
+        where: { id: { in: valid } },
+        data: { teamId: existing.id },
+      });
+      if (result.count === 0) {
+        console.warn(`[teamController] updateTeam: updateMany matched 0 users for memberIds ${JSON.stringify(valid)}`);
+      }
+    }
+  }
+
+  const updated = await prisma.team.findUnique({
+    where: { id: req.params.id },
+    include: {
+      manager: { select: { id: true, name: true, email: true, role: true, position: true } },
+      members: { select: { id: true, name: true, email: true, position: true } },
+    },
+  });
+
+  res.status(200).json({ success: true, message: 'Team updated', data: { ...updated, _id: updated.id, managerId: updated.manager ? { ...updated.manager, _id: updated.manager.id } : null } });
 });
 
 export const deleteTeam = asyncHandler(async (req, res) => {

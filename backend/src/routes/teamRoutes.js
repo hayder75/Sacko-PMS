@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getTeams,
   createTeam,
+  updateTeam,
   deleteTeam,
 } from '../controllers/teamController.js';
 import { protect } from '../middleware/auth.js';
@@ -14,6 +15,7 @@ router.route('/teams')
   .post(protect, isBranchManager, createTeam);
 
 router.route('/teams/:id')
+  .put(protect, isBranchManager, updateTeam)
   .delete(protect, isBranchManager, deleteTeam);
 
 export default router;

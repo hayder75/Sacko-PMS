@@ -6,3 +6,4 @@ dist/
 .env.development
 *.log
 .DS_Store
+DEPLOY_SERVER.md

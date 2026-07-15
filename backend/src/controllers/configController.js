@@ -5,17 +5,18 @@ import { TASK_TYPE_MAP, KPI_CATEGORY_MAP, POSITION_MAP } from '../utils/prismaHe
 const HARDCODED_TASK_TYPES = Object.entries(TASK_TYPE_MAP).map(([value, label]) => ({ value, label }));
 
 const HARDCODED_TASK_TYPE_TO_KPI = {
-  'Deposit_Mobilization': 'Deposit_Mobilization',
-  'New_Member_Registration': 'New_Member_Registration',
-  'New_Account_Opening': 'New_Account_Opening',
-  'Mobile_Banking_Activation': 'Mobile_Banking_Users',
-  'Merchant_POS_Activation': 'Merchant_POS_Growth',
-  'Biller_Recruitment': 'Billers_Recruitment',
-  'Transaction_Processing': 'Internal_Operations',
-  'SMS_Alert_Config': 'Internal_Operations',
-  'Complaint_Resolution': 'Internal_Operations',
-  'Share_Capital': 'Share_Capital_Growth',
-  'Account_Productivity': 'Account_Productivity',
+  'Loan_Saving_Deposit': 'Deposit_Mobilization',
+  'Michu_Current_Saving': 'Deposit_Mobilization',
+  'Gihon_Regular_Saving': 'Deposit_Mobilization',
+  'Mothers_Saving': 'Deposit_Mobilization',
+  'Young_Womens_Saving': 'Deposit_Mobilization',
+  'Elders_Saving': 'Deposit_Mobilization',
+  'Children_Saving': 'Deposit_Mobilization',
+  'Fixed_Time_Deposit': 'Deposit_Mobilization',
+  'Premium_Saving_Deposit': 'Deposit_Mobilization',
+  'Special_Saving': 'Deposit_Mobilization',
+  'Segment_Deposit': 'Deposit_Mobilization',
+  'Wadiah_IFB_Deposit': 'Deposit_Mobilization',
 };
 
 export const getConfig = asyncHandler(async (req, res) => {

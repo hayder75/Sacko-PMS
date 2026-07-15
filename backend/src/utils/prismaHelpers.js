@@ -88,18 +88,6 @@ export const KPI_CATEGORY_TO_ENUM = {
  * Maps display names and legacy names to new enum values
  */
 export const TASK_TYPE_TO_ENUM = {
-    'Deposit Mobilization': 'Deposit_Mobilization',
-    'New Member Registration': 'New_Member_Registration',
-    'New Account Opening': 'New_Account_Opening',
-    'Mobile Banking Activation': 'Mobile_Banking_Activation',
-    'Merchant POS Activation': 'Merchant_POS_Activation',
-    'Biller Recruitment': 'Biller_Recruitment',
-    'Transaction Processing': 'Transaction_Processing',
-    'SMS Alert Configuration': 'SMS_Alert_Config',
-    'Complaint Resolution': 'Complaint_Resolution',
-    'Share Capital': 'Share_Capital',
-    'Account Productivity': 'Account_Productivity',
-    'Account Productivity Improvement': 'Account_Productivity',
     'Loan Saving Deposit': 'Loan_Saving_Deposit',
     'Michu Current Saving': 'Michu_Current_Saving',
     'Gihon Regular Saving': 'Gihon_Regular_Saving',
@@ -115,17 +103,6 @@ export const TASK_TYPE_TO_ENUM = {
 };
 
 export const TASK_TYPE_MAP = {
-    'Deposit_Mobilization': 'Deposit Mobilization',
-    'New_Member_Registration': 'New Member Registration',
-    'New_Account_Opening': 'New Account Opening',
-    'Mobile_Banking_Activation': 'Mobile Banking Activation',
-    'Merchant_POS_Activation': 'Merchant POS Activation',
-    'Biller_Recruitment': 'Biller Recruitment',
-    'Transaction_Processing': 'Transaction Processing',
-    'SMS_Alert_Config': 'SMS Alert Configuration',
-    'Complaint_Resolution': 'Complaint Resolution',
-    'Share_Capital': 'Share Capital',
-    'Account_Productivity': 'Account Productivity',
     'Loan_Saving_Deposit': 'Loan Saving Deposit',
     'Michu_Current_Saving': 'Michu Current Saving',
     'Gihon_Regular_Saving': 'Gihon Regular Saving',

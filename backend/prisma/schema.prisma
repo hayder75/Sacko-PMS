@@ -93,17 +93,6 @@ enum AccountStatus {
 }
 
 enum TaskType {
-  Account_Productivity         @map("Account Productivity Improvement")
-  Deposit_Mobilization         @map("Deposit Mobilization")
-  New_Member_Registration      @map("New Member Registration")
-  New_Account_Opening          @map("New Account Opening")
-  Share_Capital                @map("Share Capital")
-  Mobile_Banking_Activation    @map("Mobile Banking Activation")
-  Merchant_POS_Activation      @map("Merchant POS Activation")
-  Biller_Recruitment           @map("Biller Recruitment")
-  Transaction_Processing       @map("Transaction Processing")
-  SMS_Alert_Config             @map("SMS Alert Configuration")
-  Complaint_Resolution         @map("Complaint Resolution")
   Loan_Saving_Deposit          @map("Loan Saving Deposit")
   Michu_Current_Saving         @map("Michu Current Saving")
   Gihon_Regular_Saving         @map("Gihon Regular Saving")
@@ -248,6 +237,8 @@ model User {
 
   // Relations
   supervisees             User[]               @relation("Supervisor")
+  teamId                  String?
+  team                    Team?                @relation("TeamMembers", fields: [teamId], references: [id])
   managedTeams            Team[]               @relation("TeamManager")
   createdPlans            Plan[]               @relation("PlanCreator")
   submittedTasks          DailyTask[]          @relation("TaskSubmitter")
@@ -271,6 +262,7 @@ model User {
   @@index([role])
   @@index([position])
   @@index([supervisorId])
+  @@index([teamId])
   @@map("users")
 }
 
@@ -747,8 +739,8 @@ model Team {
   branch    Branch   @relation(fields: [branchId], references: [id])
   managerId String?
   manager   User?    @relation("TeamManager", fields: [managerId], references: [id])
+  members   User[]   @relation("TeamMembers")
   isActive  Boolean  @default(true)
-  subTeams  SubTeam[]
 
   @@unique([branchId, code])
   @@map("teams")
