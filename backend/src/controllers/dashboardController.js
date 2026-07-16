@@ -1,20 +1,12 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { normalizeRole } from '../utils/roleNormalizer.js';
-import { calculateIncrementalGrowth, calculateBranchDepositGrowth, calculateBranchDigitalGrowth, calculateStaffCollectionRate, calculateParMetrics } from '../utils/performanceCalculator.js';
-import { CBS_PRODUCT_TO_CATEGORY } from '../utils/prismaHelpers.js';
+import { calculateIncrementalGrowth, calculateStaffCollectionRate, calculateParMetrics, calculateBatchDpd, getStaffCollectionAlerts, buildTaskAchievementFilter } from '../utils/performanceCalculator.js';
+import { getActivePeriod, normalizePeriod } from '../utils/periodUtils.js';
 
 const simplifyKpiKey = (key) => {
   const map = {
     'Deposit_Mobilization': 'deposit',
-    'New_Member_Registration': 'member',
-    'Share_Capital_Growth': 'shareCapital',
-    'Account_Productivity': 'accountProductivity',
-    'New_Account_Opening': 'newAccount',
-    'Mobile_Banking_Users': 'mobileBanking',
-    'Merchant_POS_Growth': 'merchantPos',
-    'Billers_Recruitment': 'billers',
-    'Internal_Operations': 'internalOps',
     'Collection_Rate': 'collectionRate',
     'Portfolio_Quality': 'portfolioQuality',
   };
@@ -30,6 +22,11 @@ const DEPOSIT_TASK_TYPES_ALL = [
 
 const getCategoryTaskTypes = () => {
   return [...DEPOSIT_TASK_TYPES_ALL];
+};
+
+const resolvePeriod = async (req) => {
+  if (req.query.period) return normalizePeriod(req.query.period);
+  return getActivePeriod();
 };
 
 // Helper: Generate analytical gauge, breakdown table, and top ranking metrics for Yesterday vs Today (Real-time DB Queries)
@@ -175,6 +172,8 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
   const totalBranches = await prisma.branch.count({ where: { isActive: true } });
   const totalStaff = await prisma.user.count({ where: { isActive: true, role: { in: ['staff', 'supervisor'] } } });
 
+  const period = await resolvePeriod(req);
+
   const now = new Date();
   let year = now.getFullYear();
   let month = now.getMonth() + 1;
@@ -199,7 +198,7 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
     let totalActual = 0;
 
     for (const staff of branchStaff) {
-      const depositGrowth = await calculateIncrementalGrowth(staff.id, branch.code, 'Deposit_Mobilization', '2025-H2');
+      const depositGrowth = await calculateIncrementalGrowth(staff.id, branch.code, 'Deposit_Mobilization', period);
       const staffPlans = await prisma.staffPlan.findMany({
         where: { userId: staff.id, branch_code: branch.code, status: 'Active', kpi_category: 'Deposit_Mobilization' }
       });
@@ -257,6 +256,28 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
     description: log.details
   }));
 
+  // Phase 3: Company-wide NPL summary for HQ dashboard
+  let companyNpl = null;
+  try {
+    const allLoanAccounts = await prisma.accountMapping.findMany({
+      where: { accountType: 'Loan', status: 'Active' },
+      select: { id: true, current_balance: true },
+    });
+    if (allLoanAccounts.length > 0) {
+      const parMetrics = await calculateParMetrics(allLoanAccounts.map(a => a.id));
+      companyNpl = {
+        totalLoanAccounts: allLoanAccounts.length,
+        totalPortfolio: parMetrics.totalPortfolio,
+        par90Ratio: Math.round(parMetrics.par90Ratio * 100) / 100,
+        par30Ratio: Math.round(parMetrics.par30Ratio * 100) / 100,
+        par1Ratio: Math.round(parMetrics.par1Ratio * 100) / 100,
+        par90Count: parMetrics.par90Count,
+      };
+    }
+  } catch (e) {
+    // NPL non-critical for HQ deposit dashboard
+  }
+
   // Build real analytical data directly from DB query for requested KPI category
   const selectedCategory = req.query.category || 'Deposit Mobilization';
   const analyticalData = await generateAnalyticalMetrics(branches, true, selectedCategory);
@@ -283,6 +304,7 @@ export const getHQDashboard = asyncHandler(async (req, res) => {
       activityFeed,
       dataPeriod: `${month}/${year}`,
       analyticalData,
+      npl: companyNpl,
     },
   });
 });
@@ -300,6 +322,8 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
     where: { areaId, isActive: true },
     select: { id: true, name: true, code: true }
   });
+
+  const period = await resolvePeriod(req);
 
   const branchPerformance = [];
   const branchComparison = [];
@@ -321,7 +345,7 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
     let bActual = 0;
 
     for (const staff of branchStaff) {
-      const growth = await calculateIncrementalGrowth(staff.id, branch.code, 'Deposit_Mobilization', '2025-H2');
+      const growth = await calculateIncrementalGrowth(staff.id, branch.code, 'Deposit_Mobilization', period);
       const staffPlans = await prisma.staffPlan.findMany({
         where: { userId: staff.id, branch_code: branch.code, status: 'Active', kpi_category: 'Deposit_Mobilization' }
       });
@@ -334,37 +358,6 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
     }
 
     const achievement = bTarget > 0 ? (bActual / bTarget) * 100 : 0;
-
-    // Share Capital calculation
-    let scTarget = 0;
-    let scActual = 0;
-    for (const staff of branchStaff) {
-      const scGrowth = await calculateIncrementalGrowth(staff.id, branch.code, 'Share_Capital_Growth', '2025-H2');
-      const scPlans = await prisma.staffPlan.findMany({
-        where: { userId: staff.id, branch_code: branch.code, status: 'Active', kpi_category: 'Share_Capital_Growth' }
-      });
-      if (scPlans.length > 0) {
-        scTarget += scPlans[0].individual_target;
-        scActual += scGrowth;
-      }
-    }
-    const scAchievement = scTarget > 0 ? Math.round((scActual / scTarget) * 100) : 0;
-
-    const branchStaffIds = branchStaff.map(s => s.id);
-    const digitalCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'Mobile_Banking_Activation', approvalStatus: 'Approved' }
-    });
-    const digitalPercent = Math.min(Math.round((digitalCount / Math.max(staffCount * 3, 1)) * 100), 100);
-
-    const memberCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'New_Member_Registration', approvalStatus: 'Approved' }
-    });
-    const memberPercent = Math.min(Math.round((memberCount / Math.max(staffCount * 2, 1)) * 100), 100);
-
-    const accountCount = await prisma.dailyTask.count({
-      where: { submittedById: { in: branchStaffIds }, taskType: 'New_Account_Opening', approvalStatus: 'Approved' }
-    });
-    const accountPercent = Math.min(Math.round((accountCount / Math.max(staffCount * 2, 1)) * 100), 100);
 
     if (achievement < 60 && achievement > 0) lowPerformersCount++;
 
@@ -382,10 +375,6 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
     branchComparison.push({
       branch: branch.name,
       deposit: roundedAchievement,
-      digital: digitalPercent,
-      member: memberPercent,
-      account: accountPercent,
-      shareCapital: scAchievement,
     });
 
     branchTableData.push({
@@ -393,10 +382,6 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
       name: branch.name,
       area: 'N/A',
       deposit: roundedAchievement,
-      digital: digitalPercent,
-      member: memberPercent,
-      account: accountPercent,
-      shareCapital: scAchievement,
       teamSize: staffCount,
       status,
     });
@@ -423,7 +408,7 @@ export const getAreaDashboard = asyncHandler(async (req, res) => {
     where: {
       taskDate: { gte: thirtyDaysAgo },
       branch: { areaId },
-      taskType: 'Deposit_Mobilization',
+      taskType: { in: DEPOSIT_TASK_TYPES_ALL },
       approvalStatus: 'Approved',
     },
     select: { taskDate: true, amount: true }
@@ -479,6 +464,8 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
     });
     if (branch) branchId = branch.id;
   }
+
+  const period = await resolvePeriod(req);
 
   if (!branchId || !branchCode) {
     return res.status(400).json({
@@ -548,10 +535,6 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
         where: { branchId: branch?.id, status: 'Active', current_balance: { gte: 1000 } }
       });
       actual = allBranchAccounts.reduce((sum, a) => sum + (a.current_balance || 0), 0);
-    } else if (plan.kpi_category === 'Share_Capital_Growth') {
-      actual = await prisma.dailyTask.count({
-        where: { submittedById: { in: staffIds }, taskType: 'Share_Capital', approvalStatus: 'Approved', cbsValidated: true }
-      });
     } else if (plan.kpi_category === 'Collection_Rate') {
       let totalRate = 0;
       let withData = 0;
@@ -568,21 +551,6 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
       if (loanAccounts.length > 0) {
         const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
         actual = parMetrics.totalPortfolio > 0 ? Math.round(100 - parMetrics.par90Ratio) : 100;
-      }
-    } else {
-      const taskTypes = {
-        'Account_Productivity': ['Account_Productivity'],
-        'New_Member_Registration': ['New_Member_Registration'],
-        'New_Account_Opening': ['New_Account_Opening'],
-        'Mobile_Banking_Users': ['Mobile_Banking_Activation'],
-        'Merchant_POS_Growth': ['Merchant_POS_Activation'],
-        'Billers_Recruitment': ['Biller_Recruitment'],
-        'Internal_Operations': ['Transaction_Processing', 'SMS_Alert_Config', 'Complaint_Resolution'],
-      }[plan.kpi_category] || [];
-      if (taskTypes.length > 0) {
-        actual = await prisma.dailyTask.count({
-          where: { submittedById: { in: staffIds }, taskType: { in: taskTypes }, approvalStatus: 'Approved' }
-        });
       }
     }
     const percent = plan.target_value > 0 ? Math.round((actual / plan.target_value) * 100) : 0;
@@ -602,7 +570,7 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
 
   const teamPerformance = [];
   for (const member of teamMembers) {
-    const depositGrowth = await calculateIncrementalGrowth(member.id, branchCode, 'Deposit_Mobilization', '2025-H2');
+    const depositGrowth = await calculateIncrementalGrowth(member.id, branchCode, 'Deposit_Mobilization', period);
     
     const staffPlans = await prisma.staffPlan.findMany({
       where: { userId: member.id, branch_code: branchCode, status: 'Active', kpi_category: 'Deposit_Mobilization' }
@@ -622,14 +590,7 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const digitalTasks = await prisma.dailyTask.count({
-      where: {
-        submittedById: member.id,
-        taskType: 'Mobile_Banking_Activation',
-        approvalStatus: 'Approved',
-        taskDate: { gte: today },
-      }
-    });
+    const digitalTasks = 0;
 
     teamPerformance.push({
       id: member.id,
@@ -647,6 +608,38 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
   const selectedCategory = req.query.category || 'Deposit Mobilization';
   const analyticalData = await generateAnalyticalMetrics(teamMembers, false, selectedCategory);
 
+  // Phase 3: NPL summary for branch dashboard
+  let branchNpl = null;
+  try {
+    const loanAccounts = await prisma.accountMapping.findMany({
+      where: { branchId: branch?.id, accountType: 'Loan', status: 'Active' },
+      select: { id: true },
+    });
+    if (loanAccounts.length > 0) {
+      const accountIds = loanAccounts.map(a => a.id);
+      const parMetrics = await calculateParMetrics(accountIds);
+      const dpdDetails = await calculateBatchDpd(accountIds);
+      let totalCollectionRate = 0;
+      let staffWithLoans = 0;
+      for (const sid of staffIds) {
+        const cd = await calculateStaffCollectionRate(sid);
+        if (cd.expected > 0) { totalCollectionRate += cd.percent; staffWithLoans++; }
+      }
+      branchNpl = {
+        totalLoanAccounts: loanAccounts.length,
+        totalPortfolio: parMetrics.totalPortfolio,
+        par90Ratio: Math.round(parMetrics.par90Ratio * 100) / 100,
+        par30Ratio: Math.round(parMetrics.par30Ratio * 100) / 100,
+        par1Ratio: Math.round(parMetrics.par1Ratio * 100) / 100,
+        par90Count: parMetrics.par90Count,
+        overdueAccounts: dpdDetails.filter(d => d.dpd > 0).length,
+        collectionRate: staffWithLoans > 0 ? Math.round(totalCollectionRate / staffWithLoans * 100) / 100 : 0,
+      };
+    }
+  } catch (e) {
+    // NPL is non-critical for deposit dashboard
+  }
+
   res.status(200).json({
     success: true,
     data: {
@@ -658,6 +651,7 @@ export const getBranchDashboard = asyncHandler(async (req, res) => {
       kpiData,
       teamPerformance,
       analyticalData,
+      npl: branchNpl,
     }
   });
 });
@@ -667,6 +661,8 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const branchCode = req.user.branch_code;
 
+  const period = await resolvePeriod(req);
+
   if (!branchCode) {
     return res.status(400).json({ success: false, message: 'Staff dashboard requires a branch assignment' });
   }
@@ -675,14 +671,15 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
     where: { mappedToId: userId, status: 'Active', current_balance: { gte: 1000 }, active_status: true }
   });
 
-  const depositGrowth = await calculateIncrementalGrowth(userId, branchCode, 'Deposit_Mobilization', '2025-H2');
+  const depositGrowth = await calculateIncrementalGrowth(userId, branchCode, 'Deposit_Mobilization', period);
 
   const staffPlans = await prisma.staffPlan.findMany({
     where: { userId, branch_code: branchCode, status: 'Active' }
   });
 
+  const staffTaskFilter = await buildTaskAchievementFilter({ userId, submittedById: userId });
   const approvedTasks = await prisma.dailyTask.findMany({
-    where: { submittedById: userId, approvalStatus: 'Approved' },
+    where: staffTaskFilter,
     select: { taskType: true, amount: true },
   });
 
@@ -694,24 +691,13 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
     taskAmountByType[key] = (taskAmountByType[key] || 0) + (t.amount || 0);
   }
 
-  const DEPOSIT_TASK_TYPES = [
-    'Loan_Saving_Deposit', 'Michu_Current_Saving',
-    'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
-    'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
-    'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
-  ];
-
-  const KPI_TO_TASK = {
-    Deposit_Mobilization: DEPOSIT_TASK_TYPES,
-  };
-
   const kpiBreakdown = {};
   const productBreakdown = {};
 
   // First pass: product-level plans
   const productPlans = staffPlans.filter(p => p.product_category);
   for (const plan of productPlans) {
-    const productGrowth = await calculateIncrementalGrowth(userId, branchCode, plan.kpi_category, '2025-H2', plan.product_category);
+    const productGrowth = await calculateIncrementalGrowth(userId, branchCode, plan.kpi_category, period, plan.product_category);
     const percent = plan.individual_target > 0 ? (productGrowth / plan.individual_target) * 100 : 0;
     productBreakdown[plan.product_category] = {
       product_category: plan.product_category,
@@ -734,10 +720,6 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
       } else {
         actual = depositGrowth;
       }
-    } else if (plan.kpi_category === 'Account_Productivity') {
-      for (const t of approvedTasks) {
-        actual += t.amount || 0;
-      }
     } else if (plan.kpi_category === 'Collection_Rate') {
       const collectionData = await calculateStaffCollectionRate(userId);
       actual = collectionData.percent;
@@ -749,11 +731,6 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
       if (loanAccounts.length > 0) {
         const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
         actual = parMetrics.totalPortfolio > 0 ? 100 - parMetrics.par90Ratio : 100;
-      }
-    } else {
-      const taskTypes = KPI_TO_TASK[plan.kpi_category] || [];
-      for (const tt of taskTypes) {
-        actual += taskCountByType[tt] || 0;
       }
     }
     const percent = plan.individual_target > 0 ? (actual / plan.individual_target) * 100 : 0;
@@ -825,6 +802,32 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
   const todayAmt = todayAmount._sum?.amount || 0;
   const yesterdayAmt = yesterdayAmount._sum?.amount || 0;
 
+  // Phase 3: Staff-level NPL summary
+  let staffNpl = null;
+  try {
+    const loanAccounts = await prisma.accountMapping.findMany({
+      where: { mappedToId: userId, accountType: 'Loan', status: 'Active' },
+      select: { id: true },
+    });
+    if (loanAccounts.length > 0) {
+      const accountIds = loanAccounts.map(a => a.id);
+      const parMetrics = await calculateParMetrics(accountIds);
+      const collectionRate = await calculateStaffCollectionRate(userId);
+      const alerts = await getStaffCollectionAlerts(userId);
+      staffNpl = {
+        totalLoans: loanAccounts.length,
+        totalPortfolio: parMetrics.totalPortfolio,
+        par90Ratio: Math.round(parMetrics.par90Ratio * 100) / 100,
+        collectionRate: collectionRate.percent,
+        collectionCount: collectionRate.count,
+        overdueCount: alerts.filter ? alerts.filter(a => a.severity === 'high').length : 0,
+        totalAlerts: alerts.length || 0,
+      };
+    }
+  } catch (e) {
+    // NPL non-critical
+  }
+
   res.status(200).json({
     success: true,
     data: { 
@@ -851,6 +854,7 @@ export const getStaffDashboard = asyncHandler(async (req, res) => {
         },
       },
       accounts,
+      npl: staffNpl,
     }
   });
 });
@@ -866,6 +870,8 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
     select: { id: true, name: true, employeeId: true, position: true, branch_code: true },
   });
 
+  const period = await resolvePeriod(req);
+
   let totalMappedAccounts = 0;
   let totalKpiAchievement = 0;
   let membersWithData = 0;
@@ -877,7 +883,7 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
       where: { mappedToId: member.id, status: 'Active' }
     });
 
-    const depositGrowth = await calculateIncrementalGrowth(member.id, member.branch_code, 'Deposit_Mobilization', '2025-H2');
+    const depositGrowth = await calculateIncrementalGrowth(member.id, member.branch_code, 'Deposit_Mobilization', period);
 
     const staffPlans = await prisma.staffPlan.findMany({
       where: { userId: member.id, branch_code: member.branch_code, status: 'Active', kpi_category: 'Deposit_Mobilization' }
@@ -916,31 +922,20 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
       where: { userId: supervisorId, branch_code: branchCode, status: 'Active' }
     });
     if (ownPlans.length > 0) {
-      const ownDepositGrowth = await calculateIncrementalGrowth(supervisorId, branchCode, 'Deposit_Mobilization', '2025-H2');
+      const ownDepositGrowth = await calculateIncrementalGrowth(supervisorId, branchCode, 'Deposit_Mobilization', period);
+      const supervisorTaskFilter = await buildTaskAchievementFilter({ userId: supervisorId, submittedById: supervisorId });
       const ownApprovedTasks = await prisma.dailyTask.findMany({
-        where: { submittedById: supervisorId, approvalStatus: 'Approved' },
+        where: supervisorTaskFilter,
         select: { taskType: true, amount: true },
       });
       const taskCountByType = {};
       for (const t of ownApprovedTasks) {
         taskCountByType[t.taskType] = (taskCountByType[t.taskType] || 0) + 1;
       }
-      const DEPOSIT_TASK_TYPES = [
-        'Loan_Saving_Deposit', 'Michu_Current_Saving',
-        'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
-        'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
-        'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
-      ];
-
-      const KPI_TO_TASK = {
-        Deposit_Mobilization: DEPOSIT_TASK_TYPES,
-      };
       for (const plan of ownPlans) {
         let actual = 0;
         if (plan.kpi_category === 'Deposit_Mobilization') {
           actual = ownDepositGrowth;
-        } else if (plan.kpi_category === 'Account_Productivity') {
-          for (const t of ownApprovedTasks) actual += t.amount || 0;
         } else if (plan.kpi_category === 'Collection_Rate') {
           const cd = await calculateStaffCollectionRate(supervisorId);
           actual = cd.percent;
@@ -953,20 +948,9 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
             const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
             actual = parMetrics.totalPortfolio > 0 ? 100 - parMetrics.par90Ratio : 100;
           }
-        } else {
-          const types = KPI_TO_TASK[plan.kpi_category] || [];
-          for (const tt of types) actual += taskCountByType[tt] || 0;
         }
         const percent = plan.individual_target > 0 ? (actual / plan.individual_target) * 100 : 0;
-        const key = plan.kpi_category.replace('Deposit_Mobilization', 'deposit')
-          .replace('New_Member_Registration', 'member')
-          .replace('Share_Capital_Growth', 'shareCapital')
-          .replace('Account_Productivity', 'accountProductivity')
-          .replace('New_Account_Opening', 'newAccount')
-          .replace('Mobile_Banking_Users', 'mobileBanking')
-          .replace('Merchant_POS_Growth', 'merchantPos')
-          .replace('Billers_Recruitment', 'billers')
-          .replace('Internal_Operations', 'internalOps').toLowerCase();
+        const key = plan.kpi_category.replace('Deposit_Mobilization', 'deposit').toLowerCase();
         ownKpiBreakdown[key] = { target: plan.individual_target, actual, percent: Math.round(percent * 100) / 100 };
       }
     }
@@ -982,23 +966,13 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
       where: { userId: { in: allStaffIds }, status: 'Active' }
     });
     const categories = [...new Set(allPlans.map(p => p.kpi_category))];
-    const DEPOSIT_TASK_TYPES = [
-      'Loan_Saving_Deposit', 'Michu_Current_Saving',
-      'Gihon_Regular_Saving', 'Mothers_Saving', 'Young_Womens_Saving',
-      'Elders_Saving', 'Children_Saving', 'Fixed_Time_Deposit',
-      'Premium_Saving_Deposit', 'Special_Saving', 'Segment_Deposit', 'Wadiah_IFB_Deposit',
-    ];
-
-    const KPI_TO_TASK_MAP = {
-      Deposit_Mobilization: DEPOSIT_TASK_TYPES,
-    };
     for (const cat of categories) {
       const catPlans = allPlans.filter(p => p.kpi_category === cat);
       const totalTarget = catPlans.reduce((s, p) => s + p.individual_target, 0);
       let totalActual = 0;
       if (cat === 'Deposit_Mobilization') {
         for (const member of supervisees) {
-          totalActual += await calculateIncrementalGrowth(member.id, member.branch_code, cat, '2025-H2');
+          totalActual += await calculateIncrementalGrowth(member.id, member.branch_code, cat, period);
         }
       } else if (cat === 'Collection_Rate') {
         let totalRate = 0;
@@ -1016,13 +990,6 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
         if (loanAccounts.length > 0) {
           const parMetrics = await calculateParMetrics(loanAccounts.map(a => a.id));
           totalActual = parMetrics.totalPortfolio > 0 ? 100 - parMetrics.par90Ratio : 100;
-        }
-      } else {
-        const taskTypes = KPI_TO_TASK_MAP[cat] || [];
-        if (taskTypes.length > 0) {
-          totalActual = await prisma.dailyTask.count({
-            where: { submittedById: { in: allStaffIds }, taskType: { in: taskTypes }, approvalStatus: 'Approved' }
-          });
         }
       }
       const percent = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;

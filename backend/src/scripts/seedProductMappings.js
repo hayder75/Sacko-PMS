@@ -8,18 +8,13 @@ const prisma = new PrismaClient();
 
 // Product mappings from CSV
 const productMappings = [
-  { cbs_product_name: 'Felagot Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
-  { cbs_product_name: 'Digital Saving', kpi_category: 'Digital_Channel_Growth', min_balance: 0 },
-  { cbs_product_name: 'Weekly Sa 360', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
-  { cbs_product_name: 'Sixty Days L Sa', kpi_category: 'Loan_NPL', min_balance: 0 },
-  { cbs_product_name: 'Thirty Days L S', kpi_category: 'Loan_NPL', min_balance: 0 },
-  { cbs_product_name: 'Revol Loan Savi', kpi_category: 'Loan_NPL', min_balance: 0 },
-  { cbs_product_name: 'Medebegna Savin', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
-  { cbs_product_name: 'Share Account', kpi_category: 'Shareholder_Recruitment', min_balance: 0 },
-  { cbs_product_name: 'Non Member', kpi_category: 'Customer_Base', min_balance: 0 },
-  { cbs_product_name: 'Special Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
-  { cbs_product_name: 'Taxi Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
-  { cbs_product_name: 'Fixed Time 1Y', kpi_category: 'Deposit_Mobilization', min_balance: 0 },
+  { cbs_product_name: 'Felagot Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0, requiresCbs: false },
+  { cbs_product_name: 'Digital Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0, requiresCbs: false },
+  { cbs_product_name: 'Weekly Sa 360', kpi_category: 'Deposit_Mobilization', min_balance: 0, requiresCbs: false },
+  { cbs_product_name: 'Medebegna Savin', kpi_category: 'Deposit_Mobilization', min_balance: 0, requiresCbs: false },
+  { cbs_product_name: 'Special Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0, requiresCbs: false },
+  { cbs_product_name: 'Taxi Saving', kpi_category: 'Deposit_Mobilization', min_balance: 0, requiresCbs: false },
+  { cbs_product_name: 'Fixed Time 1Y', kpi_category: 'Deposit_Mobilization', min_balance: 0, requiresCbs: false },
 ];
 
 const seedProductMappings = async () => {
@@ -60,6 +55,7 @@ const seedProductMappings = async () => {
           data: {
             kpi_category: mappingData.kpi_category,
             min_balance: mappingData.min_balance || 0,
+            requiresCbs: mappingData.requiresCbs !== undefined ? mappingData.requiresCbs : true,
             status: 'active',
             mappedById: admin.id,
             mapped_at: new Date(),
@@ -73,6 +69,7 @@ const seedProductMappings = async () => {
             cbs_product_name: mappingData.cbs_product_name,
             kpi_category: mappingData.kpi_category,
             min_balance: mappingData.min_balance || 0,
+            requiresCbs: mappingData.requiresCbs !== undefined ? mappingData.requiresCbs : true,
             mappedById: admin.id,
             status: 'active',
           },

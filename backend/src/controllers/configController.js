@@ -1,6 +1,7 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { TASK_TYPE_MAP, KPI_CATEGORY_MAP, POSITION_MAP } from '../utils/prismaHelpers.js';
+import { normalizePeriod } from '../utils/periodUtils.js';
 
 const HARDCODED_TASK_TYPES = Object.entries(TASK_TYPE_MAP).map(([value, label]) => ({ value, label }));
 
@@ -28,8 +29,8 @@ export const getConfig = asyncHandler(async (req, res) => {
   });
 
   const periodOptions = activePeriods.length > 0
-    ? activePeriods.map(p => p.period)
-    : ['2025-H2'];
+    ? [...new Set(activePeriods.map(p => normalizePeriod(p.period)))]
+    : ['FY-2026-27'];
 
   const positions = Object.entries(POSITION_MAP).map(([value, label]) => ({ value, label }));
   const kpiCategories = Object.entries(KPI_CATEGORY_MAP).map(([value, label]) => ({ value, label }));

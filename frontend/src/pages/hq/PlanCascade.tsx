@@ -11,15 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { plansAPI, staffPlansAPI } from '@/lib/api';
 
 const kpiCategories = [
-  'Account Productivity',
   'Deposit Mobilization',
-  'New Member Registration',
-  'New Account Opening',
-  'Share Capital Growth',
-  'Mobile Banking Users',
-  'Merchant POS Growth',
-  'Billers Recruitment',
-  'Internal Operations',
   'Collection Rate',
   'Portfolio Quality',
 ];
@@ -31,7 +23,7 @@ export const productCategories = [
   'Special Saving', 'Segment Deposit', 'Wadiah IFB Deposit',
 ];
 
-const periods = ['FY-2026-27', '2025-H2', 'Q4-2025', 'December-2025', '2025'];
+const periods = ['FY-2026-27'];
 
 export function PlanCascade() {
   const [activeTab, setActiveTab] = useState('manual');
@@ -39,7 +31,7 @@ export function PlanCascade() {
   const [staffPlans, setStaffPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [staffPlansLoading, setStaffPlansLoading] = useState(false);
-  const [staffPlansFilter, setStaffPlansFilter] = useState({ branch_code: 'WOLAYTA_SODO', period: '2025-H2' });
+  const [staffPlansFilter, setStaffPlansFilter] = useState({ branch_code: 'WOLAYTA_SODO', period: 'FY-2026-27' });
   const [formData, setFormData] = useState({
     branch_code: '',
     kpi_category: '',

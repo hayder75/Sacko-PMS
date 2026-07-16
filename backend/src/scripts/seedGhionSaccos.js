@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { normalizePeriod } from '../utils/periodUtils.js';
 
 dotenv.config();
 
@@ -123,17 +124,10 @@ async function main() {
 
   console.log('✅ 8 users created with Ethiopian names and supervisor assignments');
 
-  // ===== PLANS (all 9 KPIs for Bole branch) =====
+  // ===== PLANS (Deposit Mobilization only) =====
+  const PERIOD = normalizePeriod('2025-H2');
   const kpiTargets = {
-    Account_Productivity: 500000,
     Deposit_Mobilization: 10000000,
-    New_Member_Registration: 200,
-    New_Account_Opening: 300,
-    Share_Capital_Growth: 1000000,
-    Mobile_Banking_Users: 400,
-    Merchant_POS_Growth: 100,
-    Billers_Recruitment: 80,
-    Internal_Operations: 500,
   };
 
   for (const [kpi, target] of Object.entries(kpiTargets)) {
@@ -142,7 +136,7 @@ async function main() {
         branch_code: 'WOLAYTA_SODO',
         branchId: sodoBranch.id,
         kpi_category: kpi,
-        period: '2025-H2',
+        period: PERIOD,
         target_value: target,
         target_type: 'incremental',
         status: 'Active',
@@ -151,7 +145,7 @@ async function main() {
     });
     console.log(`  Plan: ${kpi} = ${target} for WOLAYTA_SODO`);
   }
-  console.log('✅ 9 plans created for Bole branch');
+  console.log('✅ Plans created for Wolayta Sodo branch');
 
   // ===== CASCADE TO STAFF =====
   const { cascadeBranchPlan } = await import('../utils/planCascade.js');
@@ -161,20 +155,12 @@ async function main() {
   }
   console.log('✅ Plans cascaded to all staff via position groups');
 
-  // ===== PRODUCT MAPPINGS =====
+  // ===== PRODUCT MAPPINGS (deposit products only) =====
   const products = [
     { name: 'Medbegna Saving', kpi: 'Deposit_Mobilization' },
     { name: 'Felagot Saving', kpi: 'Deposit_Mobilization' },
     { name: 'Super Saving', kpi: 'Deposit_Mobilization' },
-    { name: 'Digital Saving', kpi: 'Mobile_Banking_Users' },
-    { name: 'Share Account', kpi: 'Share_Capital_Growth' },
-    { name: 'Member Registration', kpi: 'New_Member_Registration' },
-    { name: 'New Account', kpi: 'New_Account_Opening' },
-    { name: 'POS Terminal', kpi: 'Merchant_POS_Growth' },
-    { name: 'Biller Onboarding', kpi: 'Billers_Recruitment' },
-    { name: 'SMS Alert', kpi: 'Internal_Operations' },
-    { name: 'Complaint Log', kpi: 'Internal_Operations' },
-    { name: 'Transaction Processing', kpi: 'Internal_Operations' },
+    { name: 'Digital Saving', kpi: 'Deposit_Mobilization' },
   ];
 
   for (const prod of products) {
@@ -182,13 +168,14 @@ async function main() {
       data: {
         cbs_product_name: prod.name,
         kpi_category: prod.kpi,
-        min_balance: prod.kpi === 'Deposit_Mobilization' || prod.kpi === 'Account_Productivity' ? 500 : 0,
+        min_balance: 1000,
+        requiresCbs: false,
         status: 'active',
         mappedById: admin.id,
       },
     });
   }
-  console.log('✅ 12 product mappings created');
+  console.log('✅ 4 deposit product mappings created');
 
   // ===== ACCOUNT MAPPINGS (all to Bole staff) =====
   const bolStaff = [staffBolCS1, staffBolCS2, staffBolCR];
@@ -241,7 +228,7 @@ async function main() {
   console.log('✅ June balances created for all accounts');
 
   // ===== SAMPLE DAILY TASKS (Bole CS Officers — fully approved) =====
-  const taskTypes = ['Deposit_Mobilization', 'New_Member_Registration', 'New_Account_Opening', 'Mobile_Banking_Activation', 'Share_Capital'];
+  const taskTypes = ['Michu_Current_Saving', 'Gihon_Regular_Saving', 'Loan_Saving_Deposit', 'Mothers_Saving', 'Premium_Saving_Deposit'];
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -256,9 +243,7 @@ async function main() {
     for (let i = 0; i < numTasks; i++) {
       const mapping = staffMappings[i];
       const taskType = taskTypes[i % taskTypes.length];
-      const amount = taskType === 'Deposit_Mobilization' || taskType === 'Share_Capital'
-        ? Math.floor(Math.random() * 5000) + 500
-        : 0;
+      const amount = Math.floor(Math.random() * 5000) + 500;
 
       const taskDate = i < 2 ? today : yesterday;
 
@@ -309,7 +294,7 @@ async function main() {
   if (birtukanMapping) {
     const pendingTask = await prisma.dailyTask.create({
       data: {
-        taskType: 'Deposit_Mobilization',
+        taskType: 'Michu_Current_Saving',
         accountNumber: birtukanMapping.accountNumber,
         accountId: birtukanMapping.id,
         amount: 10000,
@@ -401,8 +386,8 @@ async function main() {
   console.log(`  Area: 1 (Hawassa)`);
   console.log(`  Branches: 1 (Wolayta Sodo)`);
   console.log(`  Users: 8 (1 admin, 1 AM, 1 BM, 2 supervisors, 3 staff)`);
-  console.log(`  Plans: 9 (all KPIs)`);
-  console.log(`  Products: 12 mapped`);
+  console.log(`  Plans: 1 (Deposit Mobilization)`);
+  console.log(`  Products: 4 mapped`);
   console.log(`  Accounts: ${HABESHA_CUSTOMERS.length} mapped`);
   console.log(`  Tasks: created for 2 CS Officers`);
   console.log(`  Evaluations: 3 behavioral`);

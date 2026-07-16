@@ -15,6 +15,8 @@ const PASSWORD = '1234';
 const ACCOUNTS_CSV = path.resolve(__dirname, '../../../Accounts.csv');
 const PLAN_XLSX = path.resolve(__dirname, '../../../WSodo Plan FY 26 - 27.xlsx');
 
+const sciCounters = {};
+
 function parseCsv(filePath) {
   const workbook = XLSX.readFile(filePath, { type: 'file', raw: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -22,12 +24,15 @@ function parseCsv(filePath) {
   return data;
 }
 
-function normalizeAccountNo(raw) {
+function normalizeAccountNo(raw, customerNo) {
   if (!raw) return '';
   const s = String(raw).trim();
   if (s.includes('E+')) {
-    const num = parseFloat(s);
-    if (!isNaN(num)) return String(Math.round(num));
+    const custNum = String(customerNo || '').trim();
+    if (!custNum) return `CSV-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    if (!sciCounters[custNum]) sciCounters[custNum] = 0;
+    sciCounters[custNum]++;
+    return `CSV-${custNum}-${sciCounters[custNum]}`;
   }
   return s.replace(/\.0+$/, '');
 }
@@ -60,7 +65,7 @@ async function main() {
     const custName = String(row[0] || '').trim();
     const custNo = String(row[1] || '').trim();
     const category = String(row[3] || '').trim();
-    const acctNo = normalizeAccountNo(row[4]);
+    const acctNo = normalizeAccountNo(row[4], row[1]);
     const credits = parseFloat(String(row[6] || '0').replace(/,/g, '')) || 0;
     const debits = parseFloat(String(row[7] || '0').replace(/,/g, '')) || 0;
     const balance = parseFloat(String(row[9] || '0').replace(/,/g, '')) || 0;
@@ -130,16 +135,23 @@ async function main() {
   // ========== CREATE ORG STRUCTURE ==========
   console.log('\n🏗️  Creating organization structure...');
 
+  await prisma.cBSDiscrepancy.deleteMany();
+  await prisma.cBSValidation.deleteMany();
+  await prisma.nplSnapshot.deleteMany();
+  await prisma.team.deleteMany();
   await prisma.performanceScore.deleteMany();
   await prisma.behavioralEvaluation.deleteMany();
   await prisma.taskApproval.deleteMany();
   await prisma.dailyTask.deleteMany();
+  await prisma.transaction.deleteMany();
   await prisma.accountMapping.deleteMany();
   await prisma.juneBalance.deleteMany();
   await prisma.productKpiMapping.deleteMany();
   await prisma.staffPlan.deleteMany();
+  await prisma.loanSchedule.deleteMany();
   await prisma.plan.deleteMany();
   await prisma.auditLog.deleteMany();
+  await prisma.kpiFrameworkConfig.deleteMany();
   await prisma.branch.updateMany({ where: { managerId: { not: null } }, data: { managerId: null } });
   await prisma.area.updateMany({ where: { managerId: { not: null } }, data: { managerId: null } });
   await prisma.user.deleteMany();
@@ -293,14 +305,8 @@ async function main() {
   // Create KPI-based plans
   const kpiPlans = [
     { name: 'Aggregate Member Deposit', kpi: 'Deposit_Mobilization', target: productPlans.reduce((s, p) => s + p.annualTarget, 0) },
-    { name: 'Customer Base Growth', kpi: 'New_Account_Opening', target: customerPlans.reduce((s, p) => s + p.annualTarget, 0) },
     { name: 'Collection Rate', kpi: 'Collection_Rate', target: 95 },
     { name: 'Portfolio Quality', kpi: 'Portfolio_Quality', target: 98 },
-    { name: 'Share Capital Growth', kpi: 'Share_Capital_Growth', target: 5000000 },
-    { name: 'Mobile Banking Users', kpi: 'Mobile_Banking_Users', target: customerPlans.find(p => p.name.includes('IFB'))?.annualTarget || 1000 },
-    { name: 'Merchant POS Growth', kpi: 'Merchant_POS_Growth', target: 100 },
-    { name: 'Billers Recruitment', kpi: 'Billers_Recruitment', target: 80 },
-    { name: 'Internal Operations', kpi: 'Internal_Operations', target: 500 },
   ];
 
   for (const kp of kpiPlans) {
@@ -361,7 +367,7 @@ async function main() {
       'SPECIAL SAVING ACCOUNT': 'Deposit_Mobilization',
       'Segment Account': 'Deposit_Mobilization',
       'WADIAH SAVING ACCOUNT': 'Deposit_Mobilization',
-      'REPAYMENT ACCOUNT': 'Internal_Operations',
+      'REPAYMENT ACCOUNT': 'Collection_Rate',
       'School': 'Deposit_Mobilization',
     };
     for (const [prod, kpi] of Object.entries(productToKpi)) {

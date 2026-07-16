@@ -2,10 +2,12 @@ import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
 import { cascadeBranchPlan } from '../utils/planCascade.js';
+import { normalizePeriod } from '../utils/periodUtils.js';
 import {
   calculateBranchDepositGrowth,
   calculateStaffCollectionRate,
   calculateParMetrics,
+  buildTaskAchievementFilter,
 } from '../utils/performanceCalculator.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
@@ -15,7 +17,8 @@ import { KPI_CATEGORY_TO_ENUM, CBS_PRODUCT_TO_CATEGORY } from '../utils/prismaHe
 // @route   POST /api/plans
 // @access  Private (Admin)
 export const createPlan = asyncHandler(async (req, res) => {
-  const { branch_code, kpi_category, period, target_value, target_count, product_category, monthly_plan, target_type: rawTargetType } = req.body;
+  const { branch_code, kpi_category, period: rawPeriod, target_value, target_count, product_category, monthly_plan, target_type: rawTargetType } = req.body;
+  const period = normalizePeriod(rawPeriod);
   const target_type = rawTargetType === 'Numeric' ? 'incremental' : (rawTargetType || 'incremental');
 
   // Validate required fields
@@ -155,7 +158,7 @@ export const uploadPlan = asyncHandler(async (req, res) => {
       'Wadiah IFB Deposit',
     ];
 
-    const validPeriods = ['2025-H2', 'Q4-2025', 'December-2025', '2025', 'FY-2026-27'];
+    const validPeriods = ['FY-2026-27', '2025-H2', 'Q4-2025', 'December-2025', '2025'];
 
     for (const [index, row] of data.entries()) {
       try {
@@ -163,7 +166,7 @@ export const uploadPlan = asyncHandler(async (req, res) => {
 
         const branch_code = (row.branch_code || row.branchcode || '').toUpperCase().trim();
         const kpi_category = row.kpi_category || row.kpicategory || '';
-        const period = row.period || '';
+        const period = normalizePeriod(row.period) || '';
         const target_value = parseFloat(row.target_value || row.targetvalue || 0);
         const target_count = row.target_count || row.targetcount ? parseInt(row.target_count || row.targetcount) : undefined;
         const product_category = row.product_category || row.productcategory || undefined;
@@ -461,15 +464,13 @@ export const getPlansAchievement = asyncHandler(async (req, res) => {
     } else {
       const taskTypes = KPI_TASK_TYPES[plan.kpi_category] || [];
       if (taskTypes.length > 0) {
-        const countWhere = {
-          submittedById: { in: staffIds },
-          taskType: { in: taskTypes },
-          approvalStatus: 'Approved',
-        };
-        if (plan.kpi_category === 'Share_Capital_Growth') {
-          countWhere.cbsValidated = true;
-        }
-        actual = await prisma.dailyTask.count({ where: countWhere });
+        const dualGateFilter = await buildTaskAchievementFilter({ taskTypes });
+        actual = await prisma.dailyTask.count({
+          where: {
+            ...dualGateFilter,
+            submittedById: { in: staffIds },
+          },
+        });
       }
     }
 

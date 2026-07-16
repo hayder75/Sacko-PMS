@@ -1,10 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { normalizePeriod } from '../utils/periodUtils.js';
 
 dotenv.config();
 
 const prisma = new PrismaClient();
+
+const PERIOD = normalizePeriod('2025-H2');
 
 const seedTestData = async () => {
   try {
@@ -90,16 +93,16 @@ const seedTestData = async () => {
 
     console.log('3️⃣ Creating Branch Plan...');
     await prisma.plan.upsert({
-      where: { id: 'ATOTE-DEPO-2025-H2' },
+      where: { id: `ATOTE-DEPO-${PERIOD}` },
       create: {
-        id: 'ATOTE-DEPO-2025-H2',
+        id: `ATOTE-DEPO-${PERIOD}`,
         branch_code: 'ATOTE',
         kpi_category: 'Deposit_Mobilization',
-        period: '2025-H2',
+        period: PERIOD,
         target_value: 1000000,
         target_type: 'incremental',
-        start_date: new Date('2025-07-01'),
-        end_date: new Date('2025-12-31'),
+        start_date: new Date('2026-07-01'),
+        end_date: new Date('2027-06-30'),
         status: 'Active',
       },
       update: {
@@ -107,17 +110,17 @@ const seedTestData = async () => {
         status: 'Active',
       },
     });
-    console.log('   ✅ Created branch plan: ATOTE Deposit Mobilization 2025-H2 = 1,000,000');
+    console.log(`   ✅ Created branch plan: ATOTE Deposit Mobilization ${PERIOD} = 1,000,000`);
 
     console.log('4️⃣ Creating Staff Plan for MSO...');
     await prisma.staffPlan.upsert({
-      where: { id: 'MSO-DEPO-2025-H2' },
+      where: { id: `MSO-DEPO-${PERIOD}` },
       create: {
-        id: 'MSO-DEPO-2025-H2',
+        id: `MSO-DEPO-${PERIOD}`,
         userId: mso.id,
         branch_code: 'ATOTE',
         kpi_category: 'Deposit_Mobilization',
-        period: '2025-H2',
+        period: PERIOD,
         individual_target: 150000,
         plan_share_percent: 15,
         daily_target: 2467,
@@ -130,7 +133,7 @@ const seedTestData = async () => {
         status: 'Active',
       },
     });
-    console.log('   ✅ Created staff plan: MSO Deposit Target = 150,000 ETB');
+    console.log(`   ✅ Created staff plan: MSO Deposit Target = 150,000 ETB (${PERIOD})`);
 
     // Calculate MSO incremental growth
     const msoMappings = await prisma.accountMapping.findMany({

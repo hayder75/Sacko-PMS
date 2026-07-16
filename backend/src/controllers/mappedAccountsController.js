@@ -2,32 +2,28 @@ import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const TASK_TO_KPI = {
-  Deposit_Mobilization: 'Deposit_Mobilization',
-  New_Member_Registration: 'New_Member_Registration',
-  New_Account_Opening: 'New_Account_Opening',
-  Share_Capital: 'Share_Capital_Growth',
-  Mobile_Banking_Activation: 'Mobile_Banking_Users',
-  Merchant_POS_Activation: 'Merchant_POS_Growth',
-  Biller_Recruitment: 'Billers_Recruitment',
-  Transaction_Processing: 'Internal_Operations',
-  SMS_Alert_Config: 'Internal_Operations',
-  Complaint_Resolution: 'Internal_Operations',
-  Account_Productivity: 'Account_Productivity',
+  // Deposit product TaskTypes → Deposit_Mobilization KPI
+  Loan_Saving_Deposit: 'Deposit_Mobilization',
+  Michu_Current_Saving: 'Deposit_Mobilization',
+  Gihon_Regular_Saving: 'Deposit_Mobilization',
+  Mothers_Saving: 'Deposit_Mobilization',
+  Young_Womens_Saving: 'Deposit_Mobilization',
+  Elders_Saving: 'Deposit_Mobilization',
+  Children_Saving: 'Deposit_Mobilization',
+  Fixed_Time_Deposit: 'Deposit_Mobilization',
+  Premium_Saving_Deposit: 'Deposit_Mobilization',
+  Special_Saving: 'Deposit_Mobilization',
+  Segment_Deposit: 'Deposit_Mobilization',
+  Wadiah_IFB_Deposit: 'Deposit_Mobilization',
 };
 
 const KPI_LABELS = {
   Deposit_Mobilization: 'Deposit Mobilization',
-  New_Member_Registration: 'New Member Registration',
-  New_Account_Opening: 'New Account Opening',
-  Share_Capital_Growth: 'Share Capital Growth',
-  Account_Productivity: 'Account Productivity',
-  Mobile_Banking_Users: 'Mobile Banking Users',
-  Merchant_POS_Growth: 'Merchant POS Growth',
-  Billers_Recruitment: 'Billers Recruitment',
-  Internal_Operations: 'Internal Operations',
+  Collection_Rate: 'Collection Rate',
+  Portfolio_Quality: 'Portfolio Quality',
 };
 
-const KPI_ORDER = ['Deposit_Mobilization', 'New_Member_Registration', 'New_Account_Opening', 'Share_Capital_Growth', 'Account_Productivity', 'Mobile_Banking_Users', 'Merchant_POS_Growth', 'Billers_Recruitment', 'Internal_Operations'];
+const KPI_ORDER = ['Deposit_Mobilization', 'Collection_Rate', 'Portfolio_Quality'];
 
 // @desc    Get mapped accounts dashboard for a user
 // @route   GET /api/mapped-accounts/dashboard

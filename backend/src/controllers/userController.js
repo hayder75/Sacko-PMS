@@ -14,23 +14,29 @@ export const getPublicUsersList = asyncHandler(async (req, res) => {
       id: true,
       name: true,
       email: true,
-      role: true,
       position: true,
-      employeeId: true,
-      branchId: true,
+      role: true,
       branch_code: true,
+      branch: { select: { name: true } },
+      area: { select: { name: true } },
     },
     orderBy: { name: 'asc' },
   });
 
-  const mapped = users.map(u => ({
-    ...u,
-    _id: u.id,
-    location: u.branch_code || '',
-    position: POSITION_MAP[u.position] || u.position,
-  }));
+  const data = users.map(u => {
+    const location = u.branch?.name || u.area?.name || u.branch_code || '';
+    return {
+      _id: u.id,
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      position: POSITION_MAP[u.position] || u.position,
+      role: u.role,
+      location,
+    };
+  });
 
-  res.status(200).json({ success: true, count: mapped.length, data: mapped });
+  res.status(200).json({ success: true, data });
 });
 
 // @desc    Get all users
@@ -446,37 +452,3 @@ export const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get public user list for login page
-// @route   GET /api/users/public-list
-// @access  Public
-export const getPublicUserList = asyncHandler(async (req, res) => {
-  const users = await prisma.user.findMany({
-    where: { isActive: true },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      position: true,
-      role: true,
-      branch_code: true,
-      branch: { select: { name: true } },
-      area: { select: { name: true } },
-    },
-    orderBy: { name: 'asc' },
-  });
-
-  const data = users.map(u => {
-    const location = u.branch?.name || u.area?.name || u.branch_code || '';
-    return {
-      _id: u.id,
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      position: u.position,
-      role: u.role,
-      location,
-    };
-  });
-
-  res.status(200).json({ success: true, data });
-});

@@ -39,10 +39,7 @@ const CBS_PRODUCT_MAPPINGS = [
   { cbs: 'FIXED TIME DEPOSIT', kpi: 'Deposit_Mobilization', product: 'Fixed_Time_Deposit' },
   { cbs: 'SPECIAL SAVING ACCOUNT', kpi: 'Deposit_Mobilization', product: 'Special_Saving' },
   { cbs: 'WADIAH SAVING ACCOUNT', kpi: 'Deposit_Mobilization', product: 'Wadiah_IFB_Deposit' },
-  { cbs: 'REPAYMENT ACCOUNT', kpi: 'Internal_Operations', product: null },
-  { cbs: 'COMMON SHARE', kpi: 'Share_Capital_Growth', product: null },
-  { cbs: 'MERCHANT ACCOUNT', kpi: 'Merchant_POS_Growth', product: null },
-  { cbs: 'BILLER SERVICE', kpi: 'Billers_Recruitment', product: null },
+  { cbs: 'REPAYMENT ACCOUNT', kpi: 'Collection_Rate', product: null },
 ];
 
 async function seedWolayitaSodoPlan() {

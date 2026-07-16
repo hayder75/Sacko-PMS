@@ -146,6 +146,7 @@ enum CBSValidationStatus {
   Completed
   Failed
   Partial
+  Superseded
 }
 
 enum DiscrepancyType {
@@ -697,6 +698,7 @@ model ProductKpiMapping {
   cbs_product_name String               @unique
   kpi_category     KpiCategory
   min_balance      Float                @default(0)
+  requiresCbs      Boolean              @default(true)
   status           ProductMappingStatus @default(active)
   mappedById       String
   mappedBy         User                 @relation("ProductMapper", fields: [mappedById], references: [id])

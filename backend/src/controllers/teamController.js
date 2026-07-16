@@ -77,13 +77,22 @@ export const createTeam = asyncHandler(async (req, res) => {
 
   const validMemberIds = Array.isArray(memberIds) ? memberIds.filter(Boolean) : [];
   if (validMemberIds.length > 0) {
-    const result = await prisma.user.updateMany({
+    const alreadyAssigned = await prisma.user.findMany({
+      where: { id: { in: validMemberIds }, teamId: { not: null } },
+      select: { id: true, name: true, teamId: true },
+    });
+    if (alreadyAssigned.length > 0) {
+      const names = alreadyAssigned.map(u => u.name).join(', ');
+      return res.status(400).json({
+        success: false,
+        message: `These staff are already assigned to another team: ${names}. Remove them from their current team first.`,
+        conflicts: alreadyAssigned.map(u => u.id),
+      });
+    }
+    await prisma.user.updateMany({
       where: { id: { in: validMemberIds } },
       data: { teamId: team.id },
     });
-    if (result.count === 0) {
-      console.warn(`[teamController] createTeam: updateMany matched 0 users for memberIds ${JSON.stringify(validMemberIds)}`);
-    }
   }
 
   const created = await prisma.team.findUnique({
@@ -124,19 +133,37 @@ export const updateTeam = asyncHandler(async (req, res) => {
   });
 
   if (Array.isArray(memberIds)) {
+    const currentMemberIds = (await prisma.user.findMany({
+      where: { teamId: existing.id },
+      select: { id: true },
+    })).map(u => u.id);
+
+    const newMemberIds = memberIds.filter(Boolean).filter(id => !currentMemberIds.includes(id));
+    if (newMemberIds.length > 0) {
+      const alreadyAssigned = await prisma.user.findMany({
+        where: { id: { in: newMemberIds }, teamId: { not: null } },
+        select: { id: true, name: true, teamId: true },
+      });
+      if (alreadyAssigned.length > 0) {
+        const names = alreadyAssigned.map(u => u.name).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `These staff are already assigned to another team: ${names}. Remove them from their current team first.`,
+          conflicts: alreadyAssigned.map(u => u.id),
+        });
+      }
+    }
+
     await prisma.user.updateMany({
       where: { teamId: existing.id },
       data: { teamId: null },
     });
     const valid = memberIds.filter(Boolean);
     if (valid.length > 0) {
-      const result = await prisma.user.updateMany({
+      await prisma.user.updateMany({
         where: { id: { in: valid } },
         data: { teamId: existing.id },
       });
-      if (result.count === 0) {
-        console.warn(`[teamController] updateTeam: updateMany matched 0 users for memberIds ${JSON.stringify(valid)}`);
-      }
     }
   }
 

@@ -18,7 +18,7 @@ const defaultConfig: AppConfig = {
   taskTypes: [],
   kpiCategories: [],
   positions: [],
-  periodOptions: ['2025-H2'],
+  periodOptions: ['FY-2026-27'],
   taskTypeToKpiMap: {},
 };
 

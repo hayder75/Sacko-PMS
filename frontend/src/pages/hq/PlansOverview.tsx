@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { plansAPI, staffPlansAPI } from '@/lib/api';
+import { useConfig } from '@/contexts/ConfigContext';
 import { Target, Users, TrendingUp, Building2 } from 'lucide-react';
 
 const KPI_COLORS: Record<string, string> = {
@@ -30,14 +31,13 @@ const KPI_COLORS: Record<string, string> = {
   'Wadiah IFB Deposit': '#65a30d',
 };
 
-const periodOptions = ['FY-2026-27', '2025-H2', 'Q4-2025', 'December-2025', '2025'];
-
 export function PlansOverview() {
+  const config = useConfig();
   const [plans, setPlans] = useState<any[]>([]);
   const [staffPlans, setStaffPlans] = useState<any[]>([]);
   const [achievementPlans, setAchievementPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('2025-H2');
+  const [selectedPeriod, setSelectedPeriod] = useState(config.periodOptions?.[0] || 'FY-2026-27');
 
   useEffect(() => {
     loadData();
@@ -142,7 +142,7 @@ export function PlansOverview() {
           onChange={e => setSelectedPeriod(e.target.value)}
           className="border rounded-md px-3 py-1.5 text-sm"
         >
-          {periodOptions.map(p => <option key={p} value={p}>{p}</option>)}
+          {config.periodOptions.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
       </div>
 
