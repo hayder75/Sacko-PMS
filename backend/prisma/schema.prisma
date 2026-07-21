@@ -403,8 +403,8 @@ model AccountMapping {
   active_status         Boolean           @default(false)
   last_transaction_date DateTime?
   isProductive          Boolean           @default(false)
-  mappedToId            String
-  mappedTo              User              @relation("MappedToUser", fields: [mappedToId], references: [id])
+  mappedToId            String?
+  mappedTo              User?             @relation("MappedToUser", fields: [mappedToId], references: [id])
   branchId              String
   branch                Branch            @relation(fields: [branchId], references: [id])
   mappedAt              DateTime          @default(now())
