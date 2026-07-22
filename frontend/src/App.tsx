@@ -41,6 +41,7 @@ import { HqNplDashboard } from './pages/HqNplDashboard';
 import { AreaNplDashboard } from './pages/AreaNplDashboard';
 import { BranchNplDashboard } from './pages/BranchNplDashboard';
 import { TeamNplAlerts } from './pages/TeamNplAlerts';
+import { StaffNplDashboard } from './pages/StaffNplDashboard';
 import { TeamManagement } from './pages/TeamManagement';
 import { TeamHub } from './pages/TeamHub';
 
@@ -133,6 +134,7 @@ function AppRoutes() {
       <Route path="/npl/area" element={<ProtectedRoute allowedRoles={['areaManager']}><AreaNplDashboard /></ProtectedRoute>} />
       <Route path="/npl/branch" element={<ProtectedRoute allowedRoles={['branchManager']}><BranchNplDashboard /></ProtectedRoute>} />
       <Route path="/npl/team-alerts" element={<ProtectedRoute allowedRoles={['supervisor']}><TeamNplAlerts /></ProtectedRoute>} />
+      <Route path="/npl/staff" element={<ProtectedRoute allowedRoles={['staff']}><StaffNplDashboard /></ProtectedRoute>} />
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>

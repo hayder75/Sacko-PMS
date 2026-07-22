@@ -193,6 +193,7 @@ export function MappedAccounts() {
 
   if (isSupervisor) {
     const { stats, accounts: myAccounts, planProgress } = data || { stats: {}, accounts: [], planProgress: [] };
+    const teamTotalAccounts = teamMembers.reduce((sum: number, m: any) => sum + (m.mappedAccounts || 0), 0) + (myAccounts?.length || 0);
 
     return (
       <div className="space-y-6">
@@ -212,6 +213,12 @@ export function MappedAccounts() {
           </Card>
           <Card className="border border-slate-200 shadow-sm">
             <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-violet-50"><Users className="h-5 w-5 text-violet-600" /></div>
+              <div><p className="text-xs text-slate-500">Team Total Accounts</p><p className="text-xl font-bold text-slate-800">{teamTotalAccounts}</p></div>
+            </CardContent>
+          </Card>
+          <Card className="border border-slate-200 shadow-sm">
+            <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-50"><PiggyBank className="h-5 w-5 text-green-600" /></div>
               <div><p className="text-xs text-slate-500">My Deposits</p><p className="text-xl font-bold text-slate-800">{(stats?.totalDeposits ?? 0).toLocaleString()}</p></div>
             </CardContent>
@@ -220,14 +227,6 @@ export function MappedAccounts() {
             <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-indigo-50"><Users className="h-5 w-5 text-indigo-600" /></div>
               <div><p className="text-xs text-slate-500">Team Members</p><p className="text-xl font-bold text-slate-800">{teamMembers.length}</p></div>
-            </CardContent>
-          </Card>
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-50"><TrendingUp className="h-5 w-5 text-emerald-600" /></div>
-              <div><p className="text-xs text-slate-500">Net Growth</p><p className={`text-xl font-bold ${(stats?.totalDifference ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                {(stats?.totalDifference ?? 0) >= 0 ? '+' : ''}{(stats?.totalDifference ?? 0).toLocaleString()}
-              </p></div>
             </CardContent>
           </Card>
         </div>

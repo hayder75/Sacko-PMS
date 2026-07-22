@@ -101,6 +101,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/staff' },
       { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
       { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
+      { title: 'COLLECTION', icon: AlertTriangle, path: '/npl/staff' },
       { title: 'MY PERFORMANCE', icon: Target, path: '/kpi' },
       { title: 'MY SCORECARD', icon: FileText, path: '/reports/scorecard' },
     ];

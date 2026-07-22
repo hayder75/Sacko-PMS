@@ -882,6 +882,7 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
     const mappedAccountsCount = await prisma.accountMapping.count({
       where: { mappedToId: member.id, status: 'Active' }
     });
+    totalMappedAccounts += mappedAccountsCount;
 
     const depositGrowth = await calculateIncrementalGrowth(member.id, member.branch_code, 'Deposit_Mobilization', period);
 
@@ -897,7 +898,6 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
     const kpiAchievement = target > 0 ? (depositGrowth / target) * 100 : 0;
 
     if (target > 0) {
-      totalMappedAccounts += mappedAccountsCount;
       totalKpiAchievement += kpiAchievement;
       membersWithData++;
     }
@@ -911,6 +911,12 @@ export const getSupervisorDashboard = asyncHandler(async (req, res) => {
       kpiAchievement: Math.round(kpiAchievement),
     });
   }
+
+  // Include supervisor's own mapped accounts in the total
+  const supervisorAccountsCount = await prisma.accountMapping.count({
+    where: { mappedToId: supervisorId, status: 'Active' }
+  });
+  totalMappedAccounts += supervisorAccountsCount;
 
   const averageKpiAchievement = membersWithData > 0 ? totalKpiAchievement / membersWithData : 0;
 
