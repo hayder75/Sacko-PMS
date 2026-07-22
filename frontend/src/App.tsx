@@ -45,6 +45,7 @@ import { StaffNplDashboard } from './pages/StaffNplDashboard';
 import { TeamManagement } from './pages/TeamManagement';
 import { TeamHub } from './pages/TeamHub';
 import { JuneBalanceDifference } from './pages/JuneBalanceDifference';
+import { UnmappedAccounts } from './pages/UnmappedAccounts';
 
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
@@ -137,6 +138,7 @@ function AppRoutes() {
       <Route path="/npl/team-alerts" element={<ProtectedRoute allowedRoles={['supervisor']}><TeamNplAlerts /></ProtectedRoute>} />
       <Route path="/npl/staff" element={<ProtectedRoute allowedRoles={['staff']}><StaffNplDashboard /></ProtectedRoute>} />
       <Route path="/june-difference" element={<ProtectedRoute allowedRoles={['staff', 'supervisor']}><JuneBalanceDifference /></ProtectedRoute>} />
+      <Route path="/unmapped-accounts" element={<ProtectedRoute allowedRoles={['admin', 'areaManager', 'branchManager']}><UnmappedAccounts /></ProtectedRoute>} />
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>

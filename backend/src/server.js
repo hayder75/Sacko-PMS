@@ -1,8 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { connectDB } from './config/database.js';
+import cron from 'node-cron';
+import { connectDB, prisma } from './config/database.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { generateNplSnapshot } from './utils/performanceCalculator.js';
 
 // Load env vars
 dotenv.config();
@@ -112,6 +114,21 @@ const startServer = async () => {
   try {
     // Connect to database first
     await connectDB();
+    
+    // Schedule daily NPL snapshot at 02:00
+    cron.schedule('0 2 * * *', async () => {
+      console.log('[CRON] Running daily NPL snapshot...');
+      try {
+        const branches = await prisma.branch.findMany();
+        for (const branch of branches) {
+          await generateNplSnapshot(branch.id);
+          console.log(`[CRON] NPL snapshot created for branch ${branch.code}`);
+        }
+        console.log('[CRON] Daily NPL snapshot complete');
+      } catch (err) {
+        console.error('[CRON] NPL snapshot failed:', err.message);
+      }
+    });
     
     // Start server only after DB connection succeeds
     app.listen(PORT, () => {

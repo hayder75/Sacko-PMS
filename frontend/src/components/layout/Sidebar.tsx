@@ -52,6 +52,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'KPI FRAMEWORK', icon: Target, path: '/kpi-framework' },
       { title: 'COMPETENCY FRAMEWORK', icon: Shield, path: '/competency-framework' },
       { title: 'AUDIT TRAIL', icon: FileText, path: '/audit-trail' },
+      { title: 'UNMAPPED ACCOUNTS', icon: Eye, path: '/unmapped-accounts' },
       { title: 'NPL DASHBOARD', icon: AlertTriangle, path: '/npl/hq' },
     ];
   }
@@ -61,6 +62,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/area' },
       { title: 'BRANCH MONITORING', icon: Eye, path: '/branch-monitoring' },
       { title: 'NPL OVERVIEW', icon: AlertTriangle, path: '/npl/area' },
+      { title: 'UNMAPPED ACCOUNTS', icon: Eye, path: '/unmapped-accounts' },
       { title: 'AREA PERFORMANCE', icon: BarChart3, path: '/area-performance' },
       { title: 'BEHAVIORAL EVALUATION', icon: ClipboardList, path: '/behavioral-evaluation' },
       { title: 'REPORTS', icon: FileText, path: '/reports' },
@@ -75,6 +77,7 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'APPROVALS', icon: CheckCircle2, path: '/approvals' },
       { title: 'TEAM MANAGEMENT', icon: Users, path: '/teams' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
+      { title: 'UNMAPPED ACCOUNTS', icon: Eye, path: '/unmapped-accounts' },
       { title: 'BULK MAPPING UPLOAD', icon: Upload, path: '/bulk-mapping-upload' },
       { title: 'CBS VALIDATION', icon: CheckCircle2, path: '/cbs-validation' },
       { title: 'BEHAVIORAL EVALUATION', icon: ClipboardList, path: '/behavioral-evaluation' },

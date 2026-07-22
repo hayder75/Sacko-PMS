@@ -13,7 +13,7 @@
     "seed:atote": "node src/scripts/seedAtoteUsers.js",
     "seed:all-data": "node src/scripts/seedAllData.js",
     "seed:ghion": "node src/scripts/seedGhionSaccos.js",
-"seed:files": "node src/scripts/seedFromFiles.js",
+    "seed:files": "node src/scripts/seedFromFiles.js",
     "seed:hawassa": "node src/scripts/seedHawassaDemo.js",
     "seed:test": "node src/scripts/seedTestData.js",
     "clean:test": "node src/scripts/cleanSystemData.js",
@@ -41,6 +41,7 @@
     "express-validator": "^7.0.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "node-cron": "^4.6.0",
     "prisma": "^5.22.0",
     "xlsx": "^0.18.5"
   },

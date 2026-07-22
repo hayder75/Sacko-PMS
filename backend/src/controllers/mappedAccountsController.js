@@ -1,6 +1,59 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 
+// @desc    Get unmapped accounts (mappedToId is null)
+// @route   GET /api/mapped-accounts/unmapped
+// @access  Private (Admin, Area Manager, Branch Manager)
+export const getUnmappedAccounts = asyncHandler(async (req, res) => {
+  const branchCode = req.query.branch_code;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 100;
+  const skip = (page - 1) * limit;
+
+  const where = { mappedToId: null };
+  if (branchCode) {
+    where.branch = { code: branchCode.toUpperCase().trim() };
+  }
+
+  const [accounts, total] = await Promise.all([
+    prisma.accountMapping.findMany({
+      where,
+      include: { branch: { select: { name: true, code: true } } },
+      orderBy: { updatedAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.accountMapping.count({ where }),
+  ]);
+
+  const data = accounts.map(a => ({
+    id: a.id,
+    accountNumber: a.accountNumber,
+    customerName: a.customerName,
+    phoneNumber: a.phoneNumber,
+    accountType: a.accountType,
+    currentBalance: a.current_balance,
+    juneBalance: a.june_balance,
+    difference: (a.current_balance || 0) - (a.june_balance || 0),
+    activeStatus: a.active_status,
+    isProductive: a.isProductive,
+    product: a.product,
+    branch: a.branch,
+    createdAt: a.createdAt,
+  }));
+
+  res.status(200).json({
+    success: true,
+    data,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    },
+  });
+});
+
 const TASK_TO_KPI = {
   // Deposit product TaskTypes → Deposit_Mobilization KPI
   Loan_Saving_Deposit: 'Deposit_Mobilization',

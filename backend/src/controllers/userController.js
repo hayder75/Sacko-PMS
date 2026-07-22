@@ -32,6 +32,7 @@ export const getPublicUsersList = asyncHandler(async (req, res) => {
       email: u.email,
       position: POSITION_MAP[u.position] || u.position,
       role: u.role,
+      branch_code: u.branch_code,
       location,
     };
   });
