@@ -271,7 +271,7 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[92vw] h-[85vh] max-h-[85vh] p-0 gap-0">
+      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] p-0 gap-0">
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">

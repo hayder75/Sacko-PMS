@@ -472,23 +472,25 @@ export const triggerNplSnapshot = asyncHandler(async (req, res) => {
 
   const snapshot = await generateNplSnapshot(branchId);
 
-  // Notify staff + supervisors about new overdue accounts
-  const overdueAccounts = await prisma.accountMapping.findMany({
-    where: {
-      branchId,
-      accountType: 'Loan',
-      loanSchedules: {
-        some: { status: { in: ['Pending', 'Partial', 'Missed'] }, daysPastDue: { gt: 0 } },
+  let overdueAccounts = [];
+  try {
+    overdueAccounts = await prisma.accountMapping.findMany({
+      where: {
+        branchId,
+        accountType: 'Loan',
+        loanSchedules: {
+          some: { status: { in: ['Pending', 'Partial', 'Missed'] }, daysPastDue: { gt: 0 } },
+        },
       },
-    },
-    select: {
-      id: true,
-      accountNumber: true,
-      customerName: true,
-      mappedToId: true,
-      mappedTo: { select: { supervisorId: true } },
-    },
-  });
+      select: {
+        id: true,
+        accountNumber: true,
+        customerName: true,
+        mappedToId: true,
+        mappedTo: { select: { supervisorId: true } },
+      },
+    });
+  } catch (e) {} // non-critical
 
   for (const acc of overdueAccounts) {
     const worstDpd = await prisma.loanSchedule.findFirst({
