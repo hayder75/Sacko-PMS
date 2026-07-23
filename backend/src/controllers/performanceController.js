@@ -336,6 +336,19 @@ export const getTeamStandings = asyncHandler(async (req, res) => {
       select: { id: true },
     });
     memberIds = teammates.map(u => u.id);
+  } else {
+    // Staff without team — fall back to supervisor's supervisees
+    const u = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { supervisorId: true },
+    });
+    if (u?.supervisorId) {
+      const supervisees = await prisma.user.findMany({
+        where: { supervisorId: u.supervisorId, isActive: true },
+        select: { id: true },
+      });
+      memberIds = supervisees.map(s => s.id);
+    }
   }
 
   if (memberIds.length === 0) {
