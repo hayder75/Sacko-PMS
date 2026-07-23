@@ -54,19 +54,29 @@ export function BulkMappingUpload() {
         'June Balance': 5000,
         'Staff ID': '0001',
         'Phone Number': '+251911234567',
+        'Account Type': 'Savings',
+        'Product': 'GIHON REGULAR SAVING',
+        'Payment Frequency': '',
+        'Loan Principal': '',
+        'Maturity Date': '',
       },
       {
         'Account Number': 'ACC002',
         'Customer Name': 'Jane Smith',
-        'Balance': 15000,
-        'June Balance': 8000,
+        'Balance': 87500,
+        'June Balance': 86000,
         'Staff ID': '0001',
         'Phone Number': '+251922345678',
+        'Account Type': 'Loan',
+        'Product': 'LOAN SAVING RESERVE ACCOUNT',
+        'Payment Frequency': 'Monthly',
+        'Loan Principal': 87500,
+        'Maturity Date': '2029-07-21',
       },
     ];
 
     // Convert to CSV
-    const headers = ['Account Number', 'Customer Name', 'Balance', 'June Balance', 'Staff ID', 'Phone Number'];
+    const headers = ['Account Number', 'Customer Name', 'Balance', 'June Balance', 'Staff ID', 'Phone Number', 'Account Type', 'Product', 'Payment Frequency', 'Loan Principal', 'Maturity Date'];
     const csvContent = [
       headers.join(','),
       ...templateData.map(row => 
@@ -103,7 +113,8 @@ export function BulkMappingUpload() {
             <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
               <li>File must be Excel (.xlsx) or CSV format</li>
               <li>Required columns: <strong>Account Number</strong>, <strong>Customer Name</strong>, <strong>Balance</strong>, <strong>June Balance</strong>, <strong>Staff ID</strong></li>
-              <li>Optional column: <strong>Phone Number</strong></li>
+              <li>Optional columns: <strong>Phone Number</strong>, <strong>Account Type</strong> (Savings/Loan), <strong>Product</strong>, <strong>Payment Frequency</strong> (Daily/Weekly/Monthly), <strong>Loan Principal</strong>, <strong>Maturity Date</strong></li>
+              <li>Account Type defaults to <strong>Savings</strong> if not specified</li>
               <li>Staff ID must match the employeeId of staff members in your branch</li>
             </ul>
           </div>

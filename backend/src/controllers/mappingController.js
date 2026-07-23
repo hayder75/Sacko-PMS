@@ -3,7 +3,7 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
-import { ACCOUNT_TYPE_TO_ENUM } from '../utils/prismaHelpers.js';
+import { ACCOUNT_TYPE_TO_ENUM, PAYMENT_FREQUENCY_MAP } from '../utils/prismaHelpers.js';
 
 // @desc    Get all account mappings
 // @route   GET /api/mappings
@@ -69,12 +69,14 @@ export const getMappings = asyncHandler(async (req, res) => {
 // @access  Private (Branch Manager, HQ Admin)
 export const createMapping = asyncHandler(async (req, res) => {
   const accountType = ACCOUNT_TYPE_TO_ENUM[req.body.accountType] || req.body.accountType;
+  const paymentFreq = req.body.payment_frequency || req.body.paymentFrequency || null;
 
   const mapping = await prisma.accountMapping.create({
     data: {
       accountNumber: req.body.accountNumber,
       customerName: req.body.customerName,
       accountType: accountType || 'Savings',
+      product: req.body.product || null,
       balance: parseFloat(req.body.balance || 0),
       june_balance: parseFloat(req.body.june_balance || 0),
       current_balance: parseFloat(req.body.current_balance || req.body.balance || 0),
@@ -84,6 +86,13 @@ export const createMapping = asyncHandler(async (req, res) => {
       mappedToId: req.body.mappedTo || req.body.mappedToId,
       mappedById: req.user.id,
       branchId: req.body.branchId || req.user.branchId,
+      // Loan-specific fields
+      loan_principal: parseFloat(req.body.loan_principal || req.body.loanPrincipal || 0) || 0,
+      payment_frequency: PAYMENT_FREQUENCY_MAP[paymentFreq] || null,
+      loan_maturity_date: req.body.loan_maturity_date || req.body.maturity_date || req.body.maturityDate || null,
+      loan_disbursement_date: req.body.loan_disbursement_date || req.body.disbursement_date || null,
+      next_payment_date: req.body.next_payment_date || req.body.nextPaymentDate || null,
+      interest_rate: parseFloat(req.body.interest_rate || req.body.interestRate || 0) || 0,
     },
   });
 
@@ -120,6 +129,9 @@ export const updateMapping = asyncHandler(async (req, res) => {
 
   const updateData = { ...req.body };
   if (updateData.accountType) updateData.accountType = ACCOUNT_TYPE_TO_ENUM[updateData.accountType] || updateData.accountType;
+  if (updateData.payment_frequency || updateData.paymentFrequency) {
+    updateData.payment_frequency = PAYMENT_FREQUENCY_MAP[updateData.payment_frequency || updateData.paymentFrequency] || null;
+  }
   if (updateData.mappedTo) {
     updateData.mappedToId = updateData.mappedTo;
     delete updateData.mappedTo;
@@ -127,6 +139,7 @@ export const updateMapping = asyncHandler(async (req, res) => {
   if (updateData.branchId) {
     updateData.branchId = updateData.branchId;
   }
+  delete updateData.paymentFrequency;
 
   const mapping = await prisma.accountMapping.update({
     where: { id: req.params.id },
@@ -269,6 +282,12 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
         const juneBalance = parseFloat(row.june_balance || row['June Balance'] || row.juneBalance || 0);
         const staffID = String(row.staffID || row['Staff ID'] || row.staffId || row.employeeId || '').trim();
         const phoneNumber = String(row.phoneNumber || row['Phone Number'] || '').trim();
+        const accountType = ACCOUNT_TYPE_TO_ENUM[row.accountType || row['Account Type']] || row.accountType || row['Account Type'] || 'Savings';
+        const product = String(row.product || row['Product'] || row.productName || row['Product Name'] || '').trim() || null;
+        const paymentFreqStr = String(row.payment_frequency || row['Payment Frequency'] || row.paymentFrequency || '').trim();
+        const paymentFrequency = PAYMENT_FREQUENCY_MAP[paymentFreqStr] || null;
+        const loanPrincipal = parseFloat(row.loan_principal || row['Loan Principal'] || row.loanPrincipal || 0) || 0;
+        const maturityDate = row.maturity_date || row['Maturity Date'] || row.maturityDate || null;
 
         if (!accountNumber || !customerName || !staffID) {
           results.errors.push({
@@ -329,6 +348,11 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
               mappedById: req.user.id,
               phoneNumber: phoneNumber || undefined,
               status: 'Active',
+              accountType,
+              product: product || undefined,
+              ...(paymentFrequency ? { payment_frequency: paymentFrequency } : {}),
+              ...(loanPrincipal > 0 ? { loan_principal: loanPrincipal } : {}),
+              ...(maturityDate ? { loan_maturity_date: new Date(maturityDate) } : {}),
             }
           });
           results.updated++;
@@ -345,7 +369,8 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
             data: {
               accountNumber,
               customerName,
-              accountType: 'Savings',
+              accountType,
+              product,
               balance,
               current_balance: balance,
               june_balance: juneBalance,
@@ -354,6 +379,9 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
               mappedById: req.user.id,
               phoneNumber: phoneNumber || undefined,
               status: 'Active',
+              loan_principal: loanPrincipal,
+              payment_frequency: paymentFrequency,
+              loan_maturity_date: maturityDate ? new Date(maturityDate) : null,
             }
           });
           results.created++;
