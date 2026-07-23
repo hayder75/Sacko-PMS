@@ -2,6 +2,7 @@ import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
 import { TASK_TYPE_TO_ENUM, MAPPING_STATUS_TO_ENUM, APPROVAL_STATUS_TO_ENUM, APPROVAL_STATUS_MAP } from '../utils/prismaHelpers.js';
+import { notifyTaskApproval } from '../utils/notificationService.js';
 
 // Helper: Build approval chain based on supervisor hierarchy
 // Chain: Staff -> Supervisor (if exists) -> Branch Manager
@@ -413,6 +414,14 @@ export const approveTask = asyncHandler(async (req, res) => {
     where: { id: req.params.id },
     include: { approvalChain: true }
   });
+
+  // Notify submitter
+  notifyTaskApproval({
+    userId: task.submittedById,
+    accountNumber: task.accountNumber,
+    amount: task.amount,
+    status: newTaskStatus,
+  }).catch(() => {});
 
   res.status(200).json({
     success: true,

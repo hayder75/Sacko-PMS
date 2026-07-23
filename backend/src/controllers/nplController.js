@@ -9,6 +9,7 @@ import {
   autoGenerateLoanSchedules,
   getStaffCollectionAlerts,
 } from '../utils/performanceCalculator.js';
+import { notifyNplAlert } from '../utils/notificationService.js';
 
 // @desc    Get staff-level collection alerts and collection rate
 // @route   GET /api/npl/staff
@@ -470,6 +471,43 @@ export const triggerNplSnapshot = asyncHandler(async (req, res) => {
   }
 
   const snapshot = await generateNplSnapshot(branchId);
+
+  // Notify staff + supervisors about new overdue accounts
+  const overdueAccounts = await prisma.accountMapping.findMany({
+    where: {
+      branchId,
+      accountType: 'Loan',
+      loanSchedules: {
+        some: { status: { in: ['Pending', 'Partial', 'Missed'] }, daysPastDue: { gt: 0 } },
+      },
+    },
+    select: {
+      id: true,
+      accountNumber: true,
+      customerName: true,
+      mappedToId: true,
+      mappedTo: { select: { supervisorId: true } },
+    },
+  });
+
+  for (const acc of overdueAccounts) {
+    const worstDpd = await prisma.loanSchedule.findFirst({
+      where: { accountId: acc.id, status: { in: ['Pending', 'Partial', 'Missed'] }, daysPastDue: { gt: 0 } },
+      orderBy: { daysPastDue: 'desc' },
+      select: { daysPastDue: true },
+    });
+
+    if (worstDpd && acc.mappedToId) {
+      notifyNplAlert({
+        accountNumber: acc.accountNumber,
+        customerName: acc.customerName,
+        dpd: worstDpd.daysPastDue,
+        staffId: acc.mappedToId,
+        supervisorId: acc.mappedTo?.supervisorId,
+      }).catch(() => {});
+    }
+  }
+
   res.status(200).json({ success: true, data: snapshot });
 });
 

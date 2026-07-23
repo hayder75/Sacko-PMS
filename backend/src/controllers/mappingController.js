@@ -4,6 +4,7 @@ import { logAudit } from '../utils/auditLogger.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
 import { ACCOUNT_TYPE_TO_ENUM, PAYMENT_FREQUENCY_MAP } from '../utils/prismaHelpers.js';
+import { notifyStaffMappingUpdated, notifyAutoBalance } from '../utils/notificationService.js';
 
 const toISODate = (val) => {
   if (!val) return null;
@@ -221,6 +222,9 @@ export const autoBalanceMapping = asyncHandler(async (req, res) => {
       updateCount++;
     }
 
+    const staffAccountCount = endIndex - accountIndex;
+    notifyAutoBalance({ staffId: staff[i].id, count: staffAccountCount }).catch(() => {});
+
     accountIndex = endIndex;
   }
 
@@ -370,6 +374,9 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
             staffName: staffMember.name,
             status: 'Updated'
           });
+          notifyStaffMappingUpdated({
+            accountNumber, customerName, staffId: staffMember.id, action: 'updated'
+          }).catch(() => {});
         } else {
           await prisma.accountMapping.create({
             data: {
@@ -399,6 +406,9 @@ export const bulkUploadMappings = asyncHandler(async (req, res) => {
             staffName: staffMember.name,
             status: 'Created'
           });
+          notifyStaffMappingUpdated({
+            accountNumber, customerName, staffId: staffMember.id, action: 'created'
+          }).catch(() => {});
         }
       } catch (error) {
         results.errors.push({

@@ -177,6 +177,16 @@ enum ProductMappingStatus {
   inactive
 }
 
+enum NotificationType {
+  CBS_VALIDATION   @map("CBS Validation")
+  MAPPING_UPDATED  @map("Mapping Updated")
+  NPL_ALERT        @map("NPL Alert")
+  PLAN_ACHIEVEMENT @map("Plan Achievement")
+  TASK_APPROVED    @map("Task Approved")
+  TASK_REJECTED    @map("Task Rejected")
+  AUTO_BALANCE     @map("Auto Balance")
+}
+
 enum AuditAction {
   Plan_Upload                  @map("Plan Upload")
   Plan_Update                  @map("Plan Update")
@@ -257,6 +267,7 @@ model User {
   managedBranches         Branch[]             @relation("BranchManager")
   taskApprovals           TaskApproval[]
   cbsDiscrepancyResolvers CBSDiscrepancy[]     @relation("DiscrepancyResolver")
+  notifications           Notification[]       @relation("NotificationRecipient")
 
   @@index([branchId])
   @@index([areaId])
@@ -758,4 +769,21 @@ model KpiFrameworkConfig {
   updatedAt DateTime @updatedAt
 
   @@map("kpi_framework_config")
+}
+
+model Notification {
+  id          String           @id @default(uuid()) @map("_id")
+  userId      String
+  user        User             @relation("NotificationRecipient", fields: [userId], references: [id])
+  type        NotificationType
+  title       String
+  message     String
+  data        Json?
+  link        String?
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, read, createdAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }

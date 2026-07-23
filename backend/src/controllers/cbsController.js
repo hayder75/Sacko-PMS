@@ -4,6 +4,7 @@ import { logAudit } from '../utils/auditLogger.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
 import { DISCREPANCY_TYPE_TO_ENUM, CBS_PRODUCT_TO_CATEGORY } from '../utils/prismaHelpers.js';
+import { notifyCbsValidation } from '../utils/notificationService.js';
 
 // Helper: Update account balances and active status from CBS data
 const updateAccountBalances = async (cbsData, branchId, validationDate) => {
@@ -463,6 +464,16 @@ export const uploadCBS = asyncHandler(async (req, res) => {
     });
 
     fs.unlinkSync(req.file.path);
+
+    // Notify branch manager and area manager about CBS validation
+    notifyCbsValidation({
+      branchId: branch.id,
+      branchName: branch.name,
+      validationId: validation.id,
+      matched: vResult.matchedRecords,
+      total: vResult.totalRecords,
+      discrepancies: vResult.discrepancies.length,
+    }).catch(err => console.error('Notification error:', err.message));
 
     res.status(201).json({
       success: true,

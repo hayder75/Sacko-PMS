@@ -689,3 +689,23 @@ export const nplAPI = {
   },
 };
 
+export const notificationsAPI = {
+  getAll: async (params?: { page?: number; limit?: number; unreadOnly?: boolean }) => {
+    const query = params
+      ? '?' + new URLSearchParams(
+          Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
+        ).toString()
+      : '';
+    return apiRequest(`/notifications${query}`);
+  },
+  getUnreadCount: async () => {
+    return apiRequest('/notifications/unread-count');
+  },
+  markAsRead: async (id: string) => {
+    return apiRequest(`/notifications/${id}/read`, { method: 'PATCH' });
+  },
+  markAllAsRead: async () => {
+    return apiRequest('/notifications/read-all', { method: 'POST' });
+  },
+};
+
