@@ -5,6 +5,12 @@ import XLSX from 'xlsx';
 import fs from 'fs';
 import { ACCOUNT_TYPE_TO_ENUM, PAYMENT_FREQUENCY_MAP } from '../utils/prismaHelpers.js';
 
+const toISODate = (val) => {
+  if (!val) return null;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 // @desc    Get all account mappings
 // @route   GET /api/mappings
 // @access  Private
@@ -89,9 +95,9 @@ export const createMapping = asyncHandler(async (req, res) => {
       // Loan-specific fields
       loan_principal: parseFloat(req.body.loan_principal || req.body.loanPrincipal || 0) || 0,
       payment_frequency: PAYMENT_FREQUENCY_MAP[paymentFreq] || null,
-      loan_maturity_date: req.body.loan_maturity_date || req.body.maturity_date || req.body.maturityDate || null,
-      loan_disbursement_date: req.body.loan_disbursement_date || req.body.disbursement_date || null,
-      next_payment_date: req.body.next_payment_date || req.body.nextPaymentDate || null,
+      loan_maturity_date: toISODate(req.body.loan_maturity_date || req.body.maturity_date || req.body.maturityDate),
+      loan_disbursement_date: toISODate(req.body.loan_disbursement_date || req.body.disbursement_date),
+      next_payment_date: toISODate(req.body.next_payment_date || req.body.nextPaymentDate),
       interest_rate: parseFloat(req.body.interest_rate || req.body.interestRate || 0) || 0,
     },
   });
