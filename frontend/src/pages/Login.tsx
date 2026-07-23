@@ -10,8 +10,8 @@ import { AlertCircle, Lock, BarChart3, Search, Check } from 'lucide-react';
 const ROLE_FILTERS = [
   { key: '', label: 'All' },
   { key: 'admin', label: 'Admin' },
-  { key: 'area_manager', label: 'Area' },
-  { key: 'branch_manager', label: 'BM' },
+  { key: 'areaManager', label: 'Area' },
+  { key: 'branchManager', label: 'BM' },
   { key: 'supervisor', label: 'Supervisor' },
   { key: 'staff', label: 'Staff' },
 ];
@@ -133,7 +133,7 @@ export function Login() {
         </svg>
       </div>
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400" />
-      <Card className="w-full max-w-md shadow-2xl border-0 relative">
+      <Card className="w-full max-w-lg shadow-2xl border-0 relative">
         <div className="h-2 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600 rounded-t-xl" />
         <CardHeader className="text-center pt-8">
           <div className="mx-auto mb-4 w-16 h-16 bg-primary-50 rounded-xl flex items-center justify-center shadow-sm">
