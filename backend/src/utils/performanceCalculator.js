@@ -86,12 +86,13 @@ export const buildTaskAchievementFilter = async ({ taskTypes, userId, submittedB
  */
 export const calculateIncrementalGrowth = async (userId, branch_code, kpi_category, period, product_category) => {
   try {
-    // Get all mapped accounts for this user
+    // Get all mapped accounts for this user (exclude Loan type)
     const mappedAccounts = await prisma.accountMapping.findMany({
       where: {
         mappedToId: userId,
         status: 'Active',
         current_balance: { gte: 1000 },
+        accountType: { not: 'Loan' },
       },
     });
 
