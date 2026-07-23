@@ -113,6 +113,13 @@ export const createMapping = asyncHandler(async (req, res) => {
     req
   );
 
+  notifyStaffMappingUpdated({
+    accountNumber: mapping.accountNumber,
+    customerName: mapping.customerName,
+    staffId: mapping.mappedToId,
+    action: 'created',
+  }).catch(() => {});
+
   res.status(201).json({
     success: true,
     data: { ...mapping, _id: mapping.id },
@@ -162,6 +169,13 @@ export const updateMapping = asyncHandler(async (req, res) => {
     `Updated mapping for account ${mapping.accountNumber}`,
     req
   );
+
+  notifyStaffMappingUpdated({
+    accountNumber: mapping.accountNumber,
+    customerName: mapping.customerName,
+    staffId: mapping.mappedToId || existingMapping.mappedToId,
+    action: 'updated',
+  }).catch(() => {});
 
   res.status(200).json({
     success: true,
