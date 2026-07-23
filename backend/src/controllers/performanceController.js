@@ -1,6 +1,6 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { calculateKPIScore, calculateBranchKPIScore, calculateRating } from '../utils/performanceCalculator.js';
+import { calculateKPIScore, calculateBranchKPIScore, calculateRating, calculateIncrementalGrowth, calculateStaffCollectionRate, calculateParMetrics } from '../utils/performanceCalculator.js';
 
 // @desc    Calculate performance score
 // @route   POST /api/performance/calculate
@@ -254,6 +254,160 @@ export const getPerformanceScore = asyncHandler(async (req, res) => {
       _id: score.id,
       userId: score.user ? { ...score.user, _id: score.user.id } : null,
       branchId: score.branch ? { ...score.branch, _id: score.branch.id } : null,
+    },
+  });
+});
+
+// @desc    Get team standings / leaderboard
+// @route   GET /api/performance/team-standings
+// @access  Private
+export const getTeamStandings = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, branchId: true, branch_code: true, teamId: true },
+  });
+
+  let memberIds = [];
+
+  if (user.role === 'branchManager') {
+    // BM sees all teams in their branch
+    const teams = await prisma.team.findMany({
+      where: { branchId: user.branchId, isActive: true },
+      select: { id: true, name: true, code: true, managerId: true },
+    });
+    const allMemberIds = await prisma.user.findMany({
+      where: { branchId: user.branchId, isActive: true, role: 'staff' },
+      select: { id: true },
+    });
+    memberIds = allMemberIds.map(u => u.id);
+
+    // Rank teams by average achievement
+    const teamStandings = [];
+    for (const team of teams) {
+      const tmIds = (await prisma.user.findMany({
+        where: { teamId: team.id, isActive: true },
+        select: { id: true },
+      })).map(u => u.id);
+
+      let totalScore = 0;
+      let count = 0;
+      for (const mid of tmIds) {
+        const growth = await calculateIncrementalGrowth(mid, user.branch_code, 'Deposit_Mobilization', 'Monthly');
+        const plan = await prisma.staffPlan.findFirst({
+          where: { userId: mid, status: 'Active', kpi_category: 'Deposit_Mobilization' },
+          select: { individual_target: true },
+        });
+        const pct = plan?.individual_target > 0 ? (growth / plan.individual_target) * 100 : 0;
+        totalScore += pct;
+        count++;
+      }
+      teamStandings.push({
+        teamId: team.id,
+        teamName: team.name,
+        teamCode: team.code,
+        managerId: team.managerId,
+        memberCount: tmIds.length,
+        averageAchievement: count > 0 ? Math.round(totalScore / count) : 0,
+      });
+    }
+    teamStandings.sort((a, b) => b.averageAchievement - a.averageAchievement);
+    teamStandings.forEach((t, i) => t.rank = i + 1);
+
+    return res.status(200).json({
+      success: true,
+      data: { view: 'branch', teamStandings },
+    });
+  }
+
+  // For staff and supervisor — find their team
+  if (user.role === 'supervisor') {
+    // Supervisor sees supervisees
+    const supervisees = await prisma.user.findMany({
+      where: { supervisorId: userId, isActive: true },
+      select: { id: true },
+    });
+    memberIds = supervisees.map(u => u.id);
+    memberIds.push(userId); // include self
+  } else if (user.teamId) {
+    // Staff — get teammates
+    const teammates = await prisma.user.findMany({
+      where: { teamId: user.teamId, isActive: true },
+      select: { id: true },
+    });
+    memberIds = teammates.map(u => u.id);
+  }
+
+  if (memberIds.length === 0) {
+    return res.status(200).json({
+      success: true,
+      data: { view: 'team', members: [], yourRank: null, totalMembers: 0 },
+    });
+  }
+
+  // Calculate performance for each member
+  const members = [];
+  for (const mid of memberIds) {
+    const u = await prisma.user.findUnique({
+      where: { id: mid },
+      select: { id: true, name: true, employeeId: true, position: true },
+    });
+    if (!u) continue;
+
+    const mappedAccounts = await prisma.accountMapping.count({
+      where: { mappedToId: mid, status: 'Active' },
+    });
+
+    const depositGrowth = await calculateIncrementalGrowth(mid, user.branch_code, 'Deposit_Mobilization', 'Monthly');
+
+    const depositPlan = await prisma.staffPlan.findFirst({
+      where: { userId: mid, status: 'Active', kpi_category: 'Deposit_Mobilization' },
+      select: { individual_target: true },
+    });
+    const depositPercent = depositPlan?.individual_target > 0 ? (depositGrowth / depositPlan.individual_target) * 100 : 0;
+
+    const collectionRate = await calculateStaffCollectionRate(mid);
+
+    const loanAccounts = await prisma.accountMapping.findMany({
+      where: { mappedToId: mid, accountType: 'Loan', status: 'Active' },
+      select: { id: true },
+    });
+    let portfolioQuality = 100;
+    if (loanAccounts.length > 0) {
+      const par = await calculateParMetrics(loanAccounts.map(a => a.id));
+      portfolioQuality = par.totalPortfolio > 0 ? 100 - par.par90Ratio : 100;
+    }
+
+    // Composite score: deposit (40%) + collection (30%) + portfolio (30%)
+    const composite = (depositPercent * 0.4) + (collectionRate.percent * 0.3) + (portfolioQuality * 0.3);
+
+    members.push({
+      id: u.id,
+      name: u.name,
+      employeeId: u.employeeId,
+      position: u.position?.replace(/_/g, ' '),
+      mappedAccounts,
+      kpiAchievement: Math.round(depositPercent),
+      depositGrowth: Math.round(depositGrowth),
+      collectionRate: Math.round(collectionRate.percent),
+      portfolioQuality: Math.round(portfolioQuality),
+      compositeScore: Math.round(composite),
+    });
+  }
+
+  // Sort by composite score descending
+  members.sort((a, b) => b.compositeScore - a.compositeScore);
+  members.forEach((m, i) => m.rank = i + 1);
+
+  const yourRank = members.find(m => m.id === userId)?.rank || null;
+
+  res.status(200).json({
+    success: true,
+    data: {
+      view: 'team',
+      members,
+      yourRank,
+      totalMembers: members.length,
     },
   });
 });
