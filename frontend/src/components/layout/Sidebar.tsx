@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   User,
   AlertTriangle,
+  Trophy,
   Settings
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
@@ -73,6 +74,7 @@ const getNavItems = (role: string): NavItem[] => {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/branch' },
       { title: 'MONITORING', icon: Eye, path: '/branch-monitoring' },
+      { title: 'TEAM STANDINGS', icon: Trophy, path: '/team-standings' },
       { title: 'NPL DASHBOARD', icon: AlertTriangle, path: '/npl/branch' },
       { title: 'APPROVALS', icon: CheckCircle2, path: '/approvals' },
       { title: 'TEAM MANAGEMENT', icon: Users, path: '/teams' },
@@ -89,6 +91,7 @@ const getNavItems = (role: string): NavItem[] => {
     return [
       { title: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard/supervisor' },
       { title: 'TEAM HUB', icon: Users, path: '/team-hub' },
+      { title: 'TEAM STANDINGS', icon: Trophy, path: '/team-standings' },
       { title: 'APPROVALS', icon: CheckCircle2, path: '/approvals' },
       { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
       { title: 'MAPPING', icon: Network, path: '/mapping' },
@@ -106,8 +109,9 @@ const getNavItems = (role: string): NavItem[] => {
       { title: 'TASKS', icon: CheckSquare, path: '/tasks' },
       { title: 'MAPPED ACCOUNTS', icon: BookOpen, path: '/mapped-accounts' },
       { title: 'JUNE DIFFERENCE', icon: BarChart3, path: '/june-difference' },
-      { title: 'COLLECTION', icon: AlertTriangle, path: '/npl/staff' },
+      { title: 'NPL COLLECTION', icon: AlertTriangle, path: '/npl/staff' },
       { title: 'MY PERFORMANCE', icon: Target, path: '/kpi' },
+      { title: 'TEAM STANDINGS', icon: Trophy, path: '/team-standings' },
       { title: 'MY SCORECARD', icon: FileText, path: '/reports/scorecard' },
     ];
   }
