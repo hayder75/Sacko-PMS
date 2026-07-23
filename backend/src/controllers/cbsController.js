@@ -153,7 +153,7 @@ const processLoanRepayments = async (cbsData) => {
     if (allPaid === 0) {
       await prisma.accountMapping.update({
         where: { id: account.id },
-        data: { status: 'Closed', active_status: false },
+        data: { status: 'Inactive', active_status: false },
       });
       loansCompleted++;
     }
