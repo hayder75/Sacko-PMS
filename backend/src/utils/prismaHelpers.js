@@ -100,6 +100,17 @@ export const TASK_TYPE_TO_ENUM = {
     'Special Saving': 'Special_Saving',
     'Segment Deposit': 'Segment_Deposit',
     'Wadiah IFB Deposit': 'Wadiah_IFB_Deposit',
+    'Deposit Mobilization': 'Deposit_Mobilization',
+    'New Member Registration': 'New_Member_Registration',
+    'New Account Opening': 'New_Account_Opening',
+    'Share Capital Growth': 'Share_Capital_Growth',
+    'Account Productivity': 'Account_Productivity',
+    'Mobile Banking Users': 'Mobile_Banking_Users',
+    'Merchant POS Growth': 'Merchant_POS_Growth',
+    'Billers Recruitment': 'Billers_Recruitment',
+    'Internal Operations': 'Internal_Operations',
+    'Collection Rate': 'Collection_Rate',
+    'Portfolio Quality': 'Portfolio_Quality',
 };
 
 export const TASK_TYPE_MAP = {
@@ -115,6 +126,17 @@ export const TASK_TYPE_MAP = {
     'Special_Saving': 'Special Saving',
     'Segment_Deposit': 'Segment Deposit',
     'Wadiah_IFB_Deposit': 'Wadiah IFB Deposit',
+    'Deposit_Mobilization': 'Deposit Mobilization',
+    'New_Member_Registration': 'New Member Registration',
+    'New_Account_Opening': 'New Account Opening',
+    'Share_Capital_Growth': 'Share Capital Growth',
+    'Account_Productivity': 'Account Productivity',
+    'Mobile_Banking_Users': 'Mobile Banking Users',
+    'Merchant_POS_Growth': 'Merchant POS Growth',
+    'Billers_Recruitment': 'Billers Recruitment',
+    'Internal_Operations': 'Internal Operations',
+    'Collection_Rate': 'Collection Rate',
+    'Portfolio_Quality': 'Portfolio Quality',
 };
 
 /**
@@ -247,6 +269,7 @@ export const AUDIT_ACTION_TO_ENUM = {
     'Edit Requested': 'Edit_Requested',
     'Edit Approved': 'Edit_Approved',
     'Edit Rejected': 'Edit_Rejected',
+    'Balance Source Updated': 'Balance_Source_Updated',
 };
 
 /**

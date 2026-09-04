@@ -5,14 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus, CheckCircle2, Clock, XCircle, Info, FileText, Pencil } from 'lucide-react';
 import { tasksAPI } from '@/lib/api';
@@ -137,164 +136,85 @@ export function Tasks() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/50">
-                    <TableHead>Task Type</TableHead>
-                    <TableHead>Account #</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Current Step</TableHead>
-                    <TableHead>Execution Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-center">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tasks.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-slate-500 py-12">
-                        <FileText className="h-10 w-10 mx-auto text-slate-300 mb-2" />
-                        <p>You haven't submitted any tasks yet.</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    tasks.map((task) => (
-                      <TableRow key={task._id} className="hover:bg-slate-50/50">
-                        <TableCell className="font-semibold text-slate-700">
-                          {task.taskType}
-                        </TableCell>
-                        <TableCell>
-                          <code className="text-blue-600 font-bold">{task.accountNumber}</code>
-                        </TableCell>
-                        <TableCell className="text-right font-bold">
-                          {task.amount > 0 ? `${task.amount.toLocaleString()} ETB` : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            {getCurrentStep(task.approvalChain)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-slate-600">
-                          {new Date(task.taskDate).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(task.approvalStatus)}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 gap-1"
-                                  onClick={() => setSelectedTask(task)}
-                                >
-                                  <Info className="h-3 w-3" /> Details
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-[500px]">
-                                <DialogHeader>
-                                  <DialogTitle className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5 text-blue-600" />
-                                    Task Details & Approval Chain
-                                  </DialogTitle>
-                                </DialogHeader>
-
-                                {selectedTask && (
-                                  <div className="space-y-6 mt-4">
-                                    {selectedTask.requestedEditAt && (
-                                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-                                        <p className="font-medium text-amber-800">Edit Request Pending</p>
-                                        <p className="text-amber-600 text-xs mt-1">Submitted for supervisor review</p>
-                                      </div>
-                                    )}
-                                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                      <div className="space-y-1">
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase">Account</p>
-                                        <p className="font-mono font-bold text-blue-600">{selectedTask.accountNumber}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase">Customer Name</p>
-                                        <p className="font-bold text-slate-800">{selectedTask.accountId?.customerName || 'N/A'}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase">Amount</p>
-                                        <p className="font-bold text-slate-800">{selectedTask.amount?.toLocaleString() || 0} ETB</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase">Task Type</p>
-                                        <p className="font-medium text-slate-700">{selectedTask.taskType}</p>
-                                      </div>
-                                      <div className="space-y-1 col-span-2">
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase">Submission Date</p>
-                                        <p className="font-medium text-slate-700">{new Date(selectedTask.taskDate).toLocaleDateString()}</p>
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                        Approval Progress
-                                      </h4>
-                                      <div className="space-y-3">
-                                        {selectedTask.approvalChain?.map((step: any, idx: number) => (
-                                          <div key={step._id} className="relative pl-6 pb-2">
-                                            {idx < selectedTask.approvalChain.length - 1 && (
-                                              <div className="absolute left-[7px] top-4 w-[2px] h-full bg-slate-200"></div>
-                                            )}
-                                            <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${step.status === 'Approved' ? 'bg-emerald-500 border-emerald-500' :
-                                              step.status === 'Rejected' ? 'bg-rose-500 border-rose-500' :
-                                                'bg-white border-slate-300'
-                                              }`}>
-                                              {step.status === 'Approved' && <CheckCircle2 className="h-3 w-3 text-white absolute inset-0 m-auto" />}
-                                              {step.status === 'Rejected' && <XCircle className="h-3 w-3 text-white absolute inset-0 m-auto" />}
-                                            </div>
-                                            <div className="flex justify-between items-start">
-                                              <div>
-                                                <p className="text-sm font-bold text-slate-800">{step.role}</p>
-                                                <p className="text-xs text-slate-500">
-                                                  {step.status === 'Approved' ? `Approved on ${new Date(step.approvedAt).toLocaleDateString()}` :
-                                                    step.status === 'Rejected' ? `Rejected: ${step.comments || 'No comments'}` :
-                                                      `Waiting for review...`}
-                                                </p>
-                                              </div>
-                                              {getStatusBadge(step.status)}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-
-                                    {selectedTask.remarks && (
-                                      <div className="space-y-2">
-                                        <h4 className="text-sm font-bold text-slate-800">Submitter Remarks</h4>
-                                        <p className="text-sm text-slate-600 bg-blue-50/50 p-3 rounded-md italic">
-                                          "{selectedTask.remarks}"
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-
-                            {task.submittedById === userId && task.approvalStatus === 'Pending' && !task.requestedEditAt && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 gap-1 text-amber-600 border-amber-200 hover:bg-amber-50"
-                                onClick={() => openEditDialog(task)}
-                              >
-                                <Pencil className="h-3 w-3" /> Edit
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+            <div className="table-scroll">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'taskType',
+                    header: 'Task Type',
+                    primary: true,
+                    render: (task: any) => (
+                      <span className="font-semibold text-slate-700">{task.taskType}</span>
+                    ),
+                  },
+                  {
+                    key: 'accountNumber',
+                    header: 'Account #',
+                    render: (task: any) => (
+                      <code className="text-blue-600 font-bold text-xs">{task.accountNumber}</code>
+                    ),
+                  },
+                  {
+                    key: 'amount',
+                    header: 'Amount',
+                    className: 'text-right',
+                    render: (task: any) => (
+                      <span className="font-bold">{task.amount > 0 ? `${task.amount.toLocaleString()} ETB` : '-'}</span>
+                    ),
+                  },
+                  {
+                    key: 'step',
+                    header: 'Current Step',
+                    render: (task: any) => (
+                      <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        {getCurrentStep(task.approvalChain)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'taskDate',
+                    header: 'Execution Date',
+                    render: (task: any) => (
+                      <span className="text-slate-600">{new Date(task.taskDate).toLocaleDateString()}</span>
+                    ),
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    render: (task: any) => getStatusBadge(task.approvalStatus),
+                  },
+                ]}
+                data={tasks}
+                rowKey={(task) => task._id}
+                emptyMessage={
+                  <span className="flex flex-col items-center gap-2 py-4">
+                    <FileText className="h-10 w-10 mx-auto text-slate-300" />
+                    <p>You haven't submitted any tasks yet.</p>
+                  </span>
+                }
+                mobileActions={(task) => (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1 flex-1"
+                      onClick={() => setSelectedTask(task)}
+                    >
+                      <Info className="h-3 w-3" /> Details
+                    </Button>
+                    {task.submittedById === userId && task.approvalStatus === 'Pending' && !task.requestedEditAt && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1 flex-1 text-amber-600 border-amber-200 hover:bg-amber-50"
+                        onClick={() => openEditDialog(task)}
+                      >
+                        <Pencil className="h-3 w-3" /> Edit
+                      </Button>
+                    )}
+                  </div>
+                )}
+              />
             </div>
           )}
         </CardContent>
@@ -377,6 +297,106 @@ export function Tasks() {
                   {editLoading ? 'Submitting...' : 'Submit Edit Request'}
                 </Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Task Details & Approval Chain Dialog */}
+      <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null); }}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              Task Details & Approval Chain
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedTask && (
+            <div className="space-y-6 mt-4">
+              {selectedTask.requestedEditAt && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                  <p className="font-medium text-amber-800">Edit Request Pending</p>
+                  <p className="text-amber-600 text-xs mt-1">Submitted for supervisor review</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">Account</p>
+                  <p className="font-mono font-bold text-blue-600">{selectedTask.accountNumber}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">Customer Name</p>
+                  <p className="font-bold text-slate-800">{selectedTask.accountId?.customerName || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">Amount</p>
+                  <p className="font-bold text-slate-800">{selectedTask.amount?.toLocaleString() || 0} ETB</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">Task Type</p>
+                  <p className="font-medium text-slate-700">{selectedTask.taskType}</p>
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">Submission Date</p>
+                  <p className="font-medium text-slate-700">{new Date(selectedTask.taskDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  Approval Progress
+                </h4>
+                <div className="space-y-3">
+                  {selectedTask.approvalChain?.map((step: any, idx: number) => (
+                    <div key={step._id} className="relative pl-6 pb-2">
+                      {idx < selectedTask.approvalChain.length - 1 && (
+                        <div className="absolute left-[7px] top-4 w-[2px] h-full bg-slate-200"></div>
+                      )}
+                      <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${step.status === 'Approved' ? 'bg-emerald-500 border-emerald-500' :
+                        step.status === 'Rejected' ? 'bg-rose-500 border-rose-500' :
+                          'bg-white border-slate-300'
+                        }`}>
+                        {step.status === 'Approved' && <CheckCircle2 className="h-3 w-3 text-white absolute inset-0 m-auto" />}
+                        {step.status === 'Rejected' && <XCircle className="h-3 w-3 text-white absolute inset-0 m-auto" />}
+                      </div>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">
+                            {step.role}
+                            {step.approverId?.name && (
+                              <span className="font-normal text-slate-500"> · {step.approverId.name}</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {step.status === 'Approved' ? `Approved on ${new Date(step.approvedAt).toLocaleDateString()}` :
+                              step.status === 'Rejected' ? (
+                                <span className="flex items-start gap-1.5 text-rose-600">
+                                  <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                                  <span>
+                                    <span className="font-semibold">Rejected:</span>{' '}
+                                    {step.comments || 'No reason provided'}
+                                  </span>
+                                </span>
+                              ) :
+                                `Waiting for review...`}
+                          </p>
+                        </div>
+                        {getStatusBadge(step.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {selectedTask.remarks && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold text-slate-800">Submitter Remarks</h4>
+                  <p className="text-sm text-slate-600 bg-blue-50/50 p-3 rounded-md italic">
+                    "{selectedTask.remarks}"
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

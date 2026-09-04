@@ -3,6 +3,7 @@ import { useUser } from '@/contexts/UserContext';
 import { mappedAccountsAPI, dashboardAPI } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Phone, TrendingUp, TrendingDown, Banknote, Target, Users, PiggyBank, FileText, ChevronDown, ChevronRight, User } from 'lucide-react';
 
 const KPI_COLORS: Record<string, string> = {
@@ -94,6 +95,39 @@ export function MappedAccounts() {
     const activeAccounts = accounts.filter(a => a.activeStatus).length;
     const productiveAccounts = accounts.filter(a => a.isProductive).length;
 
+    const branchColumns = [
+      { key: 'accountNumber', header: 'Account #', primary: true, render: (a: any) => <span className="font-mono text-xs font-bold text-blue-600">{a.accountNumber}</span> },
+      { key: 'customerName', header: 'Customer', render: (a: any) => <span className="font-medium text-slate-800">{a.customerName}</span> },
+      {
+        key: 'phoneNumber', header: 'Phone',
+        render: (a: any) => a.phoneNumber ? (
+          <a href={`tel:${a.phoneNumber}`} className="flex items-center gap-1 text-blue-600 hover:text-blue-800"><Phone className="h-3 w-3" /><span>{a.phoneNumber}</span></a>
+        ) : <span className="text-slate-300">-</span>,
+      },
+      {
+        key: 'mappedTo', header: 'Mapped To',
+        render: (a: any) => (
+          <span className="text-slate-700">{a.mappedTo?.name || 'N/A'}
+            {a.mappedTo?.position && <span className="text-xs text-slate-400 ml-1">({a.mappedTo.position.replace(/_/g, ' ')})</span>}
+          </span>
+        ),
+      },
+      { key: 'currentBalance', header: 'Balance', className: 'text-right font-mono', render: (a: any) => <span className="font-mono text-sm">{(a.currentBalance ?? 0).toLocaleString()}</span> },
+      {
+        key: 'difference', header: 'Difference', className: 'text-right',
+        render: (a: any) => a.difference !== 0 ? (
+          <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${a.difference > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            {a.difference > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {a.difference > 0 ? '+' : ''}{(a.difference ?? 0).toLocaleString()}
+          </span>
+        ) : null,
+      },
+      {
+        key: 'activeStatus', header: 'Status',
+        render: (a: any) => <Badge variant={a.activeStatus ? 'default' : 'secondary'} className="text-xs">{a.activeStatus ? 'Active' : 'Inactive'}</Badge>,
+      },
+    ];
+
     return (
       <div className="space-y-6">
         <div>
@@ -132,58 +166,14 @@ export function MappedAccounts() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-slate-800">Branch Accounts ({accounts.length})</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Account #</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Customer</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Phone</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Mapped To</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Balance</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Difference</th>
-                    <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-8 text-slate-400">No accounts mapped in this branch</td></tr>
-                  ) : (
-                    accounts.map((acct: any) => (
-                      <tr key={acct.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs text-slate-700">{acct.accountNumber}</td>
-                        <td className="px-4 py-3"><span className="font-medium text-slate-800">{acct.customerName}</span></td>
-                        <td className="px-4 py-3">
-                          {acct.phoneNumber ? (
-                            <a href={`tel:${acct.phoneNumber}`} className="flex items-center gap-1 text-blue-600 hover:text-blue-800">
-                              <Phone className="h-3 w-3" /><span>{acct.phoneNumber}</span>
-                            </a>
-                          ) : <span className="text-slate-300">-</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-slate-700">{acct.mappedTo?.name || 'N/A'}</span>
-                          {acct.mappedTo?.position && <span className="text-xs text-slate-400 ml-1">({acct.mappedTo.position.replace(/_/g, ' ')})</span>}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-sm">{(acct.currentBalance ?? 0).toLocaleString()}</td>
-                        <td className="px-4 py-3 text-right">
-                          {acct.difference !== 0 && (
-                            <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${acct.difference > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                              {acct.difference > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                              {acct.difference > 0 ? '+' : ''}{(acct.difference ?? 0).toLocaleString()}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">
-                            {acct.activeStatus ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          <CardContent className="p-0 sm:p-0">
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={branchColumns}
+                data={accounts}
+                rowKey={(a) => a.id}
+                emptyMessage="No accounts mapped in this branch"
+              />
             </div>
           </CardContent>
         </Card>
@@ -273,46 +263,31 @@ export function MappedAccounts() {
               <span className="ml-2 text-sm font-normal text-slate-400">({myAccounts?.length || 0})</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 sm:p-0">
             {myAccounts?.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="text-left px-4 py-3 font-medium text-slate-600">Account #</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600">Customer</th>
-                      <th className="text-left px-4 py-3 font-medium text-slate-600">Phone</th>
-                      <th className="text-right px-4 py-3 font-medium text-slate-600">Curr Balance</th>
-                      <th className="text-right px-4 py-3 font-medium text-slate-600">Diff</th>
-                      <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
-                      <th className="text-center px-4 py-3 font-medium text-slate-600">Productivity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {myAccounts.map((acct: any) => (
-                      <tr key={acct.id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="px-4 py-3 font-mono text-xs text-slate-700">{acct.accountNumber}</td>
-                        <td className="px-4 py-3"><span className="font-medium text-slate-800">{acct.customerName}</span></td>
-                        <td className="px-4 py-3">{acct.phoneNumber ? <span>{acct.phoneNumber}</span> : <span className="text-slate-300">-</span>}</td>
-                        <td className="px-4 py-3 text-right font-mono text-sm">{acct.currentBalance?.toLocaleString() || '0'}</td>
-                        <td className="px-4 py-3 text-right">
-                          {acct.difference !== 0 && (
-                            <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${acct.difference > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                              {acct.difference > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                              {acct.difference > 0 ? '+' : ''}{(acct.difference ?? 0).toLocaleString()}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">{acct.activeStatus ? 'Active' : 'Inactive'}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge variant={acct.isProductive ? 'default' : 'outline'} className="text-xs">{acct.isProductive ? 'Productive' : 'Non-Productive'}</Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="table-scroll px-3 sm:px-0">
+                <ResponsiveTable
+                  columns={[
+                    { key: 'accountNumber', header: 'Account #', primary: true, render: (a: any) => <span className="font-mono text-xs font-bold text-blue-600">{a.accountNumber}</span> },
+                    { key: 'customerName', header: 'Customer', render: (a: any) => <span className="font-medium text-slate-800">{a.customerName}</span> },
+                    { key: 'phoneNumber', header: 'Phone', render: (a: any) => a.phoneNumber ? <span>{a.phoneNumber}</span> : <span className="text-slate-300">-</span> },
+                    { key: 'currentBalance', header: 'Curr Balance', className: 'text-right font-mono', render: (a: any) => <span className="font-mono text-sm">{a.currentBalance?.toLocaleString() || '0'}</span> },
+                    {
+                      key: 'difference', header: 'Diff', className: 'text-right',
+                      render: (a: any) => a.difference !== 0 ? (
+                        <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${a.difference > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {a.difference > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {a.difference > 0 ? '+' : ''}{(a.difference ?? 0).toLocaleString()}
+                        </span>
+                      ) : null,
+                    },
+                    { key: 'activeStatus', header: 'Status', render: (a: any) => <Badge variant={a.activeStatus ? 'default' : 'secondary'} className="text-xs">{a.activeStatus ? 'Active' : 'Inactive'}</Badge> },
+                    { key: 'isProductive', header: 'Productivity', render: (a: any) => <Badge variant={a.isProductive ? 'default' : 'outline'} className="text-xs">{a.isProductive ? 'Productive' : 'Non-Productive'}</Badge> },
+                  ]}
+                  data={myAccounts}
+                  rowKey={(a) => a.id}
+                  emptyMessage="No accounts mapped to you yet"
+                />
               </div>
             ) : (
               <div className="text-center py-8 text-slate-400 text-sm">No accounts mapped to you yet</div>
@@ -356,49 +331,32 @@ export function MappedAccounts() {
                       ) : staffAccounts.length === 0 ? (
                         <div className="text-center py-6 text-slate-400 text-sm">No accounts mapped to {member.name}</div>
                       ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="bg-slate-50 border-b border-slate-200">
-                                <th className="text-left px-4 py-2 font-medium text-slate-600 text-xs">Account #</th>
-                                <th className="text-left px-4 py-2 font-medium text-slate-600 text-xs">Customer</th>
-                                <th className="text-left px-4 py-2 font-medium text-slate-600 text-xs">Phone</th>
-                                <th className="text-right px-4 py-2 font-medium text-slate-600 text-xs">Curr Balance</th>
-                                <th className="text-right px-4 py-2 font-medium text-slate-600 text-xs">vs June</th>
-                                <th className="text-center px-4 py-2 font-medium text-slate-600 text-xs">Status</th>
-                                <th className="text-center px-4 py-2 font-medium text-slate-600 text-xs">Productivity</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {staffAccounts.map((acct: any) => {
-                                const diff = (acct.currentBalance || acct.current_balance || 0) - (acct.juneBalance || acct.june_balance || 0);
-                                return (
-                                  <tr key={acct.id || acct.accountNumber} className="border-b border-slate-100 hover:bg-slate-50">
-                                    <td className="px-4 py-2 font-mono text-xs text-slate-700">{acct.accountNumber}</td>
-                                    <td className="px-4 py-2"><span className="font-medium text-slate-800 text-xs">{acct.customerName}</span></td>
-                                    <td className="px-4 py-2 text-xs">{acct.phoneNumber || <span className="text-slate-300">-</span>}</td>
-                                    <td className="px-4 py-2 text-right font-mono text-xs">{(acct.currentBalance || acct.current_balance || 0).toLocaleString()}</td>
-                                    <td className="px-4 py-2 text-right">
-                                      <span className={`inline-flex items-center gap-0.5 font-mono text-xs ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                                        {diff > 0 ? <TrendingUp className="h-3 w-3" /> : diff < 0 ? <TrendingDown className="h-3 w-3" /> : null}
-                                        {diff > 0 ? '+' : ''}{diff.toLocaleString()}
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-2 text-center">
-                                      <Badge variant={acct.activeStatus || acct.active_status ? 'default' : 'secondary'} className="text-[10px]">
-                                        {acct.activeStatus || acct.active_status ? 'Active' : 'Inactive'}
-                                      </Badge>
-                                    </td>
-                                    <td className="px-4 py-2 text-center">
-                                      <Badge variant={acct.isProductive ? 'default' : 'outline'} className="text-[10px]">
-                                        {acct.isProductive ? 'Productive' : 'Non-Productive'}
-                                      </Badge>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                        <div className="table-scroll px-3 sm:px-0">
+                          <ResponsiveTable
+                            columns={[
+                              { key: 'accountNumber', header: 'Account #', primary: true, render: (a: any) => <span className="font-mono text-xs font-bold text-blue-600">{a.accountNumber}</span> },
+                              { key: 'customerName', header: 'Customer', render: (a: any) => <span className="font-medium text-slate-800 text-xs">{a.customerName}</span> },
+                              { key: 'phoneNumber', header: 'Phone', render: (a: any) => <span className="text-xs">{a.phoneNumber || <span className="text-slate-300">-</span>}</span> },
+                              { key: 'currentBalance', header: 'Curr Balance', className: 'text-right font-mono', render: (a: any) => <span className="font-mono text-xs">{(a.currentBalance || a.current_balance || 0).toLocaleString()}</span> },
+                              {
+                                key: 'diff', header: 'vs June', className: 'text-right',
+                                render: (a: any) => {
+                                  const diff = (a.currentBalance || a.current_balance || 0) - (a.juneBalance || a.june_balance || 0);
+                                  return (
+                                    <span className={`inline-flex items-center gap-0.5 font-mono text-xs ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                      {diff > 0 ? <TrendingUp className="h-3 w-3" /> : diff < 0 ? <TrendingDown className="h-3 w-3" /> : null}
+                                      {diff > 0 ? '+' : ''}{diff.toLocaleString()}
+                                    </span>
+                                  );
+                                },
+                              },
+                              { key: 'activeStatus', header: 'Status', render: (a: any) => <Badge variant={a.activeStatus || a.active_status ? 'default' : 'secondary'} className="text-[10px]">{a.activeStatus || a.active_status ? 'Active' : 'Inactive'}</Badge> },
+                              { key: 'isProductive', header: 'Productivity', render: (a: any) => <Badge variant={a.isProductive ? 'default' : 'outline'} className="text-[10px]">{a.isProductive ? 'Productive' : 'Non-Productive'}</Badge> },
+                            ]}
+                            data={staffAccounts}
+                            rowKey={(a) => a.id || a.accountNumber}
+                            emptyMessage="No accounts mapped to this staff"
+                          />
                         </div>
                       )}
                     </div>
@@ -493,57 +451,36 @@ export function MappedAccounts() {
             <span className="ml-2 text-sm font-normal text-slate-400">({myAccounts?.length || 0})</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Account #</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Customer</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Phone</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">June Balance</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Current Balance</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Difference</th>
-                  <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
-                  <th className="text-center px-4 py-3 font-medium text-slate-600">Productivity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myAccounts?.length === 0 ? (
-                  <tr><td colSpan={8} className="text-center py-8 text-slate-400">No accounts mapped to you yet</td></tr>
-                ) : (
-                  myAccounts?.map((acct: any) => (
-                    <tr key={acct.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3 font-mono text-xs text-slate-700">{acct.accountNumber}</td>
-                      <td className="px-4 py-3"><span className="font-medium text-slate-800">{acct.customerName}</span></td>
-                      <td className="px-4 py-3">
-                        {acct.phoneNumber ? (
-                          <a href={`tel:${acct.phoneNumber}`} className="flex items-center gap-1 text-blue-600 hover:text-blue-800">
-                            <Phone className="h-3 w-3" /><span>{acct.phoneNumber}</span>
-                          </a>
-                        ) : <span className="text-slate-300">-</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm">{acct.juneBalance?.toLocaleString() || '0'}</td>
-                      <td className="px-4 py-3 text-right font-mono text-sm">{acct.currentBalance?.toLocaleString() || '0'}</td>
-                      <td className="px-4 py-3 text-right">
-                        {acct.difference !== 0 && (
-                          <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${acct.difference > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {acct.difference > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                            {acct.difference > 0 ? '+' : ''}{(acct.difference ?? 0).toLocaleString()}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">{acct.activeStatus ? 'Active' : 'Inactive'}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant={acct.isProductive ? 'default' : 'outline'} className="text-xs">{acct.isProductive ? 'Productive' : 'Non-Productive'}</Badge>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        <CardContent className="p-0 sm:p-0">
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                { key: 'accountNumber', header: 'Account #', primary: true, render: (a: any) => <span className="font-mono text-xs font-bold text-blue-600">{a.accountNumber}</span> },
+                { key: 'customerName', header: 'Customer', render: (a: any) => <span className="font-medium text-slate-800">{a.customerName}</span> },
+                {
+                  key: 'phoneNumber', header: 'Phone',
+                  render: (a: any) => a.phoneNumber ? (
+                    <a href={`tel:${a.phoneNumber}`} className="flex items-center gap-1 text-blue-600 hover:text-blue-800"><Phone className="h-3 w-3" /><span>{a.phoneNumber}</span></a>
+                  ) : <span className="text-slate-300">-</span>,
+                },
+                { key: 'juneBalance', header: 'June Balance', className: 'text-right font-mono', render: (a: any) => <span className="font-mono text-sm">{a.juneBalance?.toLocaleString() || '0'}</span> },
+                { key: 'currentBalance', header: 'Current Balance', className: 'text-right font-mono', render: (a: any) => <span className="font-mono text-sm">{a.currentBalance?.toLocaleString() || '0'}</span> },
+                {
+                  key: 'difference', header: 'Difference', className: 'text-right',
+                  render: (a: any) => a.difference !== 0 ? (
+                    <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${a.difference > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {a.difference > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {a.difference > 0 ? '+' : ''}{(a.difference ?? 0).toLocaleString()}
+                    </span>
+                  ) : null,
+                },
+                { key: 'activeStatus', header: 'Status', render: (a: any) => <Badge variant={a.activeStatus ? 'default' : 'secondary'} className="text-xs">{a.activeStatus ? 'Active' : 'Inactive'}</Badge> },
+                { key: 'isProductive', header: 'Productivity', render: (a: any) => <Badge variant={a.isProductive ? 'default' : 'outline'} className="text-xs">{a.isProductive ? 'Productive' : 'Non-Productive'}</Badge> },
+              ]}
+              data={myAccounts || []}
+              rowKey={(a) => a.id}
+              emptyMessage="No accounts mapped to you yet"
+            />
           </div>
         </CardContent>
       </Card>

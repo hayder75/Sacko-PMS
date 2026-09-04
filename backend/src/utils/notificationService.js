@@ -144,14 +144,20 @@ export const notifyPlanAchievement = async ({ userId, targetType, achieved, targ
 /**
  * Notify task submitter about approval/rejection.
  */
-export const notifyTaskApproval = async ({ userId, accountNumber, amount, status }) => {
+export const notifyTaskApproval = async ({ userId, accountNumber, amount, status, comments, approverName }) => {
   const action = status === 'Approved' ? 'approved' : 'rejected';
+  const reasonText = status === 'Rejected' && comments
+    ? ` Reason: ${comments}`
+    : '';
+  const byText = status === 'Rejected' && approverName
+    ? ` by ${approverName}`
+    : '';
   return createNotification({
     userId,
     type: status === 'Approved' ? 'TASK_APPROVED' : 'TASK_REJECTED',
     title: `Task ${status}`,
-    message: `Your task for account ${accountNumber} (${amount}) was ${action}`,
-    data: { accountNumber, amount, status },
+    message: `Your task for account ${accountNumber} (${amount}) was ${action}${byText}.${reasonText}`,
+    data: { accountNumber, amount, status, comments, approverName },
     link: `/tasks`,
   });
 };

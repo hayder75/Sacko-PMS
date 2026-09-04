@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,10 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useUser } from '@/contexts/UserContext';
-import { authAPI } from '@/lib/api';
+import { authAPI, settingsAPI } from '@/lib/api';
 
 export function Settings() {
-  const { currentBranch, role, setRole } = useUser();
+  const { currentBranch, role } = useUser();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,6 +18,37 @@ export function Settings() {
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [balanceSource, setBalanceSource] = useState<'cbs' | 'approval'>('approval');
+  const [balanceSourceLoading, setBalanceSourceLoading] = useState(false);
+
+  const canManageBalanceSource = role === 'admin' || role === 'areaManager' || role === 'branchManager';
+
+  useEffect(() => {
+    let mounted = true;
+    settingsAPI
+      .getBalanceSource()
+      .then((res: any) => {
+        if (mounted && res?.data?.balanceSource) {
+          setBalanceSource(res.data.balanceSource);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleBalanceSourceChange = async (value: 'cbs' | 'approval') => {
+    setBalanceSourceLoading(true);
+    try {
+      await settingsAPI.updateBalanceSource(value);
+      setBalanceSource(value);
+    } catch (error: any) {
+      alert(error.message || 'Failed to update balance source');
+    } finally {
+      setBalanceSourceLoading(false);
+    }
+  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +168,37 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      {/* Deposit Balance Source */}
+      {canManageBalanceSource && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Deposit Balance Source</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label htmlFor="balanceSource">Approval Method</Label>
+                <p className="text-sm text-slate-500">
+                  When on, approved deposit tasks update account balances so KPI growth counts immediately.
+                  Turn off once CBS balance imports are being used to avoid double counting.
+                </p>
+              </div>
+              <Switch
+                id="balanceSource"
+                checked={balanceSource === 'approval'}
+                disabled={balanceSourceLoading}
+                onCheckedChange={(checked) => handleBalanceSourceChange(checked ? 'approval' : 'cbs')}
+              />
+            </div>
+            <p className="text-sm font-medium text-slate-700">
+              {balanceSource === 'approval'
+                ? 'Approval method is active — approved deposits count toward KPI.'
+                : 'CBS method is active — balances update from CBS imports only.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Branch Info */}
       {currentBranch && (
         <Card>
@@ -174,33 +236,6 @@ export function Settings() {
             </Select>
             <p className="text-sm text-slate-500 mt-2">
               Choose your preferred interface language
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Role Switcher (for testing) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Role Selection (Testing)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="role">Current Role</Label>
-            <Select value={role} onValueChange={(value: any) => setRole(value)}>
-              <SelectTrigger id="role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">admin</SelectItem>
-                <SelectItem value="areaManager">areaManager</SelectItem>
-                <SelectItem value="branchManager">branchManager</SelectItem>
-                <SelectItem value="supervisor">supervisor</SelectItem>
-                <SelectItem value="staff">staff</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-slate-500 mt-2">
-              Switch roles to test different dashboard views (for development only)
             </p>
           </div>
         </CardContent>

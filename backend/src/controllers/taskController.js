@@ -3,6 +3,22 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logAudit } from '../utils/auditLogger.js';
 import { TASK_TYPE_TO_ENUM, MAPPING_STATUS_TO_ENUM, APPROVAL_STATUS_TO_ENUM, APPROVAL_STATUS_MAP } from '../utils/prismaHelpers.js';
 import { notifyTaskApproval } from '../utils/notificationService.js';
+import { BALANCE_SOURCE_KEY, BALANCE_SOURCE_DEFAULT } from './settingsController.js';
+
+const TASK_TYPE_TO_CBS_PRODUCT = {
+  'Loan_Saving_Deposit': 'LOAN SAVING RESERVE ACCOUNT',
+  'Michu_Current_Saving': 'Michu Current Account',
+  'Gihon_Regular_Saving': 'GIHON REGULAR SAVING',
+  'Mothers_Saving': 'MOTHERS SAVING ACCOUNT',
+  'Young_Womens_Saving': 'YOUNG WOMEN SAVING',
+  'Elders_Saving': 'ELDERS SAVING ACCOUNT',
+  'Children_Saving': 'CHILDREN SAVING ACCOUNT',
+  'Fixed_Time_Deposit': 'FIXED TIME DEPOSIT',
+  'Premium_Saving_Deposit': 'Premium Saving',
+  'Special_Saving': 'SPECIAL SAVING ACCOUNT',
+  'Segment_Deposit': 'Segment Account',
+  'Wadiah_IFB_Deposit': 'WADIAH SAVING ACCOUNT',
+};
 
 // Helper: Build approval chain based on supervisor hierarchy
 // Chain: Staff -> Supervisor (if exists) -> Branch Manager
@@ -88,7 +104,7 @@ const checkAccountMapping = async (accountNumber, userId, branch_code) => {
 // @route   POST /api/tasks
 // @access  Private
 export const createTask = asyncHandler(async (req, res) => {
-  const { taskType, productType, accountNumber, customerName, amount, remarks, evidence, taskDate } = req.body;
+  const { taskType, productType, accountNumber, customerName, accountType, amount, remarks, evidence, taskDate } = req.body;
 
   if (req.user.role !== 'staff' && req.user.role !== 'supervisor') {
     return res.status(403).json({
@@ -118,7 +134,7 @@ export const createTask = asyncHandler(async (req, res) => {
       data: {
         accountNumber,
         customerName,
-        accountType: 'Savings',
+        accountType: accountType || 'Savings',
         status: 'Active',
         branchId: req.user.branchId,
         notes: 'Created during task entry',
@@ -398,6 +414,38 @@ export const approveTask = asyncHandler(async (req, res) => {
       where: { id: task.id },
       data: { approvalStatus: newTaskStatus }
     });
+
+    // In APPROVAL balance-source mode, an approved deposit updates the
+    // account's current_balance so KPI growth reflects it until CBS takes over.
+    if (newTaskStatus === 'Approved') {
+      const sourceSetting = await prisma.systemSetting.findUnique({
+        where: { key: BALANCE_SOURCE_KEY },
+      });
+      const balanceSource = sourceSetting?.value || BALANCE_SOURCE_DEFAULT;
+
+      if (balanceSource === 'approval' && !task.performanceImpacted && task.amount > 0) {
+        const account = await tx.accountMapping.findUnique({
+          where: { accountNumber: task.accountNumber },
+        });
+
+        if (account && account.accountType !== 'Loan') {
+          const cbsProduct = TASK_TYPE_TO_CBS_PRODUCT[task.taskType];
+
+          await tx.accountMapping.update({
+            where: { id: account.id },
+            data: {
+              current_balance: (account.current_balance || 0) + task.amount,
+              ...(cbsProduct && !account.product ? { product: cbsProduct } : {}),
+            },
+          });
+
+          await tx.dailyTask.update({
+            where: { id: task.id },
+            data: { performanceImpacted: true, performanceImpactedAt: new Date() },
+          });
+        }
+      }
+    }
   });
 
   await logAudit(
@@ -420,7 +468,9 @@ export const approveTask = asyncHandler(async (req, res) => {
     userId: task.submittedById,
     accountNumber: task.accountNumber,
     amount: task.amount,
-    status: newTaskStatus,
+    status,
+    comments,
+    approverName: req.user.name,
   }).catch(() => {});
 
   res.status(200).json({

@@ -2,17 +2,17 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Helper function to get auth token
 export const getToken = () => {
-  return localStorage.getItem('token');
+  return sessionStorage.getItem('token');
 };
 
 // Helper function to set auth token
 export const setToken = (token: string) => {
-  localStorage.setItem('token', token);
+  sessionStorage.setItem('token', token);
 };
 
 // Helper function to remove auth token
 export const removeToken = () => {
-  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
 };
 
 // Generic API request function
@@ -625,6 +625,18 @@ export const mappedAccountsAPI = {
 export const configAPI = {
   getConfig: async () => {
     return apiRequest('/config');
+  },
+};
+
+export const settingsAPI = {
+  getBalanceSource: async () => {
+    return apiRequest('/settings/balance-source');
+  },
+  updateBalanceSource: async (balanceSource: 'cbs' | 'approval') => {
+    return apiRequest('/settings/balance-source', {
+      method: 'PUT',
+      body: JSON.stringify({ balanceSource }),
+    });
   },
 };
 

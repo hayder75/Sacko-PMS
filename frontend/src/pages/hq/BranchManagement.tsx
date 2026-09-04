@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2 } from 'lucide-react';
@@ -315,41 +315,53 @@ export function BranchManagement() {
         <CardContent>
           {loading && branches.length === 0 ? (
             <div className="text-center py-8">Loading branches...</div>
-          ) : branches.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">No branches found</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Region</TableHead>
-                  <TableHead>Area</TableHead>
-                  <TableHead>Manager</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {branches.map((branch: any) => (
-                  <TableRow key={branch._id}>
-                    <TableCell className="font-medium">{branch.name}</TableCell>
-                    <TableCell>{branch.code}</TableCell>
-                    <TableCell>{branch.regionId?.name || 'N/A'}</TableCell>
-                    <TableCell>{branch.areaId?.name || 'N/A'}</TableCell>
-                    <TableCell>{branch.managerId?.name || 'Unassigned'}</TableCell>
-                    <TableCell>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'name',
+                    header: 'Name',
+                    primary: true,
+                    render: (branch: any) => <span className="font-medium text-slate-800">{branch.name}</span>,
+                  },
+                  {
+                    key: 'code',
+                    header: 'Code',
+                    render: (branch: any) => <code className="font-mono text-xs text-blue-600">{branch.code}</code>,
+                  },
+                  {
+                    key: 'region',
+                    header: 'Region',
+                    render: (branch: any) => <span className="text-xs text-slate-500">{branch.regionId?.name || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'area',
+                    header: 'Area',
+                    render: (branch: any) => <span className="text-xs text-slate-500">{branch.areaId?.name || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'manager',
+                    header: 'Manager',
+                    render: (branch: any) => <span>{branch.managerId?.name || 'Unassigned'}</span>,
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    className: 'text-center',
+                    render: (branch: any) => (
                       <Badge variant={branch.isActive ? 'default' : 'secondary'}>
                         {branch.isActive ? 'Active' : 'Inactive'}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
+                    ),
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Actions',
+                    className: 'text-center',
+                    render: (branch: any) => (
                       <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(branch)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(branch)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -361,11 +373,24 @@ export function BranchManagement() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    ),
+                  },
+                ]}
+                data={branches}
+                rowKey={(branch: any) => branch._id}
+                emptyMessage="No branches found"
+                mobileActions={(branch: any) => (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(branch)}>
+                      <Edit className="h-4 w-4 mr-1" /> Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleDelete(branch._id)} disabled={!branch.isActive}>
+                      <Trash2 className="h-4 w-4 mr-1" /> Delete
+                    </Button>
+                  </div>
+                )}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

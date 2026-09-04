@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { Edit2, X, Check } from 'lucide-react';
+import { getToken } from '@/lib/api';
 
 const DEFAULT_KPI_DATA = [
   { id: 'Account_Productivity', kpiId: 'Account_Productivity', name: 'Account Productivity', weight: 30, minBalance: 1000 },
@@ -39,7 +40,7 @@ export function KPIFramework() {
 
   const loadConfig = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const res = await fetch('/api/kpi-config', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -63,7 +64,7 @@ export function KPIFramework() {
 
   const saveWeight = async (id: string, weight: number) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       await fetch(`/api/kpi-config/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -111,21 +112,21 @@ export function KPIFramework() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>KPI Category</TableHead>
-                <TableHead>Weight (%)</TableHead>
-                <TableHead>Min Balance (ETB)</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {kpiCategories.map((kpi) => (
-                <TableRow key={kpi.id}>
-                  <TableCell className="font-medium">{kpi.name}</TableCell>
-                  <TableCell>
-                    {editingId === kpi.id ? (
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'name',
+                  header: 'KPI Category',
+                  primary: true,
+                  render: (kpi: any) => <span className="font-medium text-slate-800">{kpi.name}</span>,
+                },
+                {
+                  key: 'weight',
+                  header: 'Weight (%)',
+                  className: 'text-center',
+                  render: (kpi: any) =>
+                    editingId === kpi.id ? (
                       <Input
                         type="number"
                         className="w-20 h-8"
@@ -136,12 +137,21 @@ export function KPIFramework() {
                       />
                     ) : (
                       <Badge variant="outline">{kpi.weight}%</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{(kpi.minBalance ?? 0).toLocaleString()}</TableCell>
-                  <TableCell>
-                    {editingId === kpi.id ? (
-                      <div className="flex gap-1">
+                    ),
+                },
+                {
+                  key: 'minBalance',
+                  header: 'Min Balance (ETB)',
+                  className: 'text-right',
+                  render: (kpi: any) => <span className="font-mono text-xs">{(kpi.minBalance ?? 0).toLocaleString()}</span>,
+                },
+                {
+                  key: 'action',
+                  header: 'Action',
+                  className: 'text-center',
+                  render: (kpi: any) =>
+                    editingId === kpi.id ? (
+                      <div className="flex gap-1 justify-center">
                         <Button variant="ghost" size="sm" onClick={() => saveEdit(kpi.id)}>
                           <Check className="h-4 w-4 text-emerald-600" />
                         </Button>
@@ -153,12 +163,29 @@ export function KPIFramework() {
                       <Button variant="ghost" size="sm" onClick={() => startEdit(kpi.id, kpi.weight)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    ),
+                },
+              ]}
+              data={kpiCategories}
+              rowKey={(kpi: any) => kpi.id}
+              mobileActions={(kpi: any) =>
+                editingId === kpi.id ? (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => saveEdit(kpi.id)}>
+                      <Check className="h-4 w-4 mr-1 text-emerald-600" /> Save
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={cancelEdit}>
+                      <X className="h-4 w-4 mr-1 text-red-600" /> Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => startEdit(kpi.id, kpi.weight)}>
+                    <Edit2 className="h-4 w-4 mr-1" /> Edit Weight
+                  </Button>
+                )
+              }
+            />
+          </div>
           {editingId && (
             <div className="mt-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-md">
               Edit the weight percentage and click ✓ to save or ✗ to cancel.

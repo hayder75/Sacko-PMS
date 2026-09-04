@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Clock, XCircle, Eye } from 'lucide-react';
@@ -92,56 +92,83 @@ export function BehavioralEvaluation() {
           <CardTitle>Evaluation List</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Submitted By</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {evaluations.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-slate-500 py-8">
-                    No evaluations found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                evaluations.map((evaluation: any) => (
-                  <TableRow key={evaluation._id}>
-                    <TableCell className="font-medium">{evaluation.employeeName}</TableCell>
-                    <TableCell>{evaluation.period}</TableCell>
-                    <TableCell>
-                      <Badge variant={(evaluation.overallScore || 0) >= 80 ? 'success' : (evaluation.overallScore || 0) >= 60 ? 'warning' : 'destructive'}>
-                        {evaluation.overallScore || 0}/100
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{evaluation.submittedBy}</TableCell>
-                    <TableCell>{new Date(evaluation.submittedAt).toLocaleDateString()}</TableCell>
-                    <TableCell>{getStatusBadge(evaluation.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'employeeName',
+                  header: 'Employee',
+                  primary: true,
+                  render: (evaluation: any) => <span className="font-medium text-slate-800">{evaluation.employeeName}</span>,
+                },
+                {
+                  key: 'period',
+                  header: 'Period',
+                  render: (evaluation: any) => <span className="text-slate-600">{evaluation.period}</span>,
+                },
+                {
+                  key: 'score',
+                  header: 'Score',
+                  className: 'text-center',
+                  render: (evaluation: any) => (
+                    <Badge variant={(evaluation.overallScore || 0) >= 80 ? 'success' : (evaluation.overallScore || 0) >= 60 ? 'warning' : 'destructive'}>
+                      {evaluation.overallScore || 0}/100
+                    </Badge>
+                  ),
+                },
+                {
+                  key: 'submittedBy',
+                  header: 'Submitted By',
+                  render: (evaluation: any) => <span>{evaluation.submittedBy}</span>,
+                },
+                {
+                  key: 'date',
+                  header: 'Date',
+                  render: (evaluation: any) => <span className="text-slate-500">{new Date(evaluation.submittedAt).toLocaleDateString()}</span>,
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (evaluation: any) => getStatusBadge(evaluation.status),
+                },
+                {
+                  key: 'actions',
+                  header: 'Actions',
+                  className: 'text-center',
+                  render: (evaluation: any) => (
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      {evaluation.status === 'Pending' && (
+                        <Button size="sm" onClick={() => handleApprove(evaluation._id)}>
+                          Approve
                         </Button>
-                        {evaluation.status === 'Pending' && (
-                          <Button size="sm" onClick={() => handleApprove(evaluation._id)}>
-                            Approve
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      )}
+                    </div>
+                  ),
+                },
+              ]}
+              data={evaluations}
+              rowKey={(evaluation: any) => evaluation._id}
+              emptyMessage="No evaluations found"
+              mobileActions={(evaluation: any) => (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <Eye className="h-4 w-4 mr-1" />
+                    View
+                  </Button>
+                  {evaluation.status === 'Pending' && (
+                    <Button size="sm" className="flex-1" onClick={() => handleApprove(evaluation._id)}>
+                      Approve
+                    </Button>
+                  )}
+                </div>
               )}
-            </TableBody>
-          </Table>
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

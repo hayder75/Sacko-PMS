@@ -3,6 +3,7 @@ import { useUser } from '@/contexts/UserContext';
 import { mappedAccountsAPI } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { TrendingUp, TrendingDown, Users, Banknote, PiggyBank, RefreshCw } from 'lucide-react';
 
 function formatBirr(n: number): string {
@@ -151,59 +152,86 @@ export function JuneBalanceDifference() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {accountsWithDiff.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">No accounts with balance data found</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">#</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Account Number</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Customer Name</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">June Balance</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Current Balance</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Difference</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Change %</th>
-                    <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accountsWithDiff.map((acct: any, i: number) => {
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'index',
+                  header: '#',
+                  className: 'text-left',
+                  render: (acct: any) => <span className="text-xs text-slate-400">{acct._idx}</span>,
+                },
+                {
+                  key: 'accountNumber',
+                  header: 'Account Number',
+                  primary: true,
+                  render: (acct: any) => (
+                    <code className="font-mono text-xs font-bold text-blue-600">{acct.accountNumber}</code>
+                  ),
+                },
+                {
+                  key: 'customerName',
+                  header: 'Customer Name',
+                  render: (acct: any) => <span className="font-medium text-slate-800">{acct.customerName}</span>,
+                },
+                {
+                  key: 'juneBalance',
+                  header: 'June Balance',
+                  className: 'text-right',
+                  render: (acct: any) => <span className="font-mono text-sm text-slate-600">{formatBirr(acct.juneBalance || 0)}</span>,
+                },
+                {
+                  key: 'currentBalance',
+                  header: 'Current Balance',
+                  className: 'text-right',
+                  render: (acct: any) => <span className="font-mono text-sm text-slate-800">{formatBirr(acct.currentBalance || 0)}</span>,
+                },
+                {
+                  key: 'difference',
+                  header: 'Difference',
+                  className: 'text-right',
+                  render: (acct: any) => {
+                    const diff = acct.difference || 0;
+                    return (
+                      <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                        {diff > 0 ? <TrendingUp className="h-3 w-3" /> : diff < 0 ? <TrendingDown className="h-3 w-3" /> : null}
+                        {diff > 0 ? '+' : ''}{formatBirr(diff)}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: 'changePercent',
+                  header: 'Change %',
+                  className: 'text-right',
+                  render: (acct: any) => {
                     const juneBal = acct.juneBalance || 0;
                     const currBal = acct.currentBalance || 0;
                     const diff = acct.difference || 0;
                     const pctChange = juneBal > 0 ? ((diff / juneBal) * 100) : (currBal > 0 ? 100 : 0);
                     return (
-                      <tr key={acct.id || acct.accountNumber} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 text-xs text-slate-400">{i + 1}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-slate-700">{acct.accountNumber}</td>
-                        <td className="px-4 py-3"><span className="font-medium text-slate-800">{acct.customerName}</span></td>
-                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{formatBirr(juneBal)}</td>
-                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-800">{formatBirr(currBal)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={`inline-flex items-center gap-0.5 font-mono text-sm ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                            {diff > 0 ? <TrendingUp className="h-3 w-3" /> : diff < 0 ? <TrendingDown className="h-3 w-3" /> : null}
-                            {diff > 0 ? '+' : ''}{formatBirr(diff)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={`font-mono text-sm ${pctChange > 0 ? 'text-emerald-600' : pctChange < 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                            {pctChange > 0 ? '+' : ''}{pctChange.toFixed(1)}%
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">
-                            {acct.activeStatus ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </td>
-                      </tr>
+                      <span className={`font-mono text-sm ${pctChange > 0 ? 'text-emerald-600' : pctChange < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                        {pctChange > 0 ? '+' : ''}{pctChange.toFixed(1)}%
+                      </span>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  },
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (acct: any) => (
+                    <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">
+                      {acct.activeStatus ? 'Active' : 'Inactive'}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={accountsWithDiff.map((a: any, i: number) => ({ ...a, _idx: i + 1 }))}
+              rowKey={(acct: any) => acct.id || acct.accountNumber}
+              emptyMessage="No accounts with balance data found"
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

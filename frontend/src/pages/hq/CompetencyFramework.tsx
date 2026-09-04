@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Edit2, Check, X } from 'lucide-react';
@@ -78,21 +78,21 @@ export function CompetencyFramework() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Competency</TableHead>
-                    <TableHead>Weight (%)</TableHead>
-                    <TableHead>Behavioral Indicators</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {competencies.map((comp) => (
-                    <TableRow key={comp.id}>
-                      <TableCell className="font-medium">{comp.name}</TableCell>
-                      <TableCell>
-                        {editingId === comp.id ? (
+              <div className="table-scroll px-3 sm:px-0">
+                <ResponsiveTable
+                  columns={[
+                    {
+                      key: 'name',
+                      header: 'Competency',
+                      primary: true,
+                      render: (comp: any) => <span className="font-medium text-slate-800">{comp.name}</span>,
+                    },
+                    {
+                      key: 'weight',
+                      header: 'Weight (%)',
+                      className: 'text-center',
+                      render: (comp: any) =>
+                        editingId === comp.id ? (
                           <Input
                             type="number"
                             className="w-20 h-8"
@@ -103,18 +103,26 @@ export function CompetencyFramework() {
                           />
                         ) : (
                           <Badge variant="outline">{comp.weight}%</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        <ul className="list-disc list-inside">
-                          {comp.indicators.map((ind, i) => (
+                        ),
+                    },
+                    {
+                      key: 'indicators',
+                      header: 'Behavioral Indicators',
+                      render: (comp: any) => (
+                        <ul className="list-disc list-inside text-sm text-slate-600">
+                          {comp.indicators.map((ind: string, i: number) => (
                             <li key={i}>{ind}</li>
                           ))}
                         </ul>
-                      </TableCell>
-                      <TableCell>
-                        {editingId === comp.id ? (
-                          <div className="flex gap-1">
+                      ),
+                    },
+                    {
+                      key: 'action',
+                      header: 'Action',
+                      className: 'text-center',
+                      render: (comp: any) =>
+                        editingId === comp.id ? (
+                          <div className="flex gap-1 justify-center">
                             <Button variant="ghost" size="sm" onClick={() => saveEdit(comp.id)}>
                               <Check className="h-4 w-4 text-emerald-600" />
                             </Button>
@@ -126,12 +134,29 @@ export function CompetencyFramework() {
                           <Button variant="ghost" size="sm" onClick={() => startEdit(comp.id, comp.weight)}>
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        ),
+                    },
+                  ]}
+                  data={competencies}
+                  rowKey={(comp: any) => String(comp.id)}
+                  mobileActions={(comp: any) =>
+                    editingId === comp.id ? (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => saveEdit(comp.id)}>
+                          <Check className="h-4 w-4 mr-1 text-emerald-600" /> Save
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1" onClick={cancelEdit}>
+                          <X className="h-4 w-4 mr-1 text-red-600" /> Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => startEdit(comp.id, comp.weight)}>
+                        <Edit2 className="h-4 w-4 mr-1" /> Edit Weight
+                      </Button>
+                    )
+                  }
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -142,28 +167,36 @@ export function CompetencyFramework() {
               <CardTitle>Role-Specific Configuration</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Applicable Competencies</TableHead>
-                    <TableHead>Weight in Final Score</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {roleWeights.map((rw) => (
-                    <TableRow key={rw.role}>
-                      <TableCell className="font-medium">{rw.label}</TableCell>
-                      <TableCell>{rw.competencies}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{rw.weight}%</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">{rw.note}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="table-scroll px-3 sm:px-0">
+                <ResponsiveTable
+                  columns={[
+                    {
+                      key: 'role',
+                      header: 'Role',
+                      primary: true,
+                      render: (rw: any) => <span className="font-medium text-slate-800">{rw.label}</span>,
+                    },
+                    {
+                      key: 'competencies',
+                      header: 'Applicable Competencies',
+                      render: (rw: any) => <span className="text-sm text-slate-700">{rw.competencies}</span>,
+                    },
+                    {
+                      key: 'weight',
+                      header: 'Weight in Final Score',
+                      className: 'text-center',
+                      render: (rw: any) => <Badge variant="outline">{rw.weight}%</Badge>,
+                    },
+                    {
+                      key: 'note',
+                      header: 'Notes',
+                      render: (rw: any) => <span className="text-sm text-slate-600">{rw.note}</span>,
+                    },
+                  ]}
+                  data={roleWeights}
+                  rowKey={(rw: any) => rw.role}
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

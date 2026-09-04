@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -84,46 +84,49 @@ export function AuditTrail() {
             </Select>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Entity</TableHead>
-                <TableHead>Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                    Loading audit logs...
-                  </TableCell>
-                </TableRow>
-              ) : filteredLogs.length > 0 ? (
-                filteredLogs.map((log) => (
-                  <TableRow key={log._id || log.id}>
-                    <TableCell className="text-sm text-slate-600">
-                      {log.timestamp || log.createdAt ? new Date(log.timestamp || log.createdAt).toLocaleString() : 'N/A'}
-                    </TableCell>
-                    <TableCell className="font-medium">{log.user || log.userName || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{log.action || 'N/A'}</Badge>
-                    </TableCell>
-                    <TableCell>{log.entity || log.entityName || 'N/A'}</TableCell>
-                    <TableCell className="text-sm text-slate-600">{log.details || log.description || 'N/A'}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                    No audit logs found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          {loading ? (
+            <div className="text-center py-8 text-slate-500">Loading audit logs...</div>
+          ) : (
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'timestamp',
+                    header: 'Timestamp',
+                    primary: true,
+                    render: (log: any) => (
+                      <span className="text-sm text-slate-800">
+                        {log.timestamp || log.createdAt ? new Date(log.timestamp || log.createdAt).toLocaleString() : 'N/A'}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'user',
+                    header: 'User',
+                    render: (log: any) => <span className="font-medium">{log.user || log.userName || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'action',
+                    header: 'Action',
+                    render: (log: any) => <Badge variant="outline">{log.action || 'N/A'}</Badge>,
+                  },
+                  {
+                    key: 'entity',
+                    header: 'Entity',
+                    render: (log: any) => <span className="text-sm">{log.entity || log.entityName || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'details',
+                    header: 'Details',
+                    render: (log: any) => <span className="text-sm text-slate-600 break-words">{log.details || log.description || 'N/A'}</span>,
+                  },
+                ]}
+                data={filteredLogs}
+                rowKey={(log: any) => log._id || log.id}
+                emptyMessage="No audit logs found"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

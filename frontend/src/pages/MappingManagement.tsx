@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Eye, UserPlus, RefreshCw } from 'lucide-react';
@@ -178,63 +178,79 @@ export function MappingManagement() {
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Account #</TableHead>
-                  <TableHead>Customer Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">June 30 Balance</TableHead>
-                  <TableHead className="text-right">Current Balance</TableHead>
-                  <TableHead>Mapped To</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMappings.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-slate-500 py-8">
-                      No accounts found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredMappings.map((mapping) => (
-                    <TableRow key={mapping._id}>
-                      <TableCell className="font-medium">{mapping.accountNumber}</TableCell>
-                      <TableCell>{mapping.customerName}</TableCell>
-                      <TableCell>{mapping.accountType}</TableCell>
-                      <TableCell className="text-right">{mapping.june_balance?.toLocaleString() || '0'}</TableCell>
-                      <TableCell className="text-right font-bold">{mapping.current_balance?.toLocaleString() || '0'}</TableCell>
-                      <TableCell>
-                        {mapping.mappedTo?.name || (
-                          <span className="text-slate-400">Not assigned</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={mapping.status === 'Active' ? 'success' : 'destructive'}>
-                          {mapping.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'accountNumber',
+                    header: 'Account #',
+                    primary: true,
+                    render: (mapping: any) => (
+                      <code className="font-mono text-xs font-bold text-blue-600">{mapping.accountNumber}</code>
+                    ),
+                  },
+                  {
+                    key: 'customerName',
+                    header: 'Customer Name',
+                    render: (mapping: any) => <span className="font-medium">{mapping.customerName}</span>,
+                  },
+                  {
+                    key: 'accountType',
+                    header: 'Type',
+                    render: (mapping: any) => <span className="text-xs text-slate-500">{mapping.accountType}</span>,
+                  },
+                  {
+                    key: 'june_balance',
+                    header: 'June 30 Balance',
+                    className: 'text-right',
+                    render: (mapping: any) => <span className="font-mono text-xs">{mapping.june_balance?.toLocaleString() || '0'}</span>,
+                  },
+                  {
+                    key: 'current_balance',
+                    header: 'Current Balance',
+                    className: 'text-right',
+                    render: (mapping: any) => <span className="font-mono text-sm font-bold">{mapping.current_balance?.toLocaleString() || '0'}</span>,
+                  },
+                  {
+                    key: 'mappedTo',
+                    header: 'Mapped To',
+                    render: (mapping: any) =>
+                      mapping.mappedTo?.name || <span className="text-slate-400">Not assigned</span>,
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    render: (mapping: any) => (
+                      <Badge variant={mapping.status === 'Active' ? 'success' : 'destructive'}>
+                        {mapping.status}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'action',
+                    header: 'Action',
+                    className: 'text-center',
+                    render: (mapping: any) => (
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        {mapping.status === 'Inactive' && (user?.role === 'branchManager' || user?.role === 'admin') && (
+                          <Button variant="outline" size="sm">
+                            <UserPlus className="h-4 w-4 mr-1" />
+                            Assign
                           </Button>
-                          {mapping.status === 'Inactive' && (user?.role === 'branchManager' || user?.role === 'admin') && (
-                            <Button variant="outline" size="sm">
-                              <UserPlus className="h-4 w-4 mr-1" />
-                              Assign
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+                data={filteredMappings}
+                rowKey={(mapping: any) => mapping._id}
+                emptyMessage="No accounts found"
+              />
+            </div>
           )}
         </CardContent>
       </Card>

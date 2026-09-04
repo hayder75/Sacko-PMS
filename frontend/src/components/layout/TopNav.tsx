@@ -44,18 +44,19 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-primary-100 bg-white">
-      <div className="flex h-16 items-center justify-between px-6">
-        <div className="flex items-center gap-6">
-          <h2 className="text-lg font-semibold text-slate-800">GHION SACCOS PMS</h2>
+      <div className="flex h-14 lg:h-16 items-center justify-between px-3 sm:px-6">
+        <div className="flex items-center gap-2 sm:gap-6">
+          <h2 className="text-sm sm:text-lg font-semibold text-slate-800 hidden sm:block">GHION SACCOS PMS</h2>
+          <h2 className="text-sm font-semibold text-slate-800 sm:hidden">PMS</h2>
           {shouldShowBranch && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">Branch:</span>
-              <span className="text-sm font-medium text-slate-800">{currentBranch}</span>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <span className="text-xs sm:text-sm text-slate-500 hidden sm:inline">Branch:</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-800 truncate max-w-[80px] sm:max-w-none">{currentBranch}</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1 sm:gap-4">
           <button
             className="relative p-2 hover:bg-slate-100 rounded-md transition-colors"
             onClick={() => setShowNotifications(true)}
@@ -79,13 +80,13 @@ export function TopNav() {
 
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2 hover:bg-slate-100 rounded-md px-2 py-1">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-blue-500 text-white text-xs">
+              <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                <AvatarFallback className="bg-blue-500 text-white text-[10px] sm:text-xs">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium text-slate-800">{userName}</span>
-              <ChevronDown className="h-4 w-4 text-slate-600" />
+              <span className="text-xs sm:text-sm font-medium text-slate-800 hidden sm:inline">{userName}</span>
+              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-slate-600" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => navigate('/profile')}>Profile</DropdownMenuItem>

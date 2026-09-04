@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Upload, Plus } from 'lucide-react';
@@ -355,24 +355,32 @@ export function PlanCascade() {
                     </CardHeader>
                     <CardContent>
                       {monthlyPlan && monthlyPlan.length > 0 ? (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Month</TableHead>
-                              <TableHead>Amount Target</TableHead>
-                              <TableHead>Account Target</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {monthlyPlan.map((m: any, i: number) => (
-                              <TableRow key={i}>
-                                <TableCell className="font-medium">{m.month}</TableCell>
-                                <TableCell>{(m.amount || 0).toLocaleString()}</TableCell>
-                                <TableCell>{(m.count || 0).toLocaleString()}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                        <div className="table-scroll px-3 sm:px-0">
+                          <ResponsiveTable
+                            columns={[
+                              {
+                                key: 'month',
+                                header: 'Month',
+                                primary: true,
+                                render: (m: any) => <span className="font-medium text-slate-800">{m.month}</span>,
+                              },
+                              {
+                                key: 'amount',
+                                header: 'Amount Target',
+                                className: 'text-right',
+                                render: (m: any) => <span className="font-mono text-xs">{(m.amount || 0).toLocaleString()}</span>,
+                              },
+                              {
+                                key: 'count',
+                                header: 'Account Target',
+                                className: 'text-right',
+                                render: (m: any) => <span className="font-mono text-xs">{(m.count || 0).toLocaleString()}</span>,
+                              },
+                            ]}
+                            data={monthlyPlan}
+                            rowKey={(m: any) => m.month}
+                          />
+                        </div>
                       ) : (
                         <div className="text-sm text-slate-500">No monthly breakdown available</div>
                       )}
@@ -427,46 +435,63 @@ export function PlanCascade() {
               {staffPlansLoading ? (
                 <div className="text-center py-8">Loading...</div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Staff Name</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>KPI Category</TableHead>
-                      <TableHead>Individual Target</TableHead>
-                      <TableHead>Plan Share %</TableHead>
-                      <TableHead>Daily Target</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {staffPlans.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-slate-500 py-8">
-                          No staff plans found. Make sure plans are cascaded and filters are correct.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      staffPlans.map((sp) => (
-                        <TableRow key={sp._id}>
-                          <TableCell className="font-medium">
-                            {sp.userId?.name || 'N/A'} ({sp.userId?.employeeId || 'N/A'})
-                          </TableCell>
-                          <TableCell>{sp.position}</TableCell>
-                          <TableCell>{sp.kpi_category}</TableCell>
-                          <TableCell>{sp.individual_target?.toLocaleString()}</TableCell>
-                          <TableCell>{sp.plan_share_percent?.toFixed(2)}%</TableCell>
-                          <TableCell>{sp.daily_target?.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Badge variant={sp.status === 'Active' ? 'default' : 'outline'}>
-                              {sp.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                <div className="table-scroll px-3 sm:px-0">
+                  <ResponsiveTable
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Staff Name',
+                        primary: true,
+                        render: (sp: any) => (
+                          <span className="font-medium text-slate-800">
+                            {sp.userId?.name || 'N/A'} <span className="text-xs text-slate-400">({sp.userId?.employeeId || 'N/A'})</span>
+                          </span>
+                        ),
+                      },
+                      {
+                        key: 'position',
+                        header: 'Position',
+                        render: (sp: any) => <span>{sp.position}</span>,
+                      },
+                      {
+                        key: 'kpi_category',
+                        header: 'KPI Category',
+                        render: (sp: any) => <span className="text-xs text-slate-500">{sp.kpi_category}</span>,
+                      },
+                      {
+                        key: 'individual_target',
+                        header: 'Individual Target',
+                        className: 'text-right',
+                        render: (sp: any) => <span className="font-mono text-xs">{sp.individual_target?.toLocaleString()}</span>,
+                      },
+                      {
+                        key: 'plan_share_percent',
+                        header: 'Plan Share %',
+                        className: 'text-right',
+                        render: (sp: any) => <span className="font-mono text-xs">{sp.plan_share_percent?.toFixed(2)}%</span>,
+                      },
+                      {
+                        key: 'daily_target',
+                        header: 'Daily Target',
+                        className: 'text-right',
+                        render: (sp: any) => <span className="font-mono text-xs">{sp.daily_target?.toLocaleString()}</span>,
+                      },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        className: 'text-center',
+                        render: (sp: any) => (
+                          <Badge variant={sp.status === 'Active' ? 'default' : 'outline'}>
+                            {sp.status}
+                          </Badge>
+                        ),
+                      },
+                    ]}
+                    data={staffPlans}
+                    rowKey={(sp: any) => sp._id}
+                    emptyMessage="No staff plans found. Make sure plans are cascaded and filters are correct."
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
@@ -481,48 +506,63 @@ export function PlanCascade() {
               {loading ? (
                 <div className="text-center py-8">Loading...</div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Branch Code</TableHead>
-                      <TableHead>KPI Category</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Target Amount</TableHead>
-                      <TableHead>Target Count</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {plans.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-slate-500 py-8">
-                          No plans found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      plans.map((plan) => (
-                        <TableRow key={plan._id}>
-                          <TableCell className="font-medium">{plan.branch_code}</TableCell>
-                          <TableCell>{plan.kpi_category?.replace(/_/g, ' ')}</TableCell>
-                          <TableCell>{plan.product_category || '-'}</TableCell>
-                          <TableCell>{plan.target_value?.toLocaleString()}</TableCell>
-                          <TableCell>{(plan.target_count ?? 0).toLocaleString()}</TableCell>
-                          <TableCell>{plan.period}</TableCell>
-                          <TableCell>
-                            <Badge variant={plan.status === 'Active' ? 'default' : 'outline'}>
-                              {plan.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(plan.createdAt).toLocaleDateString()}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                <div className="table-scroll px-3 sm:px-0">
+                  <ResponsiveTable
+                    columns={[
+                      {
+                        key: 'branch_code',
+                        header: 'Branch Code',
+                        primary: true,
+                        render: (plan: any) => <code className="font-mono text-xs font-bold text-blue-600">{plan.branch_code}</code>,
+                      },
+                      {
+                        key: 'kpi_category',
+                        header: 'KPI Category',
+                        render: (plan: any) => <span>{plan.kpi_category?.replace(/_/g, ' ')}</span>,
+                      },
+                      {
+                        key: 'product_category',
+                        header: 'Product',
+                        render: (plan: any) => <span className="text-xs text-slate-500">{plan.product_category || '-'}</span>,
+                      },
+                      {
+                        key: 'target_value',
+                        header: 'Target Amount',
+                        className: 'text-right',
+                        render: (plan: any) => <span className="font-mono text-xs">{plan.target_value?.toLocaleString()}</span>,
+                      },
+                      {
+                        key: 'target_count',
+                        header: 'Target Count',
+                        className: 'text-right',
+                        render: (plan: any) => <span className="font-mono text-xs">{(plan.target_count ?? 0).toLocaleString()}</span>,
+                      },
+                      {
+                        key: 'period',
+                        header: 'Period',
+                        render: (plan: any) => <span className="text-xs text-slate-500">{plan.period}</span>,
+                      },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        className: 'text-center',
+                        render: (plan: any) => (
+                          <Badge variant={plan.status === 'Active' ? 'default' : 'outline'}>
+                            {plan.status}
+                          </Badge>
+                        ),
+                      },
+                      {
+                        key: 'createdAt',
+                        header: 'Created',
+                        render: (plan: any) => <span className="text-xs text-slate-500">{new Date(plan.createdAt).toLocaleDateString()}</span>,
+                      },
+                    ]}
+                    data={plans}
+                    rowKey={(plan: any) => plan._id}
+                    emptyMessage="No plans found"
+                  />
+                </div>
               )}
             </CardContent>
           </Card>

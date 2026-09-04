@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -142,45 +142,51 @@ export function AreaPerformance() {
           <CardTitle className="text-sm font-semibold text-slate-800">Branch Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">Branch Name</TableHead>
-                <TableHead className="text-xs">Staff</TableHead>
-                <TableHead className="text-xs">Achievement</TableHead>
-                <TableHead className="text-xs">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {branches.length > 0 ? (
-                branches.map((branch: any, index: number) => {
-                  const ach = branch.achievement || 0;
-                  const status = getStatus(ach);
-                  return (
-                    <TableRow key={branch.id || index}>
-                      <TableCell className="font-medium text-sm text-slate-700">{branch.name}</TableCell>
-                      <TableCell className="text-sm text-slate-500">{branch.staff || 0}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Progress value={ach} className="w-20 h-1.5" />
-                          <span className="text-sm font-semibold text-slate-700">{ach}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`${status.color} text-xs`}>{status.label}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-slate-400 py-8 text-sm">
-                    No branches assigned to your area
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Branch Name',
+                  primary: true,
+                  render: (branch: any) => <span className="font-medium text-sm text-slate-800">{branch.name}</span>,
+                },
+                {
+                  key: 'staff',
+                  header: 'Staff',
+                  className: 'text-right',
+                  render: (branch: any) => <span className="text-sm text-slate-500">{branch.staff || 0}</span>,
+                },
+                {
+                  key: 'achievement',
+                  header: 'Achievement',
+                  className: 'text-right',
+                  render: (branch: any) => {
+                    const ach = branch.achievement || 0;
+                    return (
+                      <div className="flex items-center gap-2 justify-end">
+                        <Progress value={ach} className="w-20 h-1.5" />
+                        <span className="text-sm font-semibold text-slate-700">{ach}%</span>
+                      </div>
+                    );
+                  },
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (branch: any) => {
+                    const ach = branch.achievement || 0;
+                    const status = getStatus(ach);
+                    return <Badge variant="outline" className={`${status.color} text-xs`}>{status.label}</Badge>;
+                  },
+                },
+              ]}
+              data={branches}
+              rowKey={(branch: any) => branch.id || branch.name}
+              emptyMessage="No branches assigned to your area"
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

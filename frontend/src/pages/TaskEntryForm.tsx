@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, AlertTriangle, XCircle, Search, User, ChevronDown, ChevronUp } from 'lucide-react';
+import ResponsiveTable from '@/components/ui/responsive-table';
+import { CheckCircle2, AlertTriangle, XCircle, Search, User, ArrowLeft } from 'lucide-react';
 import { tasksAPI, mappingsAPI, productMappingAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 import { useConfig } from '@/contexts/ConfigContext';
@@ -68,6 +69,7 @@ export function TaskEntryForm() {
   const [productType, setProductType] = useState('');
   const [accountNumber, setAccountNumber] = useState(preselectedAccount);
   const [customerName, setCustomerName] = useState('');
+  const [accountType, setAccountType] = useState('Savings');
   const [amount, setAmount] = useState('');
   const [remarks, setRemarks] = useState('');
   const [taskDate, setTaskDate] = useState(new Date().toISOString().split('T')[0]);
@@ -77,14 +79,9 @@ export function TaskEntryForm() {
   const [mappingInfo, setMappingInfo] = useState<any>(null);
   const [mappings, setMappings] = useState<any[]>([]);
   const [accountSearch, setAccountSearch] = useState('');
-  const [showMappedOnly, setShowMappedOnly] = useState(true);
   const [dynamicProducts, setDynamicProducts] = useState<Record<string, string[]> | null>(null);
-  const [showAccountPicker, setShowAccountPicker] = useState(!!!preselectedAccount);
 
-  useEffect(() => {
-    loadMappings();
-    loadProducts();
-  }, []);
+  useEffect(() => { loadMappings(); loadProducts(); }, []);
 
   const loadProducts = async () => {
     try {
@@ -106,41 +103,34 @@ export function TaskEntryForm() {
   const loadMappings = async () => {
     try {
       const response = await mappingsAPI.getAll({ mappedTo: user?._id });
-      if (response.success) {
-        setMappings(response.data || []);
-      }
-    } catch (error) {
-      console.error('Error loading mappings:', error);
-    }
+      if (response.success) setMappings(response.data || []);
+    } catch (_) {}
   };
 
-  const getProductTypes = (): Record<string, string[]> => {
-    if (dynamicProducts) return dynamicProducts;
-    return FALLBACK_PRODUCTS;
-  };
-
-  const productTypes = getProductTypes();
-
+  const productTypes = dynamicProducts || FALLBACK_PRODUCTS;
   const selectedMapping = mappings.find(m => m.accountNumber === accountNumber);
   const isNewAccount = !selectedMapping && accountNumber.length > 0;
+  const kpiKey = taskTypeToKpiCategory[taskType] || taskType;
+  const products = productTypes[kpiKey];
+  const hasBasicFields = taskType && accountNumber;
+
+  const filteredMappings = mappings.filter(m =>
+    !accountSearch || m.accountNumber.includes(accountSearch) ||
+    m.customerName.toLowerCase().includes(accountSearch.toLowerCase()) ||
+    m.productType?.toLowerCase().includes(accountSearch.toLowerCase())
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const taskData = {
-        taskType,
-        productType,
-        accountNumber,
+        taskType, productType, accountNumber,
         customerName: isNewAccount ? customerName : undefined,
-        amount: amount ? parseFloat(amount) : 0,
-        remarks,
-        taskDate,
+        accountType: isNewAccount ? accountType : undefined,
+        amount: amount ? parseFloat(amount) : 0, remarks, taskDate,
       };
-
       const response = await tasksAPI.create(taskData);
-
       if (response.success) {
         setSubmittedTask(response.data);
         setMappingStatus(response.mappingInfo?.status || response.data.mappingStatus);
@@ -149,273 +139,255 @@ export function TaskEntryForm() {
       }
     } catch (error: any) {
       alert(error.message || 'Failed to submit task');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const getMappingBadge = () => {
     if (!mappingStatus) return null;
     switch (mappingStatus) {
       case 'Mapped to You':
-        return <Badge variant="success" className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" />Mapped to You</Badge>;
+        return <Badge variant="success" className="flex items-center gap-1.5 text-xs"><CheckCircle2 className="h-3 w-3" />Mapped to You</Badge>;
       case 'Mapped to Another Staff':
-        return <Badge variant="warning" className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Mapped to Another Staff</Badge>;
+        return <Badge variant="warning" className="flex items-center gap-1.5 text-xs"><AlertTriangle className="h-3 w-3" />Mapped to Another</Badge>;
       case 'Unmapped':
-        return <Badge variant="destructive" className="flex items-center gap-2"><XCircle className="h-4 w-4" />Unmapped – Requires BM Approval</Badge>;
+        return <Badge variant="destructive" className="flex items-center gap-1.5 text-xs"><XCircle className="h-3 w-3" />Unmapped – BM Approval</Badge>;
     }
   };
 
-  const filteredMappings = mappings.filter(m =>
-    m.accountNumber.includes(accountSearch) ||
-    m.customerName.toLowerCase().includes(accountSearch.toLowerCase())
-  );
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-800">Daily Task Entry</h1>
-        <p className="text-slate-600 mt-1">Submit your daily tasks and activities</p>
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <button onClick={() => navigate('/tasks')} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Daily Task Entry</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Submit your daily tasks and activities</p>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>New Task Form</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="taskType">Task Type *</Label>
-              <Select value={taskType} onValueChange={(value) => { setTaskType(value); setProductType(''); }}>
-                <SelectTrigger id="taskType">
-                  <SelectValue placeholder="Select task type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {taskTypes.filter((t, i, arr) => arr.indexOf(t) === i).map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {(() => {
-              const kpiKey = taskTypeToKpiCategory[taskType] || taskType;
-              const products = productTypes[kpiKey];
-              return products && (
-                <div className="space-y-2">
-                  <Label htmlFor="productType">Product Type *</Label>
-                  <Select value={productType} onValueChange={setProductType}>
-                    <SelectTrigger id="productType">
-                      <SelectValue placeholder="Select product type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              );
-            })()}
-
-            <div className="space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Account
-                  {preselectedAccount && (
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] ml-2">
-                      Pre-selected
-                    </Badge>
-                  )}
-                </Label>
-                {preselectedAccount && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAccountPicker(!showAccountPicker)}
-                    className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
-                  >
-                    {showAccountPicker ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                    {showAccountPicker ? 'Hide list' : 'Change account'}
-                  </button>
-                )}
-              </div>
-
-              {selectedMapping && (
-                <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-md">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-emerald-900">{selectedMapping.accountNumber}</p>
-                      <p className="text-xs text-emerald-700">{selectedMapping.customerName}</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                    {selectedMapping.balance?.toLocaleString()} ETB
-                  </Badge>
-                </div>
-              )}
-
-              {(showAccountPicker || !preselectedAccount) && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        placeholder="Search your accounts by name or number..."
-                        value={accountSearch}
-                        onChange={(e) => setAccountSearch(e.target.value)}
-                        className="pl-10 bg-white border-slate-200"
-                      />
-                    </div>
-                    <label className="flex items-center gap-1.5 text-xs text-slate-500 ml-3 shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={showMappedOnly}
-                        onChange={(e) => setShowMappedOnly(e.target.checked)}
-                        className="h-3.5 w-3.5 rounded border-slate-300"
-                      />
-                      My mappings
-                    </label>
-                  </div>
-
-                  {filteredMappings.length > 0 && (
-                    <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-md bg-white">
-                      {filteredMappings.map((m) => (
-                        <div
-                          key={m.id}
-                          className={`p-2 hover:bg-slate-50 cursor-pointer flex justify-between items-center border-b border-slate-100 last:border-0 ${
-                            accountNumber === m.accountNumber ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
-                          }`}
-                          onClick={() => {
-                            setAccountNumber(m.accountNumber);
-                            setAccountSearch('');
-                          }}
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-slate-800">{m.accountNumber}</p>
-                            <p className="text-xs text-slate-500">{m.customerName}</p>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] bg-slate-50">
-                            {m.balance?.toLocaleString()} ETB
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="space-y-4 border-t pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="accountNumber" className="flex items-center gap-2">
-                  Account Number * {selectedMapping && <Badge variant="success">Found</Badge>}
-                </Label>
-                <Input
-                  id="accountNumber"
-                  value={accountNumber}
-                  onChange={(e) => {
-                    setAccountNumber(e.target.value);
-                    setMappingStatus(null);
-                    setMappingInfo(null);
-                  }}
-                  placeholder="Or enter manually here"
-                  required
-                  disabled={loading}
-                  className={selectedMapping ? 'border-green-500 bg-green-50/30' : ''}
-                />
-              </div>
-
-              {isNewAccount && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                  <Label htmlFor="customerName" className="text-blue-700">Customer Name (Required for new accounts) *</Label>
-                  <Input
-                    id="customerName"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter full customer name"
-                    required={isNewAccount}
-                    className="border-blue-300 bg-blue-50/20"
-                  />
-                  <p className="text-[11px] text-blue-600 italic">This is an unmapped account. It will be added to the system as "Unmapped" for approval.</p>
-                </div>
-              )}
-
-              {selectedMapping && (
-                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-md flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-emerald-700 font-semibold">Matched Customer:</p>
-                    <p className="text-sm font-bold text-emerald-900">{selectedMapping.customerName}</p>
-                  </div>
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                </div>
-              )}
-
-              {mappingStatus && !submittedTask && (
-                <div className="mt-2">
-                  {getMappingBadge()}
-                  {mappingInfo?.canCountForKPI === false && (
-                    <p className="text-xs text-red-600 mt-1">This task will not count toward your KPI until mapping is resolved.</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount (Birr)</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Enter amount (optional)"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="taskDate">Task Date *</Label>
-              <Input
-                id="taskDate"
-                type="date"
-                value={taskDate}
-                onChange={(e) => setTaskDate(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="remarks">Remarks</Label>
-              <Textarea
-                id="remarks"
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                placeholder="Add any additional remarks..."
-                rows={4}
-                disabled={loading}
-              />
-            </div>
-
-            {mappingStatus && (
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-md">
-                <p className="text-sm font-medium text-slate-700 mb-2">Mapping Status:</p>
-                {getMappingBadge()}
-              </div>
-            )}
-
-            <div className="flex gap-4">
-              <Button type="submit" disabled={loading}>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3">
+            <CardTitle className="text-base">Task Details</CardTitle>
+            <div className="flex gap-2 shrink-0">
+              <Button type="submit" disabled={loading || !hasBasicFields || !accountNumber} className="h-9 px-5 text-sm">
                 {loading ? 'Submitting...' : 'Submit Task'}
               </Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/tasks')} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => navigate('/tasks')} disabled={loading} className="h-9 px-4 text-sm">
                 Cancel
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-500">Task Type *</Label>
+                <Select value={taskType} onValueChange={(v) => { setTaskType(v); setProductType(''); }}>
+                  <SelectTrigger className="h-10"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectContent>
+                    {taskTypes.filter((t, i, a) => a.indexOf(t) === i).map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {products && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-500">Product Type</Label>
+                  <Select value={productType} onValueChange={setProductType} disabled={!taskType}>
+                    <SelectTrigger className="h-10"><SelectValue placeholder={taskType ? "Select (optional)" : "Pick task type"} /></SelectTrigger>
+                    <SelectContent>
+                      {products?.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-500 flex items-center gap-1">Amount (ETB)</Label>
+                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" disabled={loading} className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-500">Task Date *</Label>
+                <Input type="date" value={taskDate} onChange={e => setTaskDate(e.target.value)} required disabled={loading} className="h-10" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-500">Account Number *</Label>
+                <Input value={accountNumber}
+                  onChange={e => { setAccountNumber(e.target.value); setMappingStatus(null); setMappingInfo(null); }}
+                  placeholder="Enter account number..."
+                  required disabled={loading}
+                  className={`h-10 ${selectedMapping ? 'border-green-400 bg-green-50/40' : ''}`}
+                />
+              </div>
+              {isNewAccount && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-blue-600">Customer Name (new account) *</Label>
+                  <Input value={customerName} onChange={e => setCustomerName(e.target.value)}
+                    placeholder="Full name" required={isNewAccount}
+                    className="h-10 border-blue-300 bg-blue-50/20"
+                  />
+                </div>
+              )}
+              {selectedMapping && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-emerald-600">Matched Customer</Label>
+                  <div className="flex items-center gap-2 h-10 px-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span className="text-sm font-semibold text-emerald-900">{selectedMapping.customerName}</span>
+                    <span className="text-xs text-emerald-600 ml-auto">{selectedMapping.balance?.toLocaleString()} ETB</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {isNewAccount && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-blue-600">Account Type (new account) *</Label>
+                <Select value={accountType} onValueChange={setAccountType}>
+                  <SelectTrigger className="h-10 border-blue-300 bg-blue-50/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Savings">Savings</SelectItem>
+                    <SelectItem value="Current">Current</SelectItem>
+                    <SelectItem value="Fixed_Deposit">Fixed Deposit</SelectItem>
+                    <SelectItem value="Recurring_Deposit">Recurring Deposit</SelectItem>
+                    <SelectItem value="Loan">Loan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {isNewAccount && (
+              <p className="text-xs text-blue-600 italic flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                New unmapped account — will be submitted for BM approval
+              </p>
+            )}
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-500">Remarks</Label>
+              <Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional notes..." rows={2} disabled={loading} className="text-sm resize-none" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="h-4 w-4 text-slate-400" />
+              Select Account
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search by account number, customer name, or product..."
+                value={accountSearch}
+                onChange={e => setAccountSearch(e.target.value)}
+                className="pl-10 h-10"
+              />
+            </div>
+
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'select',
+                    header: 'Select',
+                    hideOnMobile: true,
+                    render: (m: any) => (
+                      <input
+                        type="radio"
+                        className="h-3.5 w-3.5 text-blue-600"
+                        checked={accountNumber === m.accountNumber}
+                        readOnly
+                      />
+                    ),
+                  },
+                  {
+                    key: 'accountNumber',
+                    header: 'Account #',
+                    primary: true,
+                    render: (m: any) => <span className="font-mono font-bold text-blue-600 text-xs">{m.accountNumber}</span>,
+                  },
+                  {
+                    key: 'customerName',
+                    header: 'Customer Name',
+                    render: (m: any) => <span className="font-medium text-slate-800">{m.customerName}</span>,
+                  },
+                  {
+                    key: 'productType',
+                    header: 'Product',
+                    render: (m: any) => <span className="text-slate-500 text-xs">{m.productType || '-'}</span>,
+                  },
+                  {
+                    key: 'balance',
+                    header: 'Balance',
+                    className: 'text-right',
+                    render: (m: any) => <span className="font-semibold text-slate-700 text-xs">{m.balance?.toLocaleString()} ETB</span>,
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    className: 'text-center',
+                    render: () => (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Mapped
+                      </span>
+                    ),
+                  },
+                ]}
+                data={filteredMappings}
+                rowKey={(m: any) => m.id}
+                onRowClick={(m: any) => { setAccountNumber(m.accountNumber); setMappingStatus(null); setMappingInfo(null); }}
+                emptyMessage={
+                  accountSearch ? 'No accounts match your search' : 'No accounts mapped to you yet'
+                }
+                mobileActions={(m: any) => (
+                  <Button
+                    type="button"
+                    variant={accountNumber === m.accountNumber ? 'default' : 'outline'}
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => { e.stopPropagation(); setAccountNumber(m.accountNumber); setMappingStatus(null); setMappingInfo(null); }}
+                  >
+                    {accountNumber === m.accountNumber ? 'Selected' : 'Select Account'}
+                  </Button>
+                )}
+              />
+            </div>
+
+            {selectedMapping && getMappingBadge()}
+          </CardContent>
+        </Card>
+
+        {mappingStatus && (
+          <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
+            <span className="text-xs font-medium text-slate-500">Mapping Status:</span>
+            {getMappingBadge()}
+            {mappingInfo?.canCountForKPI === false && (
+              <span className="text-xs text-red-500">Won't count toward KPI until resolved</span>
+            )}
+          </div>
+        )}
+
+        {submittedTask && (
+          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-800">Task submitted successfully</p>
+              <p className="text-xs text-emerald-600">Redirecting to task list...</p>
+            </div>
+          </div>
+        )}
+      </form>
     </div>
   );
 }

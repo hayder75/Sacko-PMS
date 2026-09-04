@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { dashboardAPI } from '@/lib/api';
 import { Users, Clock, CheckCircle2, AlertCircle, TrendingUp, Banknote, Target, UserCheck, FileText } from 'lucide-react';
 
@@ -123,27 +124,36 @@ export function BranchOperations() {
         <CardHeader><CardTitle>Staff Activity Today</CardTitle></CardHeader>
         <CardContent className="p-0">
           {branch.staffActivity.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Staff</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Position</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Tasks</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Total Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {branch.staffActivity.map((s: any) => (
-                    <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
-                      <td className="px-4 py-3 text-slate-600">{s.position?.replace(/_/g, ' ') || 'N/A'}</td>
-                      <td className="px-4 py-3 text-right font-mono">{s.todayTasks}</td>
-                      <td className="px-4 py-3 text-right font-mono">{(s.totalAmount || 0).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'name',
+                    header: 'Staff',
+                    primary: true,
+                    render: (s: any) => <span className="font-medium text-slate-800">{s.name}</span>,
+                  },
+                  {
+                    key: 'position',
+                    header: 'Position',
+                    render: (s: any) => <span className="text-slate-600">{s.position?.replace(/_/g, ' ') || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'todayTasks',
+                    header: 'Tasks',
+                    className: 'text-right',
+                    render: (s: any) => <span className="font-mono">{s.todayTasks}</span>,
+                  },
+                  {
+                    key: 'totalAmount',
+                    header: 'Total Amount',
+                    className: 'text-right',
+                    render: (s: any) => <span className="font-mono">{(s.totalAmount || 0).toLocaleString()}</span>,
+                  },
+                ]}
+                data={branch.staffActivity}
+                rowKey={(s: any) => s.id}
+              />
             </div>
           ) : (
             <div className="text-center py-8 text-slate-400">No staff activity recorded today</div>

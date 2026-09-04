@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { plansAPI, staffPlansAPI } from '@/lib/api';
@@ -287,35 +287,49 @@ export function PlansOverview() {
         </CardHeader>
         <CardContent>
           {plans.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>KPI Category</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Target Amount</TableHead>
-                  <TableHead>Actual</TableHead>
-                  <TableHead>Achievement</TableHead>
-                  <TableHead>Target Count</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created By</TableHead>
-                  <TableHead>Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {plans.map((plan) => {
-                  const ach = achievementMap.get(`${plan.branch_code}-${plan.kpi_category}-${plan.product_category || ''}`);
-                  const actual = ach?.actual ?? 0;
-                  const pct = ach?.achievementPercent ?? 0;
-                  return (
-                    <TableRow key={plan._id || plan.id}>
-                      <TableCell className="font-medium">{plan.branch_code}</TableCell>
-                      <TableCell>{plan.kpi_category?.replace(/_/g, ' ')}</TableCell>
-                      <TableCell>{plan.product_category || '-'}</TableCell>
-                      <TableCell>{plan.target_value?.toLocaleString()}</TableCell>
-                      <TableCell>{actual.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'branch_code',
+                    header: 'Branch',
+                    primary: true,
+                    render: (plan: any) => <span className="font-medium text-slate-800">{plan.branch_code}</span>,
+                  },
+                  {
+                    key: 'kpi_category',
+                    header: 'KPI Category',
+                    render: (plan: any) => <span>{plan.kpi_category?.replace(/_/g, ' ')}</span>,
+                  },
+                  {
+                    key: 'product_category',
+                    header: 'Product',
+                    render: (plan: any) => <span className="text-xs text-slate-500">{plan.product_category || '-'}</span>,
+                  },
+                  {
+                    key: 'target_value',
+                    header: 'Target Amount',
+                    className: 'text-right',
+                    render: (plan: any) => <span className="font-mono text-xs">{plan.target_value?.toLocaleString()}</span>,
+                  },
+                  {
+                    key: 'actual',
+                    header: 'Actual',
+                    className: 'text-right',
+                    render: (plan: any) => {
+                      const ach = achievementMap.get(`${plan.branch_code}-${plan.kpi_category}-${plan.product_category || ''}`);
+                      return <span className="font-mono text-xs">{(ach?.actual ?? 0).toLocaleString()}</span>;
+                    },
+                  },
+                  {
+                    key: 'achievement',
+                    header: 'Achievement',
+                    className: 'text-right',
+                    render: (plan: any) => {
+                      const ach = achievementMap.get(`${plan.branch_code}-${plan.kpi_category}-${plan.product_category || ''}`);
+                      const pct = ach?.achievementPercent ?? 0;
+                      return (
+                        <div className="flex items-center gap-2 justify-end">
                           <div className="w-full max-w-[100px] bg-slate-100 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full ${pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
@@ -326,22 +340,41 @@ export function PlansOverview() {
                             {pct}%
                           </span>
                         </div>
-                      </TableCell>
-                      <TableCell>{(plan.target_count ?? 0).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge variant={plan.status === 'Active' ? 'success' : plan.status === 'Draft' ? 'warning' : 'secondary'}>
-                          {plan.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{plan.createdBy?.name || 'N/A'}</TableCell>
-                      <TableCell className="text-sm text-slate-500">
-                        {new Date(plan.createdAt).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                      );
+                    },
+                  },
+                  {
+                    key: 'target_count',
+                    header: 'Target Count',
+                    className: 'text-right',
+                    render: (plan: any) => <span className="font-mono text-xs">{(plan.target_count ?? 0).toLocaleString()}</span>,
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    className: 'text-center',
+                    render: (plan: any) => (
+                      <Badge variant={plan.status === 'Active' ? 'success' : plan.status === 'Draft' ? 'warning' : 'secondary'}>
+                        {plan.status}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'createdBy',
+                    header: 'Created By',
+                    render: (plan: any) => <span>{plan.createdBy?.name || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'createdAt',
+                    header: 'Created',
+                    render: (plan: any) => <span className="text-sm text-slate-500">{new Date(plan.createdAt).toLocaleDateString()}</span>,
+                  },
+                ]}
+                data={plans}
+                rowKey={(plan: any) => plan._id || plan.id}
+                emptyMessage={`No plans found for ${selectedPeriod}`}
+              />
+            </div>
           ) : (
             <div className="text-center text-slate-400 py-8">No plans found for {selectedPeriod}</div>
           )}
@@ -355,28 +388,43 @@ export function PlansOverview() {
         </CardHeader>
         <CardContent>
           {staffPlanByUser.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Staff Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Plans</TableHead>
-                  <TableHead>Total Individual Target</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {staffPlanByUser.map((sp) => (
-                  <TableRow key={sp.name}>
-                    <TableCell className="font-medium">{sp.name}</TableCell>
-                    <TableCell>{sp.role}</TableCell>
-                    <TableCell>{sp.branch}</TableCell>
-                    <TableCell>{sp.plans}</TableCell>
-                    <TableCell>{(sp.target ?? 0).toLocaleString()}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'name',
+                    header: 'Staff Name',
+                    primary: true,
+                    render: (sp: any) => <span className="font-medium text-slate-800">{sp.name}</span>,
+                  },
+                  {
+                    key: 'role',
+                    header: 'Role',
+                    render: (sp: any) => <span>{sp.role}</span>,
+                  },
+                  {
+                    key: 'branch',
+                    header: 'Branch',
+                    render: (sp: any) => <span className="text-xs text-slate-500">{sp.branch}</span>,
+                  },
+                  {
+                    key: 'plans',
+                    header: 'Plans',
+                    className: 'text-center',
+                    render: (sp: any) => <span className="font-mono">{sp.plans}</span>,
+                  },
+                  {
+                    key: 'target',
+                    header: 'Total Individual Target',
+                    className: 'text-right',
+                    render: (sp: any) => <span className="font-mono text-sm">{(sp.target ?? 0).toLocaleString()}</span>,
+                  },
+                ]}
+                data={staffPlanByUser}
+                rowKey={(sp: any) => sp.name}
+                emptyMessage={`No staff plans for ${selectedPeriod}`}
+              />
+            </div>
           ) : (
             <div className="text-center text-slate-400 py-8">No staff plans for {selectedPeriod}</div>
           )}

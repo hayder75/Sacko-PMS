@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Users, Banknote, Search, RefreshCw } from 'lucide-react';
+import { getToken } from '@/lib/api';
 
 function formatBirr(n: number): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -24,7 +26,7 @@ export function UnmappedAccounts() {
     params.set('limit', '100');
 
     fetch(`/api/mapped-accounts/unmapped?${params}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then(r => r.json())
       .then(res => {
@@ -127,48 +129,73 @@ export function UnmappedAccounts() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {accounts.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">All accounts are mapped. No unmapped accounts found.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Account #</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Customer Name</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Product</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Branch</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Current Balance</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">June Balance</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Difference</th>
-                    <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((acct: any) => (
-                    <tr key={acct.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-slate-700">{acct.accountNumber}</td>
-                      <td className="px-4 py-3"><span className="font-medium text-slate-800">{acct.customerName}</span></td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{acct.product || '-'}</td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{acct.branch?.code || acct.branch?.name || '-'}</td>
-                      <td className="px-4 py-3 text-right font-mono text-sm">{formatBirr(acct.currentBalance || 0)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-600">{formatBirr(acct.juneBalance || 0)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-sm">
-                        <span className={acct.difference > 0 ? 'text-emerald-600' : acct.difference < 0 ? 'text-red-600' : 'text-slate-400'}>
-                          {acct.difference > 0 ? '+' : ''}{formatBirr(acct.difference || 0)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">
-                          {acct.activeStatus ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'accountNumber',
+                  header: 'Account #',
+                  primary: true,
+                  render: (acct: any) => (
+                    <code className="font-mono text-xs font-bold text-blue-600">{acct.accountNumber}</code>
+                  ),
+                },
+                {
+                  key: 'customerName',
+                  header: 'Customer Name',
+                  render: (acct: any) => <span className="font-medium text-slate-800">{acct.customerName}</span>,
+                },
+                {
+                  key: 'product',
+                  header: 'Product',
+                  render: (acct: any) => <span className="text-xs text-slate-500">{acct.product || '-'}</span>,
+                },
+                {
+                  key: 'branch',
+                  header: 'Branch',
+                  render: (acct: any) => <span className="text-xs text-slate-500">{acct.branch?.code || acct.branch?.name || '-'}</span>,
+                },
+                {
+                  key: 'currentBalance',
+                  header: 'Current Balance',
+                  className: 'text-right',
+                  render: (acct: any) => <span className="font-mono text-sm">{formatBirr(acct.currentBalance || 0)}</span>,
+                },
+                {
+                  key: 'juneBalance',
+                  header: 'June Balance',
+                  className: 'text-right',
+                  render: (acct: any) => <span className="font-mono text-sm text-slate-600">{formatBirr(acct.juneBalance || 0)}</span>,
+                },
+                {
+                  key: 'difference',
+                  header: 'Difference',
+                  className: 'text-right',
+                  render: (acct: any) => {
+                    const diff = acct.difference || 0;
+                    return (
+                      <span className={`font-mono text-sm ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                        {diff > 0 ? '+' : ''}{formatBirr(diff)}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (acct: any) => (
+                    <Badge variant={acct.activeStatus ? 'default' : 'secondary'} className="text-xs">
+                      {acct.activeStatus ? 'Active' : 'Inactive'}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={accounts}
+              rowKey={(acct: any) => acct.id}
+              emptyMessage="All accounts are mapped. No unmapped accounts found."
+            />
+          </div>
         </CardContent>
       </Card>
 

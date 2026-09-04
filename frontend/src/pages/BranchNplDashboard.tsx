@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { nplAPI } from '@/lib/api';
 import { AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
@@ -120,39 +121,53 @@ export function BranchNplDashboard() {
           <CardTitle>Staff Collection Performance</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-slate-50">
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Staff</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Accounts</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Portfolio</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Overdue</th>
-                  <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffBreakdown?.map((s: any) => (
-                  <tr key={s.staffId} className="border-b hover:bg-slate-50">
-                    <td className="px-4 py-3">
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'staff',
+                  header: 'Staff',
+                  primary: true,
+                  render: (s: any) => (
+                    <div>
                       <div className="font-medium text-slate-800">{s.staffName}</div>
                       <div className="text-xs text-slate-400">{s.position?.replace(/_/g, ' ')}</div>
-                    </td>
-                    <td className="px-4 py-3 text-right">{s.accountCount}</td>
-                    <td className="px-4 py-3 text-right font-mono">{formatBirr(s.totalBalance)}</td>
-                    <td className="px-4 py-3 text-right font-mono text-red-600">{s.overdueAccounts}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Badge variant={s.overdueAccounts > 0 ? 'destructive' : 'default'} className="text-xs">
-                        {s.overdueAccounts > 0 ? `${s.overdueAccounts} Overdue` : 'Clear'}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-                {(!staffBreakdown || staffBreakdown.length === 0) && (
-                  <tr><td colSpan={5} className="text-center py-8 text-slate-400">No staff data available</td></tr>
-                )}
-              </tbody>
-            </table>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'accountCount',
+                  header: 'Accounts',
+                  className: 'text-right',
+                  render: (s: any) => <span className="font-mono text-xs">{s.accountCount}</span>,
+                },
+                {
+                  key: 'totalBalance',
+                  header: 'Portfolio',
+                  className: 'text-right',
+                  render: (s: any) => <span className="font-mono text-xs">{formatBirr(s.totalBalance)}</span>,
+                },
+                {
+                  key: 'overdueAccounts',
+                  header: 'Overdue',
+                  className: 'text-right',
+                  render: (s: any) => <span className="font-mono text-xs text-red-600">{s.overdueAccounts}</span>,
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (s: any) => (
+                    <Badge variant={s.overdueAccounts > 0 ? 'destructive' : 'default'} className="text-xs">
+                      {s.overdueAccounts > 0 ? `${s.overdueAccounts} Overdue` : 'Clear'}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={staffBreakdown || []}
+              rowKey={(s: any) => s.staffId}
+              emptyMessage="No staff data available"
+            />
           </div>
         </CardContent>
       </Card>
@@ -200,31 +215,41 @@ export function BranchNplDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-slate-50">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Account</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Balance</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">DPD</th>
-                    <th className="text-center px-4 py-3 font-medium text-slate-600">Classification</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dpdDetails.map((d: any) => (
-                    <tr key={d.accountId} className="border-b hover:bg-slate-50">
-                      <td className="px-4 py-3 font-mono text-xs">{d.accountNumber}</td>
-                      <td className="px-4 py-3 text-right font-mono">{formatBirr(d.currentBalance)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-red-600">{d.dpd}d</td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant={d.dpd >= 90 ? 'destructive' : d.dpd >= 30 ? 'warning' : 'secondary'} className="text-xs">
-                          {d.classification}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'accountNumber',
+                    header: 'Account',
+                    primary: true,
+                    render: (d: any) => <code className="font-mono text-xs font-bold text-blue-600">{d.accountNumber}</code>,
+                  },
+                  {
+                    key: 'currentBalance',
+                    header: 'Balance',
+                    className: 'text-right',
+                    render: (d: any) => <span className="font-mono text-xs">{formatBirr(d.currentBalance)}</span>,
+                  },
+                  {
+                    key: 'dpd',
+                    header: 'DPD',
+                    className: 'text-right',
+                    render: (d: any) => <span className="font-mono text-xs text-red-600">{d.dpd}d</span>,
+                  },
+                  {
+                    key: 'classification',
+                    header: 'Classification',
+                    className: 'text-center',
+                    render: (d: any) => (
+                      <Badge variant={d.dpd >= 90 ? 'destructive' : d.dpd >= 30 ? 'warning' : 'secondary'} className="text-xs">
+                        {d.classification}
+                      </Badge>
+                    ),
+                  },
+                ]}
+                data={dpdDetails}
+                rowKey={(d: any) => d.accountId}
+              />
             </div>
           </CardContent>
         </Card>

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, CheckCircle2, AlertCircle, FileSpreadsheet, Download, RefreshCw } from 'lucide-react';
 import { mappingsAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 
 export function BulkMappingUpload() {
   const { user } = useUser();
@@ -187,36 +187,55 @@ export function BulkMappingUpload() {
                   </CardHeader>
                   <CardContent>
                     <div className="max-h-96 overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Row</TableHead>
-                            <TableHead>Account Number</TableHead>
-                            <TableHead>Customer Name</TableHead>
-                            <TableHead>Staff ID</TableHead>
-                            <TableHead>Staff Name</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {result.successful.map((item: any) => (
-                            <TableRow key={item.accountNumber || item.row} className="bg-green-50">
-                              <TableCell>{item.row}</TableCell>
-                              <TableCell className="font-medium">{item.accountNumber}</TableCell>
-                              <TableCell>{item.customerName}</TableCell>
-                              <TableCell>{item.staffID}</TableCell>
-                              <TableCell>{item.staffName}</TableCell>
-                              <TableCell>
+                      <div className="table-scroll px-3 sm:px-0">
+                        <ResponsiveTable
+                          columns={[
+                            {
+                              key: 'row',
+                              header: 'Row',
+                              className: 'text-left',
+                              render: (item: any) => <span className="text-xs text-slate-400">{item.row}</span>,
+                            },
+                            {
+                              key: 'accountNumber',
+                              header: 'Account Number',
+                              primary: true,
+                              render: (item: any) => (
+                                <code className="font-mono text-xs font-bold text-blue-600">{item.accountNumber}</code>
+                              ),
+                            },
+                            {
+                              key: 'customerName',
+                              header: 'Customer Name',
+                              render: (item: any) => <span className="font-medium">{item.customerName}</span>,
+                            },
+                            {
+                              key: 'staffID',
+                              header: 'Staff ID',
+                              render: (item: any) => <span className="font-mono text-xs">{item.staffID}</span>,
+                            },
+                            {
+                              key: 'staffName',
+                              header: 'Staff Name',
+                              render: (item: any) => <span>{item.staffName}</span>,
+                            },
+                            {
+                              key: 'status',
+                              header: 'Status',
+                              className: 'text-center',
+                              render: (item: any) => (
                                 <span className={`px-2 py-1 rounded text-xs font-semibold ${
                                   item.status === 'Created' ? 'bg-green-200 text-green-800' : 'bg-blue-200 text-blue-800'
                                 }`}>
                                   {item.status}
                                 </span>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                              ),
+                            },
+                          ]}
+                          data={result.successful}
+                          rowKey={(item: any) => item.accountNumber || item.row}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -233,28 +252,43 @@ export function BulkMappingUpload() {
                   </CardHeader>
                   <CardContent>
                     <div className="max-h-96 overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Row</TableHead>
-                            <TableHead>Account Number</TableHead>
-                            <TableHead>Customer Name</TableHead>
-                            <TableHead>Staff ID</TableHead>
-                            <TableHead>Error Reason</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {result.errors.map((error: any) => (
-                            <TableRow key={error.accountNumber || error.row} className="bg-red-50">
-                              <TableCell>{error.row}</TableCell>
-                              <TableCell className="font-medium">{error.accountNumber || 'N/A'}</TableCell>
-                              <TableCell>{error.customerName || 'N/A'}</TableCell>
-                              <TableCell>{error.staffID || 'N/A'}</TableCell>
-                              <TableCell className="text-red-600 font-medium">{error.error}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                      <div className="table-scroll px-3 sm:px-0">
+                        <ResponsiveTable
+                          columns={[
+                            {
+                              key: 'row',
+                              header: 'Row',
+                              className: 'text-left',
+                              render: (error: any) => <span className="text-xs text-slate-400">{error.row}</span>,
+                            },
+                            {
+                              key: 'accountNumber',
+                              header: 'Account Number',
+                              primary: true,
+                              render: (error: any) => (
+                                <code className="font-mono text-xs font-bold text-blue-600">{error.accountNumber || 'N/A'}</code>
+                              ),
+                            },
+                            {
+                              key: 'customerName',
+                              header: 'Customer Name',
+                              render: (error: any) => <span className="font-medium">{error.customerName || 'N/A'}</span>,
+                            },
+                            {
+                              key: 'staffID',
+                              header: 'Staff ID',
+                              render: (error: any) => <span className="font-mono text-xs">{error.staffID || 'N/A'}</span>,
+                            },
+                            {
+                              key: 'error',
+                              header: 'Error Reason',
+                              render: (error: any) => <span className="text-red-600 font-medium">{error.error}</span>,
+                            },
+                          ]}
+                          data={result.errors}
+                          rowKey={(error: any) => error.accountNumber || error.row}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { dashboardAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
 import {
@@ -262,29 +263,37 @@ export function BranchMonitoring() {
                     Staff Activity
                     {staffFilter !== 'all' && <span className="text-slate-400 normal-case ml-1">(filtered)</span>}
                   </h4>
-                  <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="text-left py-2.5 px-3 font-medium text-slate-500">Staff</th>
-                          <th className="text-left py-2.5 px-3 font-medium text-slate-500">Position</th>
-                          <th className="text-right py-2.5 px-3 font-medium text-slate-500">Tasks</th>
-                          <th className="text-right py-2.5 px-3 font-medium text-slate-500">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {branch._filteredStaff.length > 0 ? branch._filteredStaff.map((s: any) => (
-                          <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-2.5 px-3 font-medium text-slate-700">{s.name}</td>
-                            <td className="py-2.5 px-3 text-slate-400">{s.position?.replace(/_/g, ' ') || 'Staff'}</td>
-                            <td className="py-2.5 px-3 text-right font-mono text-slate-700">{s.todayTasks}</td>
-                            <td className="py-2.5 px-3 text-right font-mono text-slate-700">{(s.totalAmount || 0).toLocaleString()}</td>
-                          </tr>
-                        )) : (
-                          <tr><td colSpan={4} className="text-center py-6 text-slate-400">No staff activity for the selected filters</td></tr>
-                        )}
-                      </tbody>
-                    </table>
+                  <div className="table-scroll px-3 sm:px-0 border border-slate-200 rounded-lg">
+                    <ResponsiveTable
+                      columns={[
+                        {
+                          key: 'name',
+                          header: 'Staff',
+                          primary: true,
+                          render: (s: any) => <span className="font-medium text-slate-700">{s.name}</span>,
+                        },
+                        {
+                          key: 'position',
+                          header: 'Position',
+                          render: (s: any) => <span className="text-slate-400">{s.position?.replace(/_/g, ' ') || 'Staff'}</span>,
+                        },
+                        {
+                          key: 'todayTasks',
+                          header: 'Tasks',
+                          className: 'text-right',
+                          render: (s: any) => <span className="font-mono text-slate-700">{s.todayTasks}</span>,
+                        },
+                        {
+                          key: 'totalAmount',
+                          header: 'Amount',
+                          className: 'text-right',
+                          render: (s: any) => <span className="font-mono text-slate-700">{(s.totalAmount || 0).toLocaleString()}</span>,
+                        },
+                      ]}
+                      data={branch._filteredStaff}
+                      rowKey={(s: any) => s.id}
+                      emptyMessage="No staff activity for the selected filters"
+                    />
                   </div>
                 </div>
 
@@ -402,27 +411,36 @@ export function BranchMonitoring() {
                           Staff Activity
                           {staffFilter !== 'all' && <span className="text-slate-400 normal-case ml-1">(filtered)</span>}
                         </h4>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b border-slate-200">
-                                <th className="text-left py-2 px-2 font-medium text-slate-500">Staff</th>
-                                <th className="text-left py-2 px-2 font-medium text-slate-500">Position</th>
-                                <th className="text-right py-2 px-2 font-medium text-slate-500">Tasks</th>
-                                <th className="text-right py-2 px-2 font-medium text-slate-500">Amount</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {branch._filteredStaff.map((s: any) => (
-                                <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                  <td className="py-2 px-2 font-medium text-slate-700">{s.name}</td>
-                                  <td className="py-2 px-2 text-slate-400">{s.position?.replace(/_/g, ' ') || 'Staff'}</td>
-                                  <td className="py-2 px-2 text-right font-mono text-slate-700">{s.todayTasks}</td>
-                                  <td className="py-2 px-2 text-right font-mono text-slate-700">{(s.totalAmount || 0).toLocaleString()}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                        <div className="table-scroll px-3 sm:px-0">
+                          <ResponsiveTable
+                            columns={[
+                              {
+                                key: 'name',
+                                header: 'Staff',
+                                primary: true,
+                                render: (s: any) => <span className="font-medium text-slate-700">{s.name}</span>,
+                              },
+                              {
+                                key: 'position',
+                                header: 'Position',
+                                render: (s: any) => <span className="text-slate-400">{s.position?.replace(/_/g, ' ') || 'Staff'}</span>,
+                              },
+                              {
+                                key: 'todayTasks',
+                                header: 'Tasks',
+                                className: 'text-right',
+                                render: (s: any) => <span className="font-mono text-slate-700">{s.todayTasks}</span>,
+                              },
+                              {
+                                key: 'totalAmount',
+                                header: 'Amount',
+                                className: 'text-right',
+                                render: (s: any) => <span className="font-mono text-slate-700">{(s.totalAmount || 0).toLocaleString()}</span>,
+                              },
+                            ]}
+                            data={branch._filteredStaff}
+                            rowKey={(s: any) => s.id}
+                          />
                         </div>
                       </div>
                     )}

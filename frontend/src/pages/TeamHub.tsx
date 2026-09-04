@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { TrendingUp, TrendingDown, Pencil, CheckCircle2, XCircle, Users } from 'lucide-react';
 import { dashboardAPI, tasksAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
@@ -89,41 +89,51 @@ export function TeamHub() {
           <CardTitle className="text-lg">Team Members</CardTitle>
         </CardHeader>
         <CardContent>
-          {teamMembers.length === 0 ? (
-            <p className="text-center py-6 text-slate-500">No team members assigned</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 px-2 font-medium text-slate-600">Name</th>
-                    <th className="text-left py-3 px-2 font-medium text-slate-600">Position</th>
-                    <th className="text-center py-3 px-2 font-medium text-slate-600">Mapped Accounts</th>
-                    <th className="text-center py-3 px-2 font-medium text-slate-600">KPI Achievement</th>
-                    <th className="text-center py-3 px-2 font-medium text-slate-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamMembers.map((member) => {
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Name',
+                  primary: true,
+                  render: (member: any) => <span className="font-medium text-slate-800">{member.name}</span>,
+                },
+                {
+                  key: 'position',
+                  header: 'Position',
+                  render: (member: any) => <span className="text-slate-600">{member.position || '—'}</span>,
+                },
+                {
+                  key: 'mappedAccounts',
+                  header: 'Mapped Accounts',
+                  className: 'text-center',
+                  render: (member: any) => <span>{member.mappedAccounts}</span>,
+                },
+                {
+                  key: 'kpiAchievement',
+                  header: 'KPI Achievement',
+                  className: 'text-center',
+                  render: (member: any) => <span className="font-medium">{member.kpiAchievement.toFixed(1)}%</span>,
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (member: any) => {
                     const pct = member.kpiAchievement;
                     const statusLabel = pct >= 80 ? 'On Track' : pct >= 60 ? 'Needs Focus' : 'At Risk';
                     const statusColor = pct >= 80 ? 'bg-emerald-100 text-emerald-700' : pct >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
                     return (
-                      <tr key={member.id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="py-3 px-2 font-medium text-slate-800">{member.name}</td>
-                        <td className="py-3 px-2 text-slate-600">{member.position || '—'}</td>
-                        <td className="py-3 px-2 text-center">{member.mappedAccounts}</td>
-                        <td className="py-3 px-2 text-center font-medium">{pct.toFixed(1)}%</td>
-                        <td className="py-3 px-2 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>{statusLabel}</span>
-                        </td>
-                      </tr>
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>{statusLabel}</span>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  },
+                },
+              ]}
+              data={teamMembers}
+              rowKey={(member: any) => member.id}
+              emptyMessage="No team members assigned"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -163,42 +173,56 @@ export function TeamHub() {
           <CardTitle className="text-lg">Recent Team Tasks</CardTitle>
         </CardHeader>
         <CardContent>
-          {recentTasks.length === 0 ? (
-            <p className="text-center py-6 text-slate-500">No recent tasks from team members</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Staff</TableHead>
-                  <TableHead>Task Type</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentTasks.slice(0, 10).map((task: any) => (
-                  <TableRow key={task._id || task.id}>
-                    <TableCell className="font-medium">{task.submittedBy?.name || '—'}</TableCell>
-                    <TableCell className="text-slate-600">{(task.taskType || '').replace(/_/g, ' ')}</TableCell>
-                    <TableCell className="font-mono text-xs">{task.accountNumber || '—'}</TableCell>
-                    <TableCell className="text-right">{task.amount ? `${task.amount.toLocaleString()}` : '—'}</TableCell>
-                    <TableCell className="text-slate-500">{task.taskDate ? new Date(task.taskDate).toLocaleDateString() : '—'}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className={
-                        task.approvalStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        task.approvalStatus === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                        'bg-amber-50 text-amber-700 border-amber-200'
-                      }>
-                        {task.approvalStatus || 'Pending'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'staff',
+                  header: 'Staff',
+                  primary: true,
+                  render: (task: any) => <span className="font-medium text-slate-800">{task.submittedBy?.name || '—'}</span>,
+                },
+                {
+                  key: 'taskType',
+                  header: 'Task Type',
+                  render: (task: any) => <span className="text-slate-600">{(task.taskType || '').replace(/_/g, ' ')}</span>,
+                },
+                {
+                  key: 'accountNumber',
+                  header: 'Account',
+                  render: (task: any) => <code className="font-mono text-xs">{task.accountNumber || '—'}</code>,
+                },
+                {
+                  key: 'amount',
+                  header: 'Amount',
+                  className: 'text-right',
+                  render: (task: any) => <span>{task.amount ? `${task.amount.toLocaleString()}` : '—'}</span>,
+                },
+                {
+                  key: 'date',
+                  header: 'Date',
+                  render: (task: any) => <span className="text-slate-500">{task.taskDate ? new Date(task.taskDate).toLocaleDateString() : '—'}</span>,
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (task: any) => (
+                    <Badge variant="outline" className={
+                      task.approvalStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      task.approvalStatus === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                      'bg-amber-50 text-amber-700 border-amber-200'
+                    }>
+                      {task.approvalStatus || 'Pending'}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={recentTasks.slice(0, 10)}
+              rowKey={(task: any) => task._id || task.id}
+              emptyMessage="No recent tasks from team members"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -213,45 +237,77 @@ export function TeamHub() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Staff</TableHead>
-                  <TableHead>Task Type</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Proposed Changes</TableHead>
-                  <TableHead className="text-center">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {editRequests.map((task: any) => {
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'staff',
+                    header: 'Staff',
+                    primary: true,
+                    render: (task: any) => <span className="font-medium text-slate-800">{task.submittedBy?.name || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'taskType',
+                    header: 'Task Type',
+                    render: (task: any) => <span className="text-slate-600">{task.taskType}</span>,
+                  },
+                  {
+                    key: 'accountNumber',
+                    header: 'Account',
+                    render: (task: any) => <code className="font-mono text-xs">{task.accountNumber}</code>,
+                  },
+                  {
+                    key: 'changes',
+                    header: 'Proposed Changes',
+                    render: (task: any) => {
+                      const editData = task.requestedEditData || {};
+                      const changes = Object.entries(editData)
+                        .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1')}: ${v}`)
+                        .join(', ');
+                      return <span className="text-xs text-amber-700 break-words">{changes}</span>;
+                    },
+                  },
+                  {
+                    key: 'action',
+                    header: 'Action',
+                    className: 'text-center',
+                    render: (task: any) => (
+                      <div className="flex items-center justify-center gap-1">
+                        <Button variant="outline" size="sm" className="h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                          onClick={() => handleReviewEdit(task._id, 'approve')} disabled={actionLoading === task._id}>
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
+                          onClick={() => handleReviewEdit(task._id, 'reject')} disabled={actionLoading === task._id}>
+                          <XCircle className="h-3 w-3 mr-1" /> Reject
+                        </Button>
+                      </div>
+                    ),
+                  },
+                ]}
+                data={editRequests}
+                rowKey={(task: any) => task._id}
+                mobileActions={(task: any) => {
                   const editData = task.requestedEditData || {};
                   const changes = Object.entries(editData)
                     .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1')}: ${v}`)
                     .join(', ');
                   return (
-                    <TableRow key={task._id}>
-                      <TableCell className="font-medium">{task.submittedBy?.name || 'N/A'}</TableCell>
-                      <TableCell className="text-slate-600">{task.taskType}</TableCell>
-                      <TableCell className="font-mono text-xs">{task.accountNumber}</TableCell>
-                      <TableCell className="text-xs text-amber-700 max-w-[200px] truncate" title={changes}>{changes}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button variant="outline" size="sm" className="h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                            onClick={() => handleReviewEdit(task._id, 'approve')} disabled={actionLoading === task._id}>
-                            <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
-                            onClick={() => handleReviewEdit(task._id, 'reject')} disabled={actionLoading === task._id}>
-                            <XCircle className="h-3 w-3 mr-1" /> Reject
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-amber-700 break-words flex-1">Changes: {changes}</span>
+                      <Button variant="outline" size="sm" className="h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                        onClick={() => handleReviewEdit(task._id, 'approve')} disabled={actionLoading === task._id}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Approve
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
+                        onClick={() => handleReviewEdit(task._id, 'reject')} disabled={actionLoading === task._id}>
+                        <XCircle className="h-3 w-3 mr-1" /> Reject
+                      </Button>
+                    </div>
                   );
-                })}
-              </TableBody>
-            </Table>
+                }}
+              />
+            </div>
           </CardContent>
         </Card>
       )}

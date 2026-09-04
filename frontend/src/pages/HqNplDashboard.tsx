@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { nplAPI } from '@/lib/api';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, DollarSign, Building2 } from 'lucide-react';
 
@@ -115,42 +116,62 @@ export function HqNplDashboard() {
           <CardTitle>Branch NPL Ranking</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-slate-50">
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Branch</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Area</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Portfolio</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">PAR 1</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">PAR 30</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">PAR 90</th>
-                  <th className="text-center px-4 py-3 font-medium text-slate-600">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {branches?.map((b: any, i: number) => (
-                  <tr key={b.branchId} className="border-b hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400 w-5">{i + 1}.</span>
-                        <span className="font-medium">{b.branchName}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{b.area}</td>
-                    <td className="px-4 py-3 text-right font-mono">{formatBirr(b.totalPortfolio)}</td>
-                    <td className={`px-4 py-3 text-right font-mono ${parColor(b.par1Ratio)}`}>{b.par1Ratio?.toFixed(1)}%</td>
-                    <td className={`px-4 py-3 text-right font-mono ${parColor(b.par30Ratio)}`}>{b.par30Ratio?.toFixed(1)}%</td>
-                    <td className={`px-4 py-3 text-right font-mono ${parColor(b.par90Ratio)}`}>{b.par90Ratio?.toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-center">
-                      <Badge variant={parBadge(b.par90Ratio)} className="text-xs">
-                        {b.par90Ratio < 5 ? 'Good' : b.par90Ratio < 10 ? 'Watch' : 'Critical'}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'branch',
+                  header: 'Branch',
+                  primary: true,
+                  render: (b: any) => (
+                    <span className="font-medium text-slate-800">
+                      {b._rank}. {b.branchName}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'area',
+                  header: 'Area',
+                  render: (b: any) => <span className="text-slate-600">{b.area}</span>,
+                },
+                {
+                  key: 'totalPortfolio',
+                  header: 'Portfolio',
+                  className: 'text-right',
+                  render: (b: any) => <span className="font-mono text-xs">{formatBirr(b.totalPortfolio)}</span>,
+                },
+                {
+                  key: 'par1Ratio',
+                  header: 'PAR 1',
+                  className: 'text-right',
+                  render: (b: any) => <span className={`font-mono text-xs ${parColor(b.par1Ratio)}`}>{b.par1Ratio?.toFixed(1)}%</span>,
+                },
+                {
+                  key: 'par30Ratio',
+                  header: 'PAR 30',
+                  className: 'text-right',
+                  render: (b: any) => <span className={`font-mono text-xs ${parColor(b.par30Ratio)}`}>{b.par30Ratio?.toFixed(1)}%</span>,
+                },
+                {
+                  key: 'par90Ratio',
+                  header: 'PAR 90',
+                  className: 'text-right',
+                  render: (b: any) => <span className={`font-mono text-xs ${parColor(b.par90Ratio)}`}>{b.par90Ratio?.toFixed(1)}%</span>,
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (b: any) => (
+                    <Badge variant={parBadge(b.par90Ratio)} className="text-xs">
+                      {b.par90Ratio < 5 ? 'Good' : b.par90Ratio < 10 ? 'Watch' : 'Critical'}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={branches?.map((b: any, i: number) => ({ ...b, _rank: i + 1 })) || []}
+              rowKey={(b: any) => b.branchId}
+            />
           </div>
         </CardContent>
       </Card>
@@ -196,40 +217,56 @@ export function HqNplDashboard() {
             <CardTitle>NPL Trend (90 days)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-slate-50">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Date</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">PAR 1</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">PAR 30</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">PAR 90</th>
-                    <th className="text-center px-4 py-3 font-medium text-slate-600">Trend</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trendData.slice(-30).map((d: any, i: number) => {
-                    const prev = trendData[Math.max(0, i - 1)];
-                    const change = prev ? d.par90Ratio - prev.par90Ratio : 0;
-                    return (
-                      <tr key={d.date} className="border-b hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-600">{new Date(d.date).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 text-right font-mono">{d.par1Ratio?.toFixed(1)}%</td>
-                        <td className="px-4 py-3 text-right font-mono">{d.par30Ratio?.toFixed(1)}%</td>
-                        <td className="px-4 py-3 text-right font-mono">{d.par90Ratio?.toFixed(1)}%</td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {trendIcon(change)}
-                            <span className={`text-xs ${change > 0 ? 'text-red-600' : change < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                              {change > 0 ? '+' : ''}{change?.toFixed(2)}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'date',
+                    header: 'Date',
+                    primary: true,
+                    render: (d: any) => <span className="text-slate-800">{new Date(d.date).toLocaleDateString()}</span>,
+                  },
+                  {
+                    key: 'par1Ratio',
+                    header: 'PAR 1',
+                    className: 'text-right',
+                    render: (d: any) => <span className="font-mono text-xs">{d.par1Ratio?.toFixed(1)}%</span>,
+                  },
+                  {
+                    key: 'par30Ratio',
+                    header: 'PAR 30',
+                    className: 'text-right',
+                    render: (d: any) => <span className="font-mono text-xs">{d.par30Ratio?.toFixed(1)}%</span>,
+                  },
+                  {
+                    key: 'par90Ratio',
+                    header: 'PAR 90',
+                    className: 'text-right',
+                    render: (d: any) => <span className="font-mono text-xs">{d.par90Ratio?.toFixed(1)}%</span>,
+                  },
+                  {
+                    key: 'trend',
+                    header: 'Trend',
+                    className: 'text-center',
+                    render: (d: any) => {
+                      const change = d._change;
+                      return (
+                        <div className="flex items-center justify-center gap-1">
+                          {trendIcon(change)}
+                          <span className={`text-xs ${change > 0 ? 'text-red-600' : change < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {change > 0 ? '+' : ''}{change?.toFixed(2)}%
+                          </span>
+                        </div>
+                      );
+                    },
+                  },
+                ]}
+                data={trendData.slice(-30).map((d: any, i: number) => {
+                  const prev = trendData[Math.max(0, i - 1)];
+                  return { ...d, _change: prev ? d.par90Ratio - prev.par90Ratio : 0 };
+                })}
+                rowKey={(d: any) => d.date}
+              />
             </div>
           </CardContent>
         </Card>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { dashboardAPI } from '@/lib/api';
 import { useUser } from '@/contexts/UserContext';
@@ -172,46 +172,67 @@ export function BranchPerformance() {
           <CardTitle>Team Member Performance</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Staff</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Mapped Accounts</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Actual</TableHead>
-                <TableHead>Achievement</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {teamPerformance.map((m: any) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-medium text-slate-800">{m.name}</TableCell>
-                  <TableCell className="text-slate-500 text-xs">{m.role}</TableCell>
-                  <TableCell>{m.mappedAccounts || 0}</TableCell>
-                  <TableCell className="font-mono">{m.target?.toLocaleString()}</TableCell>
-                  <TableCell className="font-mono">{m.actual?.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Staff',
+                  primary: true,
+                  render: (m: any) => <span className="font-medium text-slate-800">{m.name}</span>,
+                },
+                {
+                  key: 'role',
+                  header: 'Role',
+                  render: (m: any) => <span className="text-slate-500 text-xs">{m.role}</span>,
+                },
+                {
+                  key: 'mappedAccounts',
+                  header: 'Mapped Accounts',
+                  className: 'text-center',
+                  render: (m: any) => <span className="font-mono text-xs">{m.mappedAccounts || 0}</span>,
+                },
+                {
+                  key: 'target',
+                  header: 'Target',
+                  className: 'text-right',
+                  render: (m: any) => <span className="font-mono text-xs">{m.target?.toLocaleString()}</span>,
+                },
+                {
+                  key: 'actual',
+                  header: 'Actual',
+                  className: 'text-right',
+                  render: (m: any) => <span className="font-mono text-xs">{m.actual?.toLocaleString()}</span>,
+                },
+                {
+                  key: 'overall',
+                  header: 'Achievement',
+                  className: 'text-right',
+                  render: (m: any) => (
+                    <div className="flex items-center gap-2 justify-end">
                       <div className="w-20 bg-slate-100 rounded-full h-2">
                         <div className={`h-2 rounded-full ${pctBarColor(m.overall)}`} style={{ width: `${Math.min(m.overall, 100)}%` }} />
                       </div>
                       <span className={`text-xs font-semibold ${pctColor(m.overall)}`}>{m.overall}%</span>
                     </div>
-                  </TableCell>
-                  <TableCell>
+                  ),
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  className: 'text-center',
+                  render: (m: any) => (
                     <Badge variant={m.status === 'good' ? 'default' : m.status === 'warning' ? 'warning' : m.status === 'critical' ? 'destructive' : 'secondary'} className="text-xs">
                       {m.status?.replace(/-/g, ' ')}
                     </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {teamPerformance.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-slate-400">No team data</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+                  ),
+                },
+              ]}
+              data={teamPerformance}
+              rowKey={(m: any) => m.id}
+              emptyMessage="No team data"
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

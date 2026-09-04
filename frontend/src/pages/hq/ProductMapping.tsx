@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { productMappingAPI, cbsAPI } from '@/lib/api';
@@ -301,37 +301,41 @@ export function ProductMapping() {
         <CardContent>
           {loading ? (
             <p className="text-center py-8 text-slate-500">Loading...</p>
-          ) : mappings.length === 0 ? (
-            <p className="text-center py-8 text-slate-500">No product mappings found</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>KPI Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Mapped By</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mappings.map((mapping) => (
-                  <TableRow key={mapping._id}>
-                    <TableCell className="font-medium">{mapping.cbs_product_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{mapping.kpi_category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={mapping.status === 'active' ? 'success' : 'warning'}
-                      >
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'cbs_product_name',
+                    header: 'Product Name',
+                    primary: true,
+                    render: (mapping: any) => <span className="font-medium text-slate-800">{mapping.cbs_product_name}</span>,
+                  },
+                  {
+                    key: 'kpi_category',
+                    header: 'KPI Category',
+                    render: (mapping: any) => <Badge variant="outline">{mapping.kpi_category}</Badge>,
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    className: 'text-center',
+                    render: (mapping: any) => (
+                      <Badge variant={mapping.status === 'active' ? 'success' : 'warning'}>
                         {mapping.status}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-600">
-                      {mapping.mappedBy?.name || 'N/A'}
-                    </TableCell>
-                    <TableCell>
+                    ),
+                  },
+                  {
+                    key: 'mappedBy',
+                    header: 'Mapped By',
+                    render: (mapping: any) => <span className="text-sm text-slate-600">{mapping.mappedBy?.name || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Actions',
+                    className: 'text-center',
+                    render: (mapping: any) => (
                       <Button
                         variant="outline"
                         size="sm"
@@ -340,11 +344,24 @@ export function ProductMapping() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    ),
+                  },
+                ]}
+                data={mappings}
+                rowKey={(mapping: any) => mapping._id}
+                emptyMessage="No product mappings found"
+                mobileActions={(mapping: any) => (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(mapping._id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                  </Button>
+                )}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

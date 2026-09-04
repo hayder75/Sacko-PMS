@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertCircle, ChevronDown, Home } from 'lucide-react';
 import { dashboardAPI, tasksAPI } from '@/lib/api';
@@ -181,35 +181,52 @@ export function BranchManagerDashboard() {
         </CardHeader>
         <CardContent>
           {pendingTasks.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Staff Member</TableHead>
-                  <TableHead className="text-xs">Task Type</TableHead>
-                  <TableHead className="text-xs">Account No.</TableHead>
-                  <TableHead className="text-xs">Amount</TableHead>
-                  <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingTasks.map((task: any) => (
-                  <TableRow key={task.id}>
-                    <TableCell className="font-medium text-xs text-slate-700">{task.submittedBy?.name || 'Staff'}</TableCell>
-                    <TableCell className="text-xs text-slate-500">{task.taskType?.replace(/_/g, ' ')}</TableCell>
-                    <TableCell className="text-xs font-mono text-slate-500">{task.accountNumber || 'N/A'}</TableCell>
-                    <TableCell className="text-xs text-slate-700">{task.amount ? `${task.amount.toLocaleString()} ETB` : '-'}</TableCell>
-                    <TableCell className="text-xs text-slate-500">{new Date(task.taskDate).toLocaleDateString()}</TableCell>
-                    <TableCell>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'staff',
+                    header: 'Staff Member',
+                    primary: true,
+                    render: (task: any) => <span className="font-medium text-xs text-slate-800">{task.submittedBy?.name || 'Staff'}</span>,
+                  },
+                  {
+                    key: 'taskType',
+                    header: 'Task Type',
+                    render: (task: any) => <span className="text-xs text-slate-500">{task.taskType?.replace(/_/g, ' ')}</span>,
+                  },
+                  {
+                    key: 'accountNumber',
+                    header: 'Account No.',
+                    render: (task: any) => <code className="text-xs font-mono text-slate-500">{task.accountNumber || 'N/A'}</code>,
+                  },
+                  {
+                    key: 'amount',
+                    header: 'Amount',
+                    className: 'text-right',
+                    render: (task: any) => <span className="text-xs text-slate-700">{task.amount ? `${task.amount.toLocaleString()} ETB` : '-'}</span>,
+                  },
+                  {
+                    key: 'date',
+                    header: 'Date',
+                    render: (task: any) => <span className="text-xs text-slate-500">{new Date(task.taskDate).toLocaleDateString()}</span>,
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    className: 'text-center',
+                    render: () => (
                       <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[11px]">
                         <AlertCircle className="w-3 h-3 mr-1" />
                         Pending
                       </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    ),
+                  },
+                ]}
+                data={pendingTasks}
+                rowKey={(task: any) => task.id}
+              />
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-6 text-slate-400">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />

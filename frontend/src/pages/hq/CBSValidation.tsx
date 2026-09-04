@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { cbsAPI } from '@/lib/api';
@@ -125,34 +125,52 @@ export function CBSValidation() {
           {validations.length === 0 ? (
             <div className="text-center py-8 text-slate-500">No validations found</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Records</TableHead>
-                  <TableHead>Matched</TableHead>
-                  <TableHead>Discrepancies</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {validations.map((validation) => (
-                  <TableRow key={validation._id}>
-                    <TableCell className="font-medium">{validation.branchId?.name || validation.branchId?.code || 'N/A'}</TableCell>
-                    <TableCell>{new Date(validation.validationDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{validation.totalRecords?.toLocaleString() || 0}</TableCell>
-                    <TableCell className="text-emerald-600">{validation.matchedRecords || 0}</TableCell>
-                    <TableCell>
-                      {validation.discrepancyCount > 0 ? (
-                        <span className="text-red-600 font-semibold">{validation.discrepancyCount}</span>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'branch',
+                    header: 'Branch',
+                    primary: true,
+                    render: (validation: any) => (
+                      <span className="font-medium text-slate-800">{validation.branchId?.name || validation.branchId?.code || 'N/A'}</span>
+                    ),
+                  },
+                  {
+                    key: 'date',
+                    header: 'Date',
+                    render: (validation: any) => <span>{new Date(validation.validationDate).toLocaleDateString()}</span>,
+                  },
+                  {
+                    key: 'totalRecords',
+                    header: 'Records',
+                    className: 'text-right',
+                    render: (validation: any) => <span className="font-mono text-xs">{validation.totalRecords?.toLocaleString() || 0}</span>,
+                  },
+                  {
+                    key: 'matchedRecords',
+                    header: 'Matched',
+                    className: 'text-right',
+                    render: (validation: any) => <span className="font-mono text-xs text-emerald-600">{validation.matchedRecords || 0}</span>,
+                  },
+                  {
+                    key: 'discrepancyCount',
+                    header: 'Discrepancies',
+                    className: 'text-right',
+                    render: (validation: any) => (
+                      validation.discrepancyCount > 0 ? (
+                        <span className="font-mono text-xs text-red-600 font-semibold">{validation.discrepancyCount}</span>
                       ) : (
-                        <span className="text-emerald-600">0</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {validation.status === 'Completed' ? (
+                        <span className="font-mono text-xs text-emerald-600">0</span>
+                      )
+                    ),
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    className: 'text-center',
+                    render: (validation: any) =>
+                      validation.status === 'Completed' ? (
                         <Badge variant="default" className="flex items-center gap-1 w-fit">
                           <CheckCircle2 className="h-3 w-3" />
                           Completed
@@ -164,15 +182,19 @@ export function CBSValidation() {
                         </Badge>
                       ) : (
                         <Badge variant="outline">Processing</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">View Details</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      ),
+                  },
+                  {
+                    key: 'action',
+                    header: 'Action',
+                    className: 'text-center',
+                    render: () => <Button variant="ghost" size="sm">View Details</Button>,
+                  },
+                ]}
+                data={validations}
+                rowKey={(validation: any) => validation._id}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

@@ -30,7 +30,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <Sidebar />
       <div className="lg:pl-60">
         <TopNav />
-        <main className="px-6 py-6">{children}</main>
+        <main className="px-3 sm:px-6 py-3 sm:py-6">{children}</main>
       </div>
     </div>
   );

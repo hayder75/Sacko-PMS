@@ -105,6 +105,17 @@ enum TaskType {
   Special_Saving               @map("Special Saving")
   Segment_Deposit              @map("Segment Deposit")
   Wadiah_IFB_Deposit           @map("Wadiah IFB Deposit")
+  Deposit_Mobilization         @map("Deposit Mobilization")
+  New_Member_Registration      @map("New Member Registration")
+  New_Account_Opening          @map("New Account Opening")
+  Share_Capital_Growth         @map("Share Capital Growth")
+  Account_Productivity         @map("Account Productivity")
+  Mobile_Banking_Users         @map("Mobile Banking Users")
+  Merchant_POS_Growth          @map("Merchant POS Growth")
+  Billers_Recruitment          @map("Billers Recruitment")
+  Internal_Operations          @map("Internal Operations")
+  Collection_Rate              @map("Collection Rate")
+  Portfolio_Quality            @map("Portfolio Quality")
 }
 
 enum MappingStatus {
@@ -210,6 +221,7 @@ enum AuditAction {
   Edit_Requested              @map("Edit Requested")
   Edit_Approved               @map("Edit Approved")
   Edit_Rejected               @map("Edit Rejected")
+  Balance_Source_Updated      @map("Balance Source Updated")
 }
 
 enum AuditEntityType {
@@ -221,6 +233,7 @@ enum AuditEntityType {
   Evaluation
   Framework
   System
+  SystemSetting
 }
 
 // ============== MODELS ==============
@@ -786,4 +799,15 @@ model Notification {
   @@index([userId, read, createdAt])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid()) @map("_id")
+  key       String   @unique
+  value     String
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
 }

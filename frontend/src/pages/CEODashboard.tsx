@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { dashboardAPI } from '@/lib/api';
@@ -169,38 +169,72 @@ export function CEODashboard() {
           </CardHeader>
           <CardContent>
             {hqData.branchKPIHeatmap && hqData.branchKPIHeatmap.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="text-left p-2 font-medium text-slate-500">Branch</th>
-                      <th className="text-center p-2 font-medium text-slate-500">Deposit %</th>
-                      <th className="text-center p-2 font-medium text-slate-500">Digital %</th>
-                      <th className="text-center p-2 font-medium text-slate-500">Loan %</th>
-                      <th className="text-center p-2 font-medium text-slate-500">Customer %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {hqData.branchKPIHeatmap.map((branch: any) => (
-                      <tr key={branch.branchId} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="p-2 font-medium text-slate-700">{branch.branch}</td>
-                        {['deposit', 'digital', 'loan', 'customer'].map((kpi) => {
-                          const val = branch[kpi] ?? 0;
-                          return (
-                            <td key={kpi} className="p-1">
-                              <div
-                                className="text-center py-1 px-2 font-semibold text-white rounded"
-                                style={{ backgroundColor: getHeatColor(val) }}
-                              >
-                                {val}%
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="table-scroll px-3 sm:px-0">
+                <ResponsiveTable
+                  columns={[
+                    {
+                      key: 'branch',
+                      header: 'Branch',
+                      primary: true,
+                      render: (branch: any) => <span className="font-medium text-slate-700">{branch.branch}</span>,
+                    },
+                    {
+                      key: 'deposit',
+                      header: 'Deposit %',
+                      className: 'text-center',
+                      render: (branch: any) => {
+                        const val = branch.deposit ?? 0;
+                        return (
+                          <span className="inline-block text-center py-1 px-2 font-semibold text-white rounded" style={{ backgroundColor: getHeatColor(val) }}>
+                            {val}%
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      key: 'digital',
+                      header: 'Digital %',
+                      className: 'text-center',
+                      render: (branch: any) => {
+                        const val = branch.digital ?? 0;
+                        return (
+                          <span className="inline-block text-center py-1 px-2 font-semibold text-white rounded" style={{ backgroundColor: getHeatColor(val) }}>
+                            {val}%
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      key: 'loan',
+                      header: 'Loan %',
+                      className: 'text-center',
+                      render: (branch: any) => {
+                        const val = branch.loan ?? 0;
+                        return (
+                          <span className="inline-block text-center py-1 px-2 font-semibold text-white rounded" style={{ backgroundColor: getHeatColor(val) }}>
+                            {val}%
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      key: 'customer',
+                      header: 'Customer %',
+                      className: 'text-center',
+                      render: (branch: any) => {
+                        const val = branch.customer ?? 0;
+                        return (
+                          <span className="inline-block text-center py-1 px-2 font-semibold text-white rounded" style={{ backgroundColor: getHeatColor(val) }}>
+                            {val}%
+                          </span>
+                        );
+                      },
+                    },
+                  ]}
+                  data={hqData.branchKPIHeatmap}
+                  rowKey={(branch: any) => branch.branchId}
+                  emptyMessage="No branch heatmap available"
+                />
               </div>
             ) : (
               <div className="text-center text-slate-400 py-8 text-sm">No branch heatmap available</div>
@@ -240,40 +274,49 @@ export function CEODashboard() {
             <CardTitle className="text-sm font-semibold text-slate-800">Top 5 Branches</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Branch</TableHead>
-                  <TableHead className="text-xs">Target</TableHead>
-                  <TableHead className="text-xs">Actual</TableHead>
-                  <TableHead className="text-xs">%</TableHead>
-                  <TableHead className="text-xs">Rating</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {hqData.topBranches && hqData.topBranches.length > 0 ? (
-                  hqData.topBranches.map((b: any) => (
-                    <TableRow key={b.branch || b.id}>
-                      <TableCell className="font-medium text-xs text-slate-700">{b.branch || b.name}</TableCell>
-                      <TableCell className="text-xs text-slate-500">{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
-                      <TableCell className="text-xs text-slate-700">{b.actual?.toLocaleString() || '0'}</TableCell>
-                      <TableCell className="text-xs">
-                        <Badge className={(b.percent ?? 0) >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
-                          {b.percent ?? 0}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-600">{b.rating || 'N/A'}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-slate-400 py-6 text-xs">
-                      No top branch data available
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'branch',
+                    header: 'Branch',
+                    primary: true,
+                    render: (b: any) => <span className="font-medium text-xs text-slate-800">{b.branch || b.name}</span>,
+                  },
+                  {
+                    key: 'target',
+                    header: 'Target',
+                    className: 'text-right',
+                    render: (b: any) => <span className="text-xs text-slate-500">{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</span>,
+                  },
+                  {
+                    key: 'actual',
+                    header: 'Actual',
+                    className: 'text-right',
+                    render: (b: any) => <span className="text-xs text-slate-700">{b.actual?.toLocaleString() || '0'}</span>,
+                  },
+                  {
+                    key: 'percent',
+                    header: '%',
+                    className: 'text-center',
+                    render: (b: any) => (
+                      <Badge className={(b.percent ?? 0) >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
+                        {b.percent ?? 0}%
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'rating',
+                    header: 'Rating',
+                    className: 'text-center',
+                    render: (b: any) => <span className="text-xs font-medium text-slate-600">{b.rating || 'N/A'}</span>,
+                  },
+                ]}
+                data={hqData.topBranches || []}
+                rowKey={(b: any) => b.branch || b.id}
+                emptyMessage="No top branch data available"
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -282,40 +325,49 @@ export function CEODashboard() {
             <CardTitle className="text-sm font-semibold text-slate-800">Bottom 5 Branches</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Branch</TableHead>
-                  <TableHead className="text-xs">Target</TableHead>
-                  <TableHead className="text-xs">Actual</TableHead>
-                  <TableHead className="text-xs">%</TableHead>
-                  <TableHead className="text-xs">Rating</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {hqData.bottomBranches && hqData.bottomBranches.length > 0 ? (
-                  hqData.bottomBranches.map((b: any) => (
-                    <TableRow key={b.branch || b.id}>
-                      <TableCell className="font-medium text-xs text-slate-700">{b.branch || b.name}</TableCell>
-                      <TableCell className="text-xs text-slate-500">{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</TableCell>
-                      <TableCell className="text-xs text-slate-700">{b.actual?.toLocaleString() || '0'}</TableCell>
-                      <TableCell className="text-xs">
-                        <Badge className={(b.percent ?? 0) < 60 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'}>
-                          {b.percent ?? 0}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-600">{b.rating || 'N/A'}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-slate-400 py-6 text-xs">
-                      No bottom branch data available
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'branch',
+                    header: 'Branch',
+                    primary: true,
+                    render: (b: any) => <span className="font-medium text-xs text-slate-800">{b.branch || b.name}</span>,
+                  },
+                  {
+                    key: 'target',
+                    header: 'Target',
+                    className: 'text-right',
+                    render: (b: any) => <span className="text-xs text-slate-500">{b.depositTarget?.toLocaleString() || b.target?.toLocaleString() || '0'}</span>,
+                  },
+                  {
+                    key: 'actual',
+                    header: 'Actual',
+                    className: 'text-right',
+                    render: (b: any) => <span className="text-xs text-slate-700">{b.actual?.toLocaleString() || '0'}</span>,
+                  },
+                  {
+                    key: 'percent',
+                    header: '%',
+                    className: 'text-center',
+                    render: (b: any) => (
+                      <Badge className={(b.percent ?? 0) < 60 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'}>
+                        {b.percent ?? 0}%
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'rating',
+                    header: 'Rating',
+                    className: 'text-center',
+                    render: (b: any) => <span className="text-xs font-medium text-slate-600">{b.rating || 'N/A'}</span>,
+                  },
+                ]}
+                data={hqData.bottomBranches || []}
+                rowKey={(b: any) => b.branch || b.id}
+                emptyMessage="No bottom branch data available"
+              />
+            </div>
           </CardContent>
         </Card>
       </div>

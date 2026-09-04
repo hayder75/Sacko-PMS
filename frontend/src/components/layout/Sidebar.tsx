@@ -134,7 +134,7 @@ export function Sidebar() {
   return (
     <>
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary text-white"
+        className="lg:hidden fixed top-3 left-3 z-50 p-2.5 bg-white text-primary-700 rounded-xl shadow-lg border border-primary-100 hover:bg-primary-50 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download } from 'lucide-react';
@@ -135,79 +135,97 @@ export function MonthlyScorecard() {
           {/* KPI Breakdown */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-slate-800 mb-4">KPI Breakdown</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>KPI</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead>Actual</TableHead>
-                  <TableHead>%</TableHead>
-                  <TableHead>Score</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {performanceScore?.kpiScores && Object.keys(performanceScore.kpiScores).length > 0 ? (
-                  Object.entries(performanceScore.kpiScores).map(([key, kpi]: [string, any]) => (
-                    <TableRow key={key}>
-                      <TableCell className="font-medium">
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'kpi',
+                    header: 'KPI',
+                    primary: true,
+                    render: ([key]: [string, any]) => (
+                      <span className="font-medium text-slate-800">
                         {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                      </TableCell>
-                      <TableCell>{kpi.target?.toLocaleString() || '-'}</TableCell>
-                      <TableCell>{kpi.actual?.toLocaleString() || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={kpi.percent >= 80 ? 'success' : 'warning'}>
-                          {kpi.percent || 0}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold">{kpi.score?.toFixed(2) || 0}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                      No KPI data available
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'target',
+                    header: 'Target',
+                    render: ([, kpi]: [string, any]) => <span>{kpi.target?.toLocaleString() || '-'}</span>,
+                  },
+                  {
+                    key: 'actual',
+                    header: 'Actual',
+                    render: ([, kpi]: [string, any]) => <span>{kpi.actual?.toLocaleString() || '-'}</span>,
+                  },
+                  {
+                    key: 'percent',
+                    header: '%',
+                    className: 'text-right',
+                    render: ([, kpi]: [string, any]) => (
+                      <Badge variant={kpi.percent >= 80 ? 'success' : 'warning'}>
+                        {kpi.percent || 0}%
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'score',
+                    header: 'Score',
+                    className: 'text-right',
+                    render: ([, kpi]: [string, any]) => <span className="font-semibold">{kpi.score?.toFixed(2) || 0}</span>,
+                  },
+                ]}
+                data={
+                  performanceScore?.kpiScores && Object.keys(performanceScore.kpiScores).length > 0
+                    ? Object.entries(performanceScore.kpiScores)
+                    : []
+                }
+                rowKey={([key]) => key}
+                emptyMessage="No KPI data available"
+              />
+            </div>
           </div>
 
           {/* Behavioral Evaluation */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-slate-800 mb-4">Behavioral Evaluation</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Competency</TableHead>
-                  <TableHead>Score</TableHead>
-                  <TableHead>Max</TableHead>
-                  <TableHead>Percentage</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {behavioralData?.competencies && behavioralData.competencies.length > 0 ? (
-                  behavioralData.competencies.map((comp: any) => (
-                    <TableRow key={comp.competencyId || comp.competency}>
-                      <TableCell className="font-medium">{comp.competencyName || comp.competency || 'N/A'}</TableCell>
-                      <TableCell className="font-semibold">{comp.score || 0}</TableCell>
-                      <TableCell>{comp.maxScore || 5}</TableCell>
-                      <TableCell>
-                        <Badge variant="success">
-                          {comp.maxScore ? ((comp.score / comp.maxScore) * 100).toFixed(0) : 0}%
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-slate-500 py-8">
-                      No behavioral evaluation data available
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'competency',
+                    header: 'Competency',
+                    primary: true,
+                    render: (comp: any) => (
+                      <span className="font-medium text-slate-800">{comp.competencyName || comp.competency || 'N/A'}</span>
+                    ),
+                  },
+                  {
+                    key: 'score',
+                    header: 'Score',
+                    render: (comp: any) => <span className="font-semibold">{comp.score || 0}</span>,
+                  },
+                  {
+                    key: 'max',
+                    header: 'Max',
+                    render: (comp: any) => <span>{comp.maxScore || 5}</span>,
+                  },
+                  {
+                    key: 'percentage',
+                    header: 'Percentage',
+                    className: 'text-right',
+                    render: (comp: any) => (
+                      <Badge variant="success">
+                        {comp.maxScore ? ((comp.score / comp.maxScore) * 100).toFixed(0) : 0}%
+                      </Badge>
+                    ),
+                  },
+                ]}
+                data={behavioralData?.competencies && behavioralData.competencies.length > 0 ? behavioralData.competencies : []}
+                rowKey={(comp: any) => comp.competencyId || comp.competency}
+                emptyMessage="No behavioral evaluation data available"
+              />
+            </div>
           </div>
 
           {/* Final Score & Rating */}

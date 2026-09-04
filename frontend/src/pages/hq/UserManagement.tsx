@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Key, Trash2, X } from 'lucide-react';
@@ -209,53 +209,80 @@ export function UserManagement() {
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Supervisor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center text-slate-500 py-8">No users found</TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => {
-                    const sup = supervisors.find(s => s._id === user.supervisorId);
-                    return (
-                      <TableRow key={user._id}>
-                        <TableCell className="font-mono text-xs font-bold text-blue-600">{user.employeeId}</TableCell>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
-                        <TableCell>{user.branch_code || 'N/A'}</TableCell>
-                        <TableCell>{(user.position || '').replace(/_/g, ' ')}</TableCell>
-                        <TableCell className="text-xs text-slate-500">{sup ? sup.name : '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.isActive ? 'success' : 'destructive'}>{user.isActive ? 'Active' : 'Inactive'}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => openEditForm(user)}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="sm"><Key className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-red-500" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+            <div className="table-scroll px-3 sm:px-0">
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'employeeId',
+                    header: 'Employee ID',
+                    primary: true,
+                    render: (user: any) => <code className="font-mono text-xs font-bold text-blue-600">{user.employeeId}</code>,
+                  },
+                  {
+                    key: 'name',
+                    header: 'Name',
+                    render: (user: any) => <span className="font-medium text-slate-800">{user.name}</span>,
+                  },
+                  {
+                    key: 'email',
+                    header: 'Email',
+                    render: (user: any) => <span className="text-sm">{user.email}</span>,
+                  },
+                  {
+                    key: 'role',
+                    header: 'Role',
+                    render: (user: any) => <Badge variant="outline">{user.role}</Badge>,
+                  },
+                  {
+                    key: 'branch',
+                    header: 'Branch',
+                    render: (user: any) => <span className="text-xs text-slate-500">{user.branch_code || 'N/A'}</span>,
+                  },
+                  {
+                    key: 'position',
+                    header: 'Position',
+                    render: (user: any) => <span>{(user.position || '').replace(/_/g, ' ')}</span>,
+                  },
+                  {
+                    key: 'supervisor',
+                    header: 'Supervisor',
+                    render: (user: any) => {
+                      const sup = supervisors.find(s => s._id === user.supervisorId);
+                      return <span className="text-xs text-slate-500">{sup ? sup.name : '-'}</span>;
+                    },
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    render: (user: any) => (
+                      <Badge variant={user.isActive ? 'success' : 'destructive'}>{user.isActive ? 'Active' : 'Inactive'}</Badge>
+                    ),
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Actions',
+                    className: 'text-center',
+                    render: (user: any) => (
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEditForm(user)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm"><Key className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                      </div>
+                    ),
+                  },
+                ]}
+                data={users}
+                rowKey={(user: any) => user._id}
+                emptyMessage="No users found"
+                mobileActions={(user: any) => (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openEditForm(user)}>
+                      <Edit className="h-4 w-4 mr-1" /> Edit
+                    </Button>
+                  </div>
                 )}
-              </TableBody>
-            </Table>
+              />
+            </div>
           )}
         </CardContent>
       </Card>

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ResponsiveTable from '@/components/ui/responsive-table';
 import { TrendingUp, Users, Target, RefreshCw, Crown, Medal } from 'lucide-react';
+import { getToken } from '@/lib/api';
 
 function rankIcon(rank: number) {
   if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" />;
@@ -21,7 +23,7 @@ export function TeamStandings() {
     setLoading(true);
     setError('');
     fetch('/api/performance/team-standings', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then(r => r.json())
       .then(res => {
@@ -161,66 +163,88 @@ export function TeamStandings() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-center px-3 py-3 font-medium text-slate-600 w-12">Rank</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Name</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Position</th>
-                  <th className="text-center px-3 py-3 font-medium text-slate-600">Accounts</th>
-                  <th className="text-right px-3 py-3 font-medium text-slate-600">Deposit%</th>
-                  <th className="text-right px-3 py-3 font-medium text-slate-600">Collection%</th>
-                  <th className="text-right px-3 py-3 font-medium text-slate-600">Portfolio%</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Composite</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m: any) => {
-                  const isMe = m.id === user?.id;
-                  return (
-                    <tr key={m.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${isMe ? 'bg-primary-50/50 border-l-2 border-l-primary-500' : ''}`}>
-                      <td className="text-center px-3 py-3">
-                        <div className="flex items-center justify-center">
-                          {m.rank === 1 ? <Crown className="h-4 w-4 text-yellow-500" /> :
-                           m.rank === 2 ? <Medal className="h-4 w-4 text-slate-400" /> :
-                           m.rank === 3 ? <Medal className="h-4 w-4 text-amber-700" /> :
-                           <span className="text-xs font-bold text-slate-400">#{m.rank}</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${isMe ? 'text-primary-700' : 'text-slate-800'}`}>{m.name}</span>
-                          {isMe && <Badge variant="default" className="text-[10px] px-1.5 py-0">You</Badge>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{m.position || '-'}</td>
-                      <td className="text-center px-3 py-3 font-mono text-xs text-slate-600">{m.mappedAccounts}</td>
-                      <td className="text-right px-3 py-3">
-                        <span className={`font-mono text-xs ${m.kpiAchievement >= 80 ? 'text-emerald-600' : m.kpiAchievement >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                          {m.kpiAchievement}%
-                        </span>
-                      </td>
-                      <td className="text-right px-3 py-3">
-                        <span className={`font-mono text-xs ${m.collectionRate >= 80 ? 'text-emerald-600' : m.collectionRate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                          {m.collectionRate}%
-                        </span>
-                      </td>
-                      <td className="text-right px-3 py-3">
-                        <span className={`font-mono text-xs ${m.portfolioQuality >= 90 ? 'text-emerald-600' : m.portfolioQuality >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
-                          {m.portfolioQuality}%
-                        </span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className={`font-bold text-sm ${m.compositeScore >= 80 ? 'text-emerald-600' : m.compositeScore >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                          {m.compositeScore}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="table-scroll px-3 sm:px-0">
+            <ResponsiveTable
+              columns={[
+                {
+                  key: 'rank',
+                  header: 'Rank',
+                  className: 'text-center',
+                  render: (m: any) => (
+                    m.rank === 1 ? <Crown className="h-4 w-4 text-yellow-500" /> :
+                    m.rank === 2 ? <Medal className="h-4 w-4 text-slate-400" /> :
+                    m.rank === 3 ? <Medal className="h-4 w-4 text-amber-700" /> :
+                    <span className="text-xs font-bold text-slate-400">#{m.rank}</span>
+                  ),
+                },
+                {
+                  key: 'name',
+                  header: 'Name',
+                  primary: true,
+                  render: (m: any) => {
+                    const isMe = m.id === user?.id;
+                    return (
+                      <span className={`font-medium ${isMe ? 'text-primary-700' : 'text-slate-800'}`}>
+                        {m.name} {isMe && <Badge variant="default" className="text-[10px] px-1.5 py-0">You</Badge>}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: 'position',
+                  header: 'Position',
+                  render: (m: any) => <span className="text-xs text-slate-500">{m.position || '-'}</span>,
+                },
+                {
+                  key: 'mappedAccounts',
+                  header: 'Accounts',
+                  className: 'text-center',
+                  render: (m: any) => <span className="font-mono text-xs text-slate-600">{m.mappedAccounts}</span>,
+                },
+                {
+                  key: 'kpiAchievement',
+                  header: 'Deposit%',
+                  className: 'text-right',
+                  render: (m: any) => (
+                    <span className={`font-mono text-xs ${m.kpiAchievement >= 80 ? 'text-emerald-600' : m.kpiAchievement >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                      {m.kpiAchievement}%
+                    </span>
+                  ),
+                },
+                {
+                  key: 'collectionRate',
+                  header: 'Collection%',
+                  className: 'text-right',
+                  render: (m: any) => (
+                    <span className={`font-mono text-xs ${m.collectionRate >= 80 ? 'text-emerald-600' : m.collectionRate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                      {m.collectionRate}%
+                    </span>
+                  ),
+                },
+                {
+                  key: 'portfolioQuality',
+                  header: 'Portfolio%',
+                  className: 'text-right',
+                  render: (m: any) => (
+                    <span className={`font-mono text-xs ${m.portfolioQuality >= 90 ? 'text-emerald-600' : m.portfolioQuality >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
+                      {m.portfolioQuality}%
+                    </span>
+                  ),
+                },
+                {
+                  key: 'compositeScore',
+                  header: 'Composite',
+                  className: 'text-right',
+                  render: (m: any) => (
+                    <span className={`font-bold text-sm ${m.compositeScore >= 80 ? 'text-emerald-600' : m.compositeScore >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                      {m.compositeScore}
+                    </span>
+                  ),
+                },
+              ]}
+              data={members}
+              rowKey={(m: any) => m.id}
+            />
           </div>
         </CardContent>
       </Card>

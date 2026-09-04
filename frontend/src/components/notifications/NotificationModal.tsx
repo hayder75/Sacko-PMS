@@ -227,7 +227,7 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
 
         {/* Task Approval details */}
         {(selected.type === 'TASK_APPROVED' || selected.type === 'TASK_REJECTED') && (
-          <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+          <div className={`rounded-lg p-4 space-y-2 ${selected.type === 'TASK_REJECTED' ? 'bg-red-50' : 'bg-slate-50'}`}>
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Account</span>
               <span className="font-medium">{data.accountNumber}</span>
@@ -242,6 +242,18 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
                 {data.status}
               </Badge>
             </div>
+            {selected.type === 'TASK_REJECTED' && data.approverName && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Rejected by</span>
+                <span className="font-medium text-red-700">{data.approverName}</span>
+              </div>
+            )}
+            {selected.type === 'TASK_REJECTED' && data.comments && (
+              <div className="mt-2 p-3 bg-white border border-red-200 rounded-md">
+                <p className="text-xs font-semibold text-red-700 mb-1">Rejection Reason</p>
+                <p className="text-sm text-slate-700 italic">"{data.comments}"</p>
+              </div>
+            )}
           </div>
         )}
 
